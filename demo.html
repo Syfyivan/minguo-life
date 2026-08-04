@@ -315,8 +315,11 @@ footer .fs{font-family:'Silk',monospace; font-size:11px; color:var(--muted);}
     var picks=o.actions.filter(function(a){ return !a.event && M.meetGate(a.gate, flat()) && a.spirit>0; });
     for(var i=0;i<G.seasonPlan.length;i++){
       if(G.seasonPlan[i]) continue;
-      if(!picks.length) break;
-      pickAction(i, picks[i%picks.length]);
+      // 选一个放进去仍不超精神上限的行动
+      var pick=null;
+      for(var j=0;j<picks.length;j++){ if(spiritOkFor(i, picks[j])){ pick=picks[j]; break; } }
+      if(!pick) break; // 精神已排满，剩余格子留空
+      pickAction(i, pick);
     }
   }
 
@@ -368,6 +371,7 @@ footer .fs{font-family:'Silk',monospace; font-size:11px; color:var(--muted);}
       d.appendChild(btn);
       grid.appendChild(d);
     });
+    updateSpirit();
   }
 
   // ---------- 行动菜单 ----------
@@ -379,12 +383,13 @@ footer .fs{font-family:'Silk',monospace; font-size:11px; color:var(--muted);}
     o.actions.forEach(function(act){
       // 事件专属行动（event:true）在 Demo 里不作为日常可选
       if(act.event) return;
-      var enabled = M.meetGate(act.gate, flat());
-      var spiritOk = (act.spirit<=0) || (estimateSpirit(slotIdx, act) <= G.spiritMax);
+      var gateOk = M.meetGate(act.gate, flat());
+      var spOk = spiritOkFor(slotIdx, act);
+      var enabled = gateOk && spOk;
       var wrap=document.createElement('div'); wrap.className='opt'+(enabled?'':' locked');
       var metas=[];
       for(var k in act.out){ var v=act.out[k]; metas.push('<span class="chip '+(v>=0?'up':'down')+'">'+(v>=0?'+':'')+v+' '+nameOf(k)+'</span>'); }
-      metas.push('<span class="chip gate">精神 '+(act.spirit>=0?'-'+act.spirit:'+'+(-act.spirit))+'</span>');
+      metas.push('<span class="chip '+(spOk?'gate':'down')+'">精神 '+(act.spirit>=0?'-'+act.spirit:'回'+(-act.spirit))+(spOk?'':' · 不足')+'</span>');
       if(act.gate){ for(var g in act.gate) metas.push('<span class="chip gate">需 '+nameOf(g)+'≥'+act.gate[g]+'</span>'); }
       wrap.innerHTML='<div class="ol">'+act.name+'</div>'+
         '<div class="od">'+(act.note||'')+'</div>'+
@@ -403,9 +408,21 @@ footer .fs{font-family:'Silk',monospace; font-size:11px; color:var(--muted);}
     openMask();
   }
 
-  function estimateSpirit(slotIdx, act){
-    var s=0; G.seasonPlan.forEach(function(p,i){ if(i!==slotIdx && p) s+=Math.max(0,p.spirit); });
-    return s + Math.max(0, act.spirit);
+  // 精神实时账：净消耗 = 各格 spirit 之和（休息类为负，等于回精神/腾出余力）
+  function usedSpirit(exceptIdx){
+    var s=0; G.seasonPlan.forEach(function(p,i){ if(p && i!==exceptIdx) s+=p.spirit; });
+    return s;
+  }
+  function spiritLeft(){ return G.spiritMax - usedSpirit(-1); }
+  function updateSpirit(){
+    var left=spiritLeft();
+    var tag=document.getElementById('spiritTag');
+    tag.textContent='精神 '+clamp(left,0,G.spiritMax)+'/'+G.spiritMax;
+    tag.style.color = left<=0 ? 'var(--accent)' : 'var(--accent2)';
+  }
+  // 把候选行动放进某格后，是否仍在精神上限内（休息类为负，恒可选）
+  function spiritOkFor(slotIdx, act){
+    return (usedSpirit(slotIdx) + act.spirit) <= G.spiritMax;
   }
 
   // 选定行动到某格（带边际递减预览）
