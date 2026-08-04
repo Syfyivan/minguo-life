@@ -334,7 +334,7 @@ footer .fs{font-family:'Silk',monospace; font-size:11px; color:var(--muted);}
       curve:[], log:[],
       pendingSits:[], pendingIdx:0, over:false
     };
-    pushLog(G.year, '出生：'+f.name+'的'+(gender==='女'?'女儿':'儿子')+'，生于'+f.place+'。往后是女工、佃农还是难民，看你怎么走。', 'good');
+    pushLog(G.year, '出生：'+f.name+'的'+(gender==='女'?'女儿':'儿子')+'，生于'+f.place+'。往后长成什么样，看时代，也看你怎么走。', 'good');
     switchScreen('play');
     startYear();
   }
@@ -387,15 +387,17 @@ footer .fs{font-family:'Silk',monospace; font-size:11px; color:var(--muted);}
       pushLog(G.year, '【转折·'+t.name+'】'+ev.desc+' '+fmt(parts)+'——从此走上「'+t.name+'」这条路。', 'bad', 'ev');
       switched=tk;
     });
-    // 到 default track 的兜底年龄仍无分叉 → 走默认主干
+    // 到 default track 的兜底年龄仍无分叉 → 走默认主干（按性别等 cond 选对应主干）
     if(!G.track){
       (fam.tracks||[]).forEach(function(tk){
         var t=M.tracks[tk]; if(!t||switched) return;
-        if((t.enter||{}).type==='default' && G.age>=(t.enter.minAge||13)){
-          G.track=tk; G.origin=t.fromOrigin;
-          pushLog(G.year, '没有别的变故，你就这样成了「'+t.name+'」。', '', 'ev');
-          switched=tk;
-        }
+        var en=t.enter||{};
+        if(en.type!=='default' || G.age<(en.minAge||13)) return;
+        var cond=en.cond||{};
+        if(cond.gender && G.gender!==cond.gender) return; // 性别不符的主干跳过（男↔读书人/实业，女↔新女性）
+        G.track=tk; G.origin=t.fromOrigin;
+        pushLog(G.year, '没有别的变故，你就这样成了「'+t.name+'」。', '', 'ev');
+        switched=tk;
       });
     }
     return switched;
@@ -545,8 +547,12 @@ footer .fs{font-family:'Silk',monospace; font-size:11px; color:var(--muted);}
   }
   // 行动是否在当前年龄/处境开放：只要有【一个】提供该行动的场景，其阶段已到且已解锁，即可做
   function actionAvailable(act){
+    // 童年行动的年龄上限：过了 stageMax 阶段自然淡出（长大就不做了）
+    if(act.stageMax && W.stageIndex(G.age) > W.stageKeyIndex(act.stageMax)){
+      return { ok:false, reason:'已过'+(W.lifeStages[W.stageKeyIndex(act.stageMax)]||{}).name+'·长大了' };
+    }
     var scenes=scenesOfAction(act.id);
-    if(!scenes.length) return { ok:true }; // 未挂载到任何场景的行动不额外限制（如纯休息）
+    if(!scenes.length) return { ok:true }; // 未挂载到任何场景的行动不额外限制（如纯休息、童年行动）
     var st=worldState(), okAny=false, stageOkAny=false, earliest=null, blockUnlock=null;
     scenes.forEach(function(sc){
       var need=W.stageKeyIndex(sc.stage);

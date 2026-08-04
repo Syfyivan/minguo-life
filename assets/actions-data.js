@@ -228,6 +228,18 @@
   //     不重复造数据；六条 origin 保留作对照，引擎两种模式并存。
   //   · 所有条件/年份为【设计示意值】，需试玩校准；史实骨架沿用 HI/MID/LO。
   // ===================================================================
+  // ---------- 童年通用行动（幼年层，解决"0-6 岁只能照顾病母"） ----------
+  //   没人一出生就下田/做工/读大书；孩子的日子是玩、帮家务、放牛拾柴、(供得起才)开蒙。
+  //   stageMax：过了这个阶段该童年行动自然淡出（长大就不做了），由引擎按世界层阶段过滤。
+  //   这些行动不挂靠世界层场景（actionAvailable 对未挂场景者放行），仅受 stageMax 约束。
+  M.childhood = [
+    { id: 'play', name: '村口玩耍', slots: ['morning', 'noon', 'evening'], spirit: -2, out: { mind: 2, body: 1 }, stageMax: 'schoolage', note: '孩子的天性；跑跳玩闹，回点精神' },
+    { id: 'chores', name: '帮做家务', slots: ['morning', 'noon', 'evening'], spirit: 2, out: { craft: 3, relation: 2 }, stageMax: 'schoolage', note: '烧火、带弟妹、洒扫；讨长辈欢心' },
+    { id: 'graze', name: '放牛拾柴', slots: ['morning', 'noon'], spirit: 3, out: { body: 3, money: 1 }, stageMax: 'schoolage', note: '农家娃的活计，也能换点零钱' },
+    { id: 'tag-along', name: '跟大人赶集', slots: ['morning'], spirit: 2, out: { network: 2, mind: 2 }, stageMax: 'schoolage', note: '看热闹、长见识，认得几个乡邻' },
+    { id: 'enlighten-read', name: '描红认字', slots: ['evening', 'night'], spirit: 2, out: { knowledge: 4, mind: 2 }, gate: { money: 1 }, stageMax: 'youth', note: '供得起笔墨才有；开蒙第一步' }
+  ];
+
   M.families = {
     subeipoor: {
       key: 'subeipoor', name: '苏北贫农家', place: '苏北乡村', born: 1910,
@@ -236,10 +248,36 @@
       // 出生家庭只给"底子"：低学识、够用的体魄手艺、几乎没钱没声望
       start: { body: 58, knowledge: 8, craft: 38, mind: 34, network: 12, fame: 6 },
       startRes: { money: 6, health: 80, relation: 60, position: 12 },
-      // 幼年学龄通用行动：不绑职业，谁都能做（复用 tenant 的通用动作，解决"幼年空转"）
-      commonActions: ['farm', 'care-mother', 'market', 'night-school', 'rest'],
+      // 通用行动 = 童年层(玩耍/家务/放牛/赶集/开蒙) + 学龄后层(下田/赶集卖粮/夜校)；随年龄自然切换
+      commonActions: ['play', 'chores', 'graze', 'tag-along', 'care-mother', 'enlighten-read', 'farm', 'market', 'night-school', 'rest'],
       // 这个家庭能长出的人生路径（主干固定、有历史逻辑）
       tracks: ['sold-mill', 'flee-refugee', 'stay-farm']
+    },
+
+    jiangnanshen: {
+      key: 'jiangnanshen', name: '江南沈家', place: '江南城镇', born: 1908,
+      motif: '书香门第，家有薄产。男丁沿"新学→留学"求功名，女儿在缠足与放足、父母之命与自由之间挣一条出路——直到抗战把满门卷进流亡。',
+      genderPool: ['男', '女'],
+      // 士绅家底子：学识/心智/声望偏高，有些田产铺面
+      start: { body: 45, knowledge: 40, craft: 20, mind: 50, network: 45, fame: 50 },
+      startRes: { money: 40, health: 72, relation: 72, position: 62 },
+      // 城镇孩子：玩/家务/赶集/描红开蒙 + 学龄后苦读、应酬、静养
+      commonActions: ['play', 'chores', 'tag-along', 'care-mother', 'enlighten-read', 'study-new', 'social', 'rest-s'],
+      // 男→读书人主干；女→新女性主干；抗战可 override 把满门推上流亡路
+      tracks: ['scholar-path', 'newwoman-path', 'flee-refugee']
+    },
+
+    shanghaigongshang: {
+      key: 'shanghaigongshang', name: '上海工商家', place: '上海租界', born: 1908,
+      motif: '生在实业顶点，人脉与银元堆起来的家。男丁被押着接过在列强、官僚资本、战火与通胀间反复被碾的家业；女儿则被送进洋学堂，长成一个新女性。',
+      genderPool: ['男', '女'],
+      // 工商家底子：人脉/声望/钱财极高，学识中等
+      start: { body: 48, knowledge: 35, craft: 18, mind: 48, network: 60, fame: 65 },
+      startRes: { money: 85, health: 75, relation: 68, position: 80 },
+      // 租界少爷小姐：玩/家务/跟大人应酬/开蒙 + 学龄后洋学堂、交际、西式休养
+      commonActions: ['play', 'chores', 'tag-along', 'care-mother', 'enlighten-read', 'foreign-college', 'socialite', 'rest-c'],
+      // 男→实业接班主干；女→新女性主干（工商家不轻易变难民，靠自身事件线承接时代冲击）
+      tracks: ['biz-heir', 'newwoman-path']
     }
   };
 
@@ -262,6 +300,22 @@
       key: 'stay-farm', name: '留乡佃农', fromOrigin: 'tenant',
       enter: { type: 'default', minAge: 13 },
       note: '守着几亩租田、交不完的租过一辈子，直到 1949 年第一次分到自己的地。'
+    },
+    // —— 江南沈家 / 上海工商家 的主干（default 型，按性别分叉；有历史逻辑，不自由发挥） ——
+    'scholar-path': {
+      key: 'scholar-path', name: '读书人', fromOrigin: 'scholar',
+      enter: { type: 'default', minAge: 13, cond: { gender: '男' } },
+      note: '科举已废，沿"新学→留学→教授/办报"走，盛年撞上抗战与通胀。'
+    },
+    'newwoman-path': {
+      key: 'newwoman-path', name: '新女性', fromOrigin: 'gentrywoman',
+      enter: { type: 'default', minAge: 13, cond: { gender: '女' } },
+      note: '读女学、抗婚约、靠学识自立——娜拉出走之后，靠什么活下去。'
+    },
+    'biz-heir': {
+      key: 'biz-heir', name: '实业接班人', fromOrigin: 'capitalist',
+      enter: { type: 'default', minAge: 13, cond: { gender: '男' } },
+      note: '接过纱厂家业，在列强、官僚资本、战火与恶性通胀间反复挣扎。'
     }
   };
 
@@ -272,17 +326,26 @@
     return null;
   };
 
+  // 按 id 在所有出身的行动表里查找一个 action（供家庭通用行动跨出身复用）
+  M.findAction = function (id) {
+    // 先查童年通用行动
+    for (var c = 0; c < M.childhood.length; c++) if (M.childhood[c].id === id) return M.childhood[c];
+    var keys = Object.keys(M.origins);
+    for (var k = 0; k < keys.length; k++) {
+      var acts = M.origins[keys[k]].actions;
+      for (var i = 0; i < acts.length; i++) if (acts[i].id === id) return acts[i];
+    }
+    return null;
+  };
+
   // 组装"当前可用行动池"：家庭通用行动 + （已走上的路径所借 origin 的行动），按 id 去重
   M.actionPoolFor = function (familyKey, trackKey) {
     var fam = M.families[familyKey];
     if (!fam) return [];
     var seen = {}, pool = [];
     function push(a) { if (a && !seen[a.id]) { seen[a.id] = 1; pool.push(a); } }
-    // 通用行动：从 tenant 池里按 id 捞（commonActions 目前都来自 tenant）
-    var base = M.origins.tenant.actions;
-    (fam.commonActions || []).forEach(function (id) {
-      for (var i = 0; i < base.length; i++) if (base[i].id === id) { push(base[i]); break; }
-    });
+    // 幼年通用行动：跨出身按 id 全局查找（不再限定 tenant）
+    (fam.commonActions || []).forEach(function (id) { push(M.findAction(id)); });
     if (trackKey && M.tracks[trackKey]) {
       var o = M.origins[M.tracks[trackKey].fromOrigin];
       if (o) o.actions.forEach(push);
