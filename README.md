@@ -11,6 +11,7 @@
 | `index.html` | 六出身命运总图（思维导图入口） |
 | `minguo-life-design.html` | 设计基线：时代 / 城市 / 阶层 / 经济 / 社会制度调研，全部带史实可靠性分级 |
 | `system-simulation.html` | 模拟系统层：日 / 旬 / 月 / 年 → 行动 → 点数 → 命运曲线，含 4 张 ECharts |
+| `world-scenes.html` | **世界层**：生命阶段 → 地图分区 → 场景 → 每场景交互（行动/对话/抉择）+ 解锁条件 + 支线涌现，含解锁时间线与地图（从 `assets/world-data.js` 渲染） |
 | `action-tables.html` | 六出身完整行动表 + 数值平衡 + 门槛概率表（从 `assets/actions-data.js` 渲染） |
 | `prototype.html` | **可玩原型**：选出身 → 安排一天四时段 → 逐年推进 → 触发历史事件 → 命运曲线生长 |
 | `arc-01..06-*.html` | 六条完整人生线正文（佃农 / 士绅之女 / 纱厂女工 / 读书人 / 资本家之子 / 东北流亡者） |
