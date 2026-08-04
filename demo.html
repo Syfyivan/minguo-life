@@ -318,7 +318,7 @@ footer .fs{font-family:'Silk',monospace; font-size:11px; color:var(--muted);}
   // 自动填满行动位（供快速验证/兜底用）：优先选可选且性价比高的
   function autoPlan(){
     var o=M.origins[G.origin];
-    var picks=o.actions.filter(function(a){ return !a.event && M.meetGate(a.gate, flat()) && a.spirit>0; });
+    var picks=o.actions.filter(function(a){ return !a.event && actionAvailable(a).ok && M.meetGate(a.gate, flat()) && a.spirit>0; });
     for(var i=0;i<G.seasonPlan.length;i++){
       if(G.seasonPlan[i]) continue;
       // 选一个放进去仍不超精神上限的行动
@@ -389,13 +389,15 @@ footer .fs{font-family:'Silk',monospace; font-size:11px; color:var(--muted);}
     o.actions.forEach(function(act){
       // 事件专属行动（event:true）在 Demo 里不作为日常可选
       if(act.event) return;
-      var gateOk = M.meetGate(act.gate, flat());
-      var spOk = spiritOkFor(slotIdx, act);
-      var enabled = gateOk && spOk;
+      var avail = actionAvailable(act);          // 世界层：年龄阶段 + 场景解锁
+      var gateOk = M.meetGate(act.gate, flat()); // 数值门槛
+      var spOk = spiritOkFor(slotIdx, act);      // 精神预算
+      var enabled = avail.ok && gateOk && spOk;
       var wrap=document.createElement('div'); wrap.className='opt'+(enabled?'':' locked');
       var metas=[];
       for(var k in act.out){ var v=act.out[k]; metas.push('<span class="chip '+(v>=0?'up':'down')+'">'+(v>=0?'+':'')+v+' '+nameOf(k)+'</span>'); }
       metas.push('<span class="chip '+(spOk?'gate':'down')+'">精神 '+(act.spirit>=0?'-'+act.spirit:'回'+(-act.spirit))+(spOk?'':' · 不足')+'</span>');
+      if(!avail.ok){ metas.push('<span class="chip down">✕ '+avail.reason+'</span>'); }
       if(act.gate){ for(var g in act.gate) metas.push('<span class="chip gate">需 '+nameOf(g)+'≥'+act.gate[g]+'</span>'); }
       wrap.innerHTML='<div class="ol">'+act.name+'</div>'+
         '<div class="od">'+(act.note||'')+'</div>'+
@@ -429,6 +431,56 @@ footer .fs{font-family:'Silk',monospace; font-size:11px; color:var(--muted);}
   // 把候选行动放进某格后，剩余精神是否仍≥0（休息类 spirit<0 会腾出余力，恒可选）
   function spiritOkFor(slotIdx, act){
     return (G.spirit - usedSpirit(slotIdx) - act.spirit) >= 0;
+  }
+
+  // ---------- 世界层约束：年龄阶段 + 场景解锁（读 world-data.js，不在 demo 里另立规则） ----------
+  // 供 W.isUnlocked 使用的世界状态视图
+  function worldState(){ return { age:G.age, attrs:G.attrs, res:G.res, firedEvents:G.firedEvents, inCity:G.inCity }; }
+  // 某行动 id 挂靠在哪些场景（含推荐阶段 stage 与解锁条件 unlock）
+  function scenesOfAction(id){
+    var list=[];
+    (W.scenes||[]).forEach(function(sc){
+      (sc.interactions||[]).forEach(function(it){
+        if(it.type==='action' && it.ref && it.ref.indexOf(id)>=0) list.push(sc);
+      });
+    });
+    return list;
+  }
+  // 行动是否在当前年龄/处境开放：只要有【一个】提供该行动的场景，其阶段已到且已解锁，即可做
+  function actionAvailable(act){
+    var scenes=scenesOfAction(act.id);
+    if(!scenes.length) return { ok:true }; // 未挂载到任何场景的行动不额外限制（如纯休息）
+    var st=worldState(), okAny=false, stageOkAny=false, earliest=null, blockUnlock=null;
+    scenes.forEach(function(sc){
+      var need=W.stageKeyIndex(sc.stage);
+      var stageOk = W.stageIndex(G.age) >= need;
+      var unlockOk = W.isUnlocked(sc.unlock, st);
+      if(stageOk) stageOkAny=true;
+      if(stageOk && unlockOk) okAny=true;
+      if(stageOk && !unlockOk && !blockUnlock) blockUnlock=sc.unlock; // 年龄够但未解锁的场景
+      if(earliest===null || need<earliest) earliest=need;
+    });
+    if(okAny) return { ok:true };
+    var reason;
+    if(!stageOkAny){
+      reason='未到年龄·需'+(W.lifeStages[earliest]?W.lifeStages[earliest].name:'更大');
+    }else{
+      reason=unlockHint(blockUnlock); // 年龄已到，仅差解锁条件
+    }
+    return { ok:false, reason:reason };
+  }
+  // 把 unlock 条件翻译成给玩家看的一句话（读 world-data 的 unlock 结构，不另立规则）
+  function unlockHint(u){
+    if(!u) return '场景未解锁';
+    switch(u.type){
+      case 'moveToCity': return '需先进城';
+      case 'eventOrCity': return '需进城或遇特定事件';
+      case 'event': return '需先经历特定事件';
+      case 'attr': { for(var k in (u.attrAny||{})) return '需'+nameOf(k)+'≥'+u.attrAny[k]; return '属性不足'; }
+      case 'resource': return '需特定处境';
+      case 'stageOrAttr': return '需到阶段或属性达标';
+      default: return '场景未解锁';
+    }
   }
 
   // 选定行动到某格（带边际递减预览）

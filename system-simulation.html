@@ -275,9 +275,57 @@ footer .foot-seal{text-align:center; font-family:'Silk',monospace; font-size:11p
     </figure>
   </section>
 
-  <!-- 05 与命运曲线的衔接 -->
+  <!-- 05 资源经济（demo 校准补充） -->
+  <section id="resource">
+    <h2><span class="no">05</span>资源经济：一年能做多少事 —— 时间 · 精神 · 健康 三轴预算</h2>
+
+    <div class="note warn">
+      <span class="tag">这一节是 demo 逼出来的</span>
+      §04 解决的是"不能靠刷<b>单一</b>行动通关"（同一件事重复做，边际递减）。但纯文字 Demo 试玩暴露了另一个更基础、原文档<mark class="key">没写清</mark>的问题：<b>"为什么不能把每件能做的事都做了？"</b>——若时间与精力都管够，玩家会把每格填满、每样都点，<mark class="key">取舍就消失了</mark>。这一节补上原设计缺失的<mark class="key">资源预算层</mark>。它不推翻 §04，而是与 §04 正交：§04 管"单件事的收益曲线"，本节管"一段时间里的总额度"。
+    </div>
+
+    <p>核心是三条<mark class="key">互不替代</mark>的预算轴，各管一件事——任何一件行动同时受这三轴约束：</p>
+    <table>
+      <thead><tr><th>预算轴</th><th>管什么</th><th>刷新/恢复方式</th><th>耗尽的后果</th></tr></thead>
+      <tbody>
+        <tr><td><b>时间 / 名额</b></td><td>这一年<b>能做几件事</b>（数量上限）</td><td>每年重置，名额随年龄变化 <span class="pt">2→4→2</span></td><td>名额用完，本年不能再安排</td></tr>
+        <tr><td><b>精神</b></td><td><b>还撑不撑得住</b>（强度/持续力）</td><td><mark class="key">跨年储备，不过年回满</mark>，每年仅缓慢恢复</td><td>透支 → 额外折损<b>健康</b></td></tr>
+        <tr><td><b>健康</b></td><td><b>长期能不能活下去</b>（生存底盘）</td><td>几乎不可逆，仅静养类微量回补</td><td>归零 → <b>一生落幕</b></td></tr>
+      </tbody>
+    </table>
+    <div class="note">
+      <span class="tag">为什么要三轴而不是一轴</span>
+      早先"精神"和"名额"其实<mark class="key">冗余</mark>：精神(12) ≥ 名额×单件消耗，精神永远花不完，等于只有"名额"一个真约束（这正是你在 demo 里发现的）。三轴各自独立后：名额管<b>广度</b>、精神管<b>可持续</b>、健康管<b>生死</b>，三者才构成真正的取舍——"这一年是求稳养神，还是拼一把透支？"
+    </div>
+
+    <h3>精神：从"每日上限"改为"跨年储备"</h3>
+    <p>原设计里精神是 <span class="chip">每日上限 = 12</span>（<code>actions-data.js · spiritMax</code>），语义是"过一天回满"。Demo 把时间压成"一回合＝一年"后，这个定义<mark class="key">直接失效</mark>——每年回满等于没有约束。校准后的规则如下（数值均为<b>设计示意值</b>）：</p>
+    <table>
+      <thead><tr><th>规则</th><th>机制</th><th>示意参数</th></tr></thead>
+      <tbody>
+        <tr><td>不回满</td><td>过年<b>不</b>重置为满，延续上一年的剩余储备</td><td>—</td></tr>
+        <tr><td>缓慢自然恢复</td><td>每年自动回补一点（保底，防死亡螺旋）</td><td><code>SPIRIT_RECOVER = 6</code></td></tr>
+        <tr><td>主动回补</td><td>安排"休息/静养"类行动（负精神）额外回精神</td><td>如 听书歇脚 <code>-3</code></td></tr>
+        <tr><td>透支扣健康</td><td>年内精神耗到透支线以下 → 额外扣健康（<mark class="key">精神↔健康唯一耦合点</mark>）</td><td>透支线 <code>≤3</code> → 健康 <code>-2</code></td></tr>
+      </tbody>
+    </table>
+    <div class="note warn">
+      <span class="tag">示意值偏狠 · 待校准</span>
+      按当前参数（恢复6 / 透支线3 / 扣血2）自测：读书人一路拼命，<mark class="key">36 岁即积劳而终</mark>。说明这组数值<b>过严</b>，需试玩校准（放宽恢复量、或抬高透支线、或减小扣血）。这里只锁定<b>规则结构</b>，不锁定具体数字。
+    </div>
+
+    <h3>时间 / 名额：随年龄变化</h3>
+    <p>"一年能做几件事"不是恒定的——由 <code>world-data.js · slotsByStage</code> 按人生阶段给出：<mark class="key">幼年少、青壮年多、暮年又少</mark>。这天然制造了"青壮年是黄金窗口、须集中投放"的节奏压力，与精神的跨年储备叠加，构成"趁年富力强多做、但别把身子熬垮"的核心张力。</p>
+
+    <div class="note warn">
+      <span class="tag">待同步的技术债（诚实标注）</span>
+      上述新常量目前<mark class="key">硬编码在 <code>demo.html</code> 引擎内</mark>，尚未回填 <code>actions-data.js</code> 的 <code>M.balance</code>。因此 §06 原表述"数值平衡框架 <b>已完成</b>"并不准确——它只覆盖了"单件行动收益"（base/k/门槛/时代乘子），<mark class="key">未覆盖本节的资源耦合</mark>。下面 §07 进度表已据此下修。若要三方（文档 / 数据 / demo）彻底对齐，下一步应把这些常量提到 <code>M.balance</code> 统一管理。
+    </div>
+  </section>
+
+  <!-- 06 与命运曲线的衔接 -->
   <section id="bridge">
-    <h2><span class="no">05</span>衔接：日常行动如何"跑"出命运曲线</h2>
+    <h2><span class="no">06</span>衔接：日常行动如何"跑"出命运曲线</h2>
     <p>这才是回答你质疑的核心——<mark class="key">命运曲线不再是我手画的，而是下面这条链每年吐出的一个采样点连成的</mark>：</p>
 
     <div class="flow">
