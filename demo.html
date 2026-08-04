@@ -165,7 +165,7 @@ footer .fs{font-family:'Silk',monospace; font-size:11px; color:var(--muted);}
     </div>
     <div class="note">
       <span class="tag">节奏说明</span>
-      为让一辈子在几分钟内玩完，Demo 把时间压缩为<b>「一回合＝一年」</b>：每年安排若干件事（可安排件数随年龄增减，受精神上限制约，得取舍），点<b>「过完这一年」</b>即结算涨点、触发当年历史事件与情境抉择、承受时代冲击、给命运曲线打一个点。到晚年（52 岁）、跨过 1950 年或健康归零，则一生落幕、出总账。
+      为让一辈子在几分钟内玩完，Demo 把时间压缩为<b>「一回合＝一年」</b>：每年有名额安排若干件事（名额随年龄 2→4→2），每件事按其<b>精神</b>消耗从你的储备里扣。<b>精神是跨年储备，不会过年回满</b>——每年只缓慢恢复一点，安排「休息/静养」类行动可多回一些；连年透支（精神见底）会额外折损<b>健康</b>。点<b>「过完这一年」</b>结算涨点、触发当年历史事件与情境抉择、承受时代冲击、给命运曲线打点。到晚年（52 岁）、跨过 1950 年或健康归零，则一生落幕、出总账。
     </div>
     <h3 class="pix" style="color:var(--accent2);">▸ 选一个出身，开始这一生</h3>
     <div class="origins" id="originGrid"></div>
@@ -236,6 +236,10 @@ footer .fs{font-family:'Silk',monospace; font-size:11px; color:var(--muted);}
   if (!M || !W || !C) { document.getElementById('originGrid').innerHTML = '<p style="color:var(--accent)">数据未加载，请通过本地/线上服务打开（不能用 file:// 直接打开）。</p>'; return; }
 
   var SEASONS = ['春', '夏', '秋', '冬'];
+  // 精神＝跨年储备（不回满，缓慢恢复）。以下为【设计示意值】，待试玩校准。
+  var SPIRIT_RECOVER = 6;    // 每年自然恢复（保底，防死亡螺旋）
+  var SPIRIT_OVERDRAFT = 3;  // 年内精神耗到 ≤此值 视为透支，额外扣健康
+  var SPIRIT_BURN_HEALTH = 2;// 透支当年扣的健康
   var G = null; // 游戏状态
   window.__DEMO = { get G(){return G;}, startGame:function(k){return startGame(k);}, advance:function(){return advanceYear();}, autoPlan:function(){return autoPlan();} };
 
@@ -298,11 +302,13 @@ footer .fs{font-family:'Silk',monospace; font-size:11px; color:var(--muted);}
     startYear();
   }
 
-  // 每年开始：重置精神、按阶段确定可安排件数、清空本年计划
+  // 每年开始：精神=上年结转+自然恢复（不回满），按阶段确定可安排件数，清空本年计划
   function startYear(){
     var stage=W.stageOf(G.age);
     var slots=W.slotsByStage(G.age);
-    G.spirit=G.spiritMax;
+    // 首年（出生年）给满储备起步；其余年份只缓慢恢复
+    if(G.year<=G.born) G.spirit=G.spiritMax;
+    else G.spirit=Math.min(G.spiritMax, G.spirit + SPIRIT_RECOVER);
     G.slotsThisSeason=slots;
     G.seasonPlan=[];
     for(var i=0;i<slots;i++) G.seasonPlan.push(null);
@@ -408,21 +414,21 @@ footer .fs{font-family:'Silk',monospace; font-size:11px; color:var(--muted);}
     openMask();
   }
 
-  // 精神实时账：净消耗 = 各格 spirit 之和（休息类为负，等于回精神/腾出余力）
+  // 精神实时账：本年可用 = 当前储备 G.spirit；已排净消耗 = 各格 spirit 之和（休息类为负=回精神）
   function usedSpirit(exceptIdx){
     var s=0; G.seasonPlan.forEach(function(p,i){ if(p && i!==exceptIdx) s+=p.spirit; });
     return s;
   }
-  function spiritLeft(){ return G.spiritMax - usedSpirit(-1); }
+  function spiritLeft(){ return G.spirit - usedSpirit(-1); }
   function updateSpirit(){
     var left=spiritLeft();
     var tag=document.getElementById('spiritTag');
-    tag.textContent='精神 '+clamp(left,0,G.spiritMax)+'/'+G.spiritMax;
-    tag.style.color = left<=0 ? 'var(--accent)' : 'var(--accent2)';
+    tag.textContent='精神 '+clamp(left,0,G.spiritMax)+'/'+G.spiritMax+'（本年可用）';
+    tag.style.color = left<=SPIRIT_OVERDRAFT ? 'var(--accent)' : 'var(--accent2)';
   }
-  // 把候选行动放进某格后，是否仍在精神上限内（休息类为负，恒可选）
+  // 把候选行动放进某格后，剩余精神是否仍≥0（休息类 spirit<0 会腾出余力，恒可选）
   function spiritOkFor(slotIdx, act){
-    return (usedSpirit(slotIdx) + act.spirit) <= G.spiritMax;
+    return (G.spirit - usedSpirit(slotIdx) - act.spirit) >= 0;
   }
 
   // 选定行动到某格（带边际递减预览）
@@ -440,32 +446,39 @@ footer .fs{font-family:'Silk',monospace; font-size:11px; color:var(--muted);}
     renderSlots();
   }
 
-  // ---------- 过完这一年：结算行动 → 年度事件 → 时代乘子 → 曲线 → 情境抉择 ----------
+  // ---------- 过完这一年：结算行动 → 扣精神储备 → 年度事件 → 时代乘子 → 曲线 → 情境抉择 ----------
   function advanceYear(){
     if(G.over) return;
-    // 结算已安排行动
-    var totalSpirit=0;
-    G.seasonPlan.forEach(function(p){ if(p) totalSpirit+=Math.max(0,p.spirit); });
-    var tired = totalSpirit > G.spiritMax; // 超过精神上限 → 后续打折
+    // 本年精神净消耗（休息类为负=回精神）；规划阶段已保证 netSpirit ≤ 当前储备
+    var netSpirit=0;
+    G.seasonPlan.forEach(function(p){ if(p) netSpirit+=p.spirit; });
 
     var idx=0, actedParts=[];
     G.seasonPlan.forEach(function(p){
       if(!p) return;
       var times=G.doneCount[p.id]||0;
-      var penalty = (tired && idx>=2) ? M.balance.tiredPenalty : 1; // 疲劳时第3件起打折
       for(var k in p.out){
         var raw=p.out[k];
-        var val = raw>0 ? M.marginalGain(raw, times)*penalty : raw;
+        var val = raw>0 ? M.marginalGain(raw, times) : raw;
         val = Math.round(val*10)/10;
         var dd={}; dd[k]=val; applyDelta(dd,1);
       }
       G.doneCount[p.id]=times+1;
-      if(p.spirit<0) G.spirit=Math.min(G.spiritMax, G.spirit-p.spirit);
       actedParts.push(p.name);
       idx++;
     });
-    if(actedParts.length) pushLog(G.year, '这一年：'+actedParts.join('、')+(tired?'（过于操劳，产出打折）':''), '');
-    else pushLog(G.year, '这一年碌碌无为，什么也没安排。', '');
+
+    // 扣精神储备（结转到明年）；休息类使净消耗为负→储备回升，封顶 spiritMax
+    G.spirit = clamp(G.spirit - netSpirit, 0, G.spiritMax);
+
+    var overdraftNote='';
+    if(G.spirit <= SPIRIT_OVERDRAFT){
+      applyDelta({ health: -SPIRIT_BURN_HEALTH }, 1); // 长期透支 → 身心俱疲，扣健康（精神与健康唯一挂钩点）
+      overdraftNote='（心力交瘁，健康 -'+SPIRIT_BURN_HEALTH+'）';
+    }
+
+    if(actedParts.length) pushLog(G.year, '这一年：'+actedParts.join('、')+overdraftNote, overdraftNote?'bad':'');
+    else pushLog(G.year, '这一年歇着养神，什么也没做。', '');
 
     // 进城判定（简化：钱财或人脉够 → 视为进城）
     if(!G.inCity && ((G.res.money||0)>=25 || (G.attrs.network||0)>=55)) {
