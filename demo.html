@@ -241,7 +241,7 @@ footer .fs{font-family:'Silk',monospace; font-size:11px; color:var(--muted);}
   var SPIRIT_OVERDRAFT = 3;  // 年内精神耗到 ≤此值 视为透支，额外扣健康
   var SPIRIT_BURN_HEALTH = 2;// 透支当年扣的健康
   var G = null; // 游戏状态
-  window.__DEMO = { get G(){return G;}, startGame:function(k){return startGame(k);}, advance:function(){return advanceYear();}, autoPlan:function(){return autoPlan();} };
+  window.__DEMO = { get G(){return G;}, startGame:function(k){return startGame(k);}, startFamily:function(fk,g){return startFamily(fk,g);}, advance:function(){return advanceYear();}, autoPlan:function(){return autoPlan();} };
 
   // ---------- 工具 ----------
   function attrName(k){ var f=M.attrs.filter(function(a){return a.key===k;})[0]; return f?f.name:k; }
@@ -269,6 +269,21 @@ footer .fs{font-family:'Silk',monospace; font-size:11px; color:var(--muted);}
   // ---------- 出身选择 ----------
   function renderOrigins(){
     var grid=document.getElementById('originGrid'); grid.innerHTML='';
+    // 先放"出生家庭"（两层模型试点）：出生只定家庭，职业靠玩后分叉走出来
+    Object.keys(M.families||{}).forEach(function(fk){
+      var f=M.families[fk];
+      var trackNames=(f.tracks||[]).map(function(tk){ return M.tracks[tk]?M.tracks[tk].name:tk; }).join(' / ');
+      var d=document.createElement('div'); d.className='ocard'; d.setAttribute('data-fam',fk);
+      d.style.borderTopColor='var(--accent)';
+      d.innerHTML='<span class="yr silk" style="background:var(--accent2)">家庭</span>'+
+        '<div class="nm">'+f.name+'</div>'+
+        '<div class="who">出生只定家庭·地域·性别，往后长成什么样看你怎么走</div>'+
+        '<div class="mo">'+f.motif+'</div>'+
+        '<div class="who" style="margin-top:8px;color:var(--accent)">可能长成：'+trackNames+'</div>';
+      d.onclick=function(){ startFamily(fk); };
+      grid.appendChild(d);
+    });
+    // 再放旧的六条"出身线"（保留作对照，一键直玩某条既定命运）
     Object.keys(M.origins).forEach(function(key){
       var o=M.origins[key];
       var d=document.createElement('div'); d.className='ocard'; d.setAttribute('data-k',key);
@@ -302,6 +317,90 @@ footer .fs{font-family:'Silk',monospace; font-size:11px; color:var(--muted);}
     startYear();
   }
 
+  // ---------- 家庭开局（两层模型）：出生只定家庭/性别，职业靠后续分叉走出来 ----------
+  function startFamily(fk, gender){
+    var f=M.families[fk];
+    if(!gender){ var pool=f.genderPool||['男']; gender=pool[Math.floor(Math.random()*pool.length)]; }
+    G={
+      family:fk, track:null, origin:null, // origin 会在走上路径时同步指向 track.fromOrigin
+      person:(gender==='女'?'一个女孩':'一个男孩'), name:f.name+'的孩子', gender:gender,
+      born:f.born, age:0, year:f.born, season:0,
+      attrs:Object.assign({},f.start),
+      res:Object.assign({},f.startRes),
+      inCity:false,
+      firedEvents:[], echoes:[], shownSits:[],
+      spirit:M.balance.spiritMax, spiritMax:M.balance.spiritMax,
+      seasonPlan:[], doneCount:{},
+      curve:[], log:[],
+      pendingSits:[], pendingIdx:0, over:false
+    };
+    pushLog(G.year, '出生：'+f.name+'的'+(gender==='女'?'女儿':'儿子')+'，生于'+f.place+'。往后是女工、佃农还是难民，看你怎么走。', 'good');
+    switchScreen('play');
+    startYear();
+  }
+
+  // 当前可用行动池：家庭模式=通用池+已走路径池；旧出身模式=该出身 actions
+  function curActions(){
+    if(G.family){ return M.actionPoolFor(G.family, G.track); }
+    return M.origins[G.origin].actions;
+  }
+  // 当前用于"史实事件/情境过滤"的 origin key：家庭模式下取已走路径借用的 origin
+  function curOriginKey(){
+    if(G.family){ return G.track ? M.tracks[G.track].fromOrigin : null; }
+    return G.origin;
+  }
+
+  // 路径分叉判定：家庭模式下，检查是否有 track 的入口事件在今年命中
+  //   命中则：写 G.track / G.origin、触发该入口事件后果、解锁对应行动池。
+  //   返回被走上的 track 名（用于打日志），否则 null。
+  function checkTrackFork(){
+    if(!G.family) return null;
+    var fam=M.families[G.family], st=flat(); st.gender=G.gender;
+    var switched=null;
+    (fam.tracks||[]).forEach(function(tk){
+      var t=M.tracks[tk]; if(!t) return;
+      var en=t.enter||{};
+      if(en.type!=='event') return;
+      // 切换规则：主动走上的 event 型路径一旦确立即锁定（女工身份不被战争抹去）；
+      //           仅"默认兜底(default 型，如留乡佃农)"可被 override 型入口覆盖（佃农→逃荒难民）。
+      if(G.track){
+        var ce=M.tracks[G.track].enter||{};
+        if(ce.type==='event') return;   // 已在 event 型路径上：锁定，任何候选都不覆盖
+        if(!en.override) return;         // 当前是 default 兜底：只有 override 型能覆盖
+      }
+      if(G.track===tk) return;
+      var cond=en.cond||{};
+      if(cond.gender && G.gender!==cond.gender) return;
+      if(cond.yearFrom && G.year<cond.yearFrom) return;
+      if(cond.resLow){ for(var rk in cond.resLow){ if((G.res[rk]||0)>=cond.resLow[rk]) return; } }
+      // 找到该 track 复用 origin 里的入口事件对象，取其年份/后果
+      var ev=M.findEvent(t.fromOrigin, en.event); if(!ev) return;
+      // 入口事件按其自身 year 触发（±0）；未到年份不走
+      if(ev.year && G.year<ev.year) return;
+      if(G.firedEvents.indexOf(ev.id)>=0) return;
+      // 概率型入口（如战乱逃难非必然）：条件满足后再掷一次；未中则视为"这次躲过了"，标记消费不再重掷
+      if(typeof en.chance==='number' && Math.random()>=en.chance){ G.firedEvents.push(ev.id); return; }
+      // —— 命中：走上这条路 ——
+      G.track=tk; G.origin=t.fromOrigin;
+      G.firedEvents.push(ev.id);
+      var parts=applyDelta(ev.effect?ev.effect:objOnlyDeltas(ev.success||{}),1);
+      pushLog(G.year, '【转折·'+t.name+'】'+ev.desc+' '+fmt(parts)+'——从此走上「'+t.name+'」这条路。', 'bad', 'ev');
+      switched=tk;
+    });
+    // 到 default track 的兜底年龄仍无分叉 → 走默认主干
+    if(!G.track){
+      (fam.tracks||[]).forEach(function(tk){
+        var t=M.tracks[tk]; if(!t||switched) return;
+        if((t.enter||{}).type==='default' && G.age>=(t.enter.minAge||13)){
+          G.track=tk; G.origin=t.fromOrigin;
+          pushLog(G.year, '没有别的变故，你就这样成了「'+t.name+'」。', '', 'ev');
+          switched=tk;
+        }
+      });
+    }
+    return switched;
+  }
+
   // 每年开始：精神=上年结转+自然恢复（不回满），按阶段确定可安排件数，清空本年计划
   function startYear(){
     var stage=W.stageOf(G.age);
@@ -317,8 +416,7 @@ footer .fs{font-family:'Silk',monospace; font-size:11px; color:var(--muted);}
 
   // 自动填满行动位（供快速验证/兜底用）：优先选可选且性价比高的
   function autoPlan(){
-    var o=M.origins[G.origin];
-    var picks=o.actions.filter(function(a){ return !a.event && actionAvailable(a).ok && M.meetGate(a.gate, flat()) && a.spirit>0; });
+    var picks=curActions().filter(function(a){ return !a.event && actionAvailable(a).ok && M.meetGate(a.gate, flat()) && a.spirit>0; });
     for(var i=0;i<G.seasonPlan.length;i++){
       if(G.seasonPlan[i]) continue;
       // 选一个放进去仍不超精神上限的行动
@@ -331,7 +429,7 @@ footer .fs{font-family:'Silk',monospace; font-size:11px; color:var(--muted);}
 
   // ---------- 主渲染 ----------
   function renderPlay(){
-    var o=M.origins[G.origin], stage=W.stageOf(G.age);
+    var stage=W.stageOf(G.age);
     document.getElementById('hudWho').textContent=G.person+'（'+stage.name+G.age+'岁）';
     document.getElementById('hudStage').textContent=stage.name;
     document.getElementById('hudTime').textContent=G.year+'年 · '+G.age+'岁';
@@ -382,11 +480,10 @@ footer .fs{font-family:'Silk',monospace; font-size:11px; color:var(--muted);}
 
   // ---------- 行动菜单 ----------
   function openActionMenu(slotIdx){
-    var o=M.origins[G.origin];
     var body=document.getElementById('actPanelBody'); body.innerHTML='';
     document.getElementById('actPanelTitle').textContent='第 '+(slotIdx+1)+' 事 · 选择行动';
 
-    o.actions.forEach(function(act){
+    curActions().forEach(function(act){
       // 事件专属行动（event:true）在 Demo 里不作为日常可选
       if(act.event) return;
       var avail = actionAvailable(act);          // 世界层：年龄阶段 + 场景解锁
@@ -542,6 +639,8 @@ footer .fs{font-family:'Silk',monospace; font-size:11px; color:var(--muted);}
 
   // ---------- 年终结算：事件 + 情境抉择 + 时代乘子 + 曲线打点 ----------
   function endOfYear(){
+    // 0) 路径分叉判定（仅家庭模式）：可能在此走上/切换人生路径，并解锁其行动与事件池
+    checkTrackFork();
     // 1) 历史事件（按出身 events 表，命中年份/门槛）
     fireYearEvents();
     // 2) 时代乘子冲击钱财/处境
@@ -599,7 +698,7 @@ footer .fs{font-family:'Silk',monospace; font-size:11px; color:var(--muted);}
     C.situations.forEach(function(sit){
       if(G.shownSits && G.shownSits.indexOf(sit.id)>=0 && sit.trigger && sit.trigger.once) return;
       if(G.shownSits && G.shownSits.indexOf(sit.id)>=0) return; // Demo：每个情境一生一次
-      var st={ origin:G.origin, attrs:G.attrs, res:G.res, firedEvents:G.firedEvents, echoes:G.echoes };
+      var st={ origin:curOriginKey(), attrs:G.attrs, res:G.res, firedEvents:G.firedEvents, echoes:G.echoes };
       // 额外的年龄/年份触发条件（isAvailable 不含，这里补判）
       var t=sit.trigger||{};
       if(t.age && G.age<t.age) return;
@@ -615,11 +714,11 @@ footer .fs{font-family:'Silk',monospace; font-size:11px; color:var(--muted);}
     if(G.pendingIdx>=G.pendingSits.length){ document.getElementById('sitMount').innerHTML=''; startYear(); return; }
     var sit=G.pendingSits[G.pendingIdx];
     var mount=document.getElementById('sitMount');
-    var st={ origin:G.origin, attrs:G.attrs, res:G.res, echoes:G.echoes };
+    var st={ origin:curOriginKey(), attrs:G.attrs, res:G.res, echoes:G.echoes };
     var html='<div class="sit"><div class="sh"><span class="st">'+sit.name+'</span><span class="badge">'+G.year+'年 · '+relLabel(sit.hist)+'</span></div>'+
       '<div class="sp">'+sit.prompt+'</div><div class="opts">';
     sit.options.forEach(function(opt, oi){
-      if(opt.origins && opt.origins.indexOf(G.origin)<0) return;
+      if(opt.origins && opt.origins.indexOf(curOriginKey())<0) return;
       var ok=C.optionEnabled(opt, st);
       var metas=[];
       if(opt.roll){ metas.push('<span class="chip roll">掷判·看'+opt.roll.chanceBy.map(nameOf).join('/')+'</span>'); }
@@ -712,14 +811,16 @@ footer .fs{font-family:'Silk',monospace; font-size:11px; color:var(--muted);}
   // ---------- 结局 ----------
   function doEnding(cause){
     G.over=true;
-    var o=M.origins[G.origin];
+    var o=G.origin?M.origins[G.origin]:null;
+    var who=o?o.person:G.person;
     var sum=0; M.attrs.forEach(function(a){ sum+=G.attrs[a.key]||0; });
     var verdict = endingVerdict(cause, sum);
     var box=document.getElementById('endingBox');
     var attrLines=M.attrs.map(function(a){ var v=Math.round(G.attrs[a.key]||0); return a.name+' '+v+'（'+M.levelNames[a.key][M.levelOf(v)]+'）'; }).join(' · ');
     var resLines=M.resources.map(function(r){ return r.name+' '+Math.round(G.res[r.key]||0); }).join(' · ');
     var echoHtml = G.echoes.length ? G.echoes.map(function(e){return '<span class="chip echo">'+e+'</span>';}).join('') : '<span style="color:var(--muted); font-style:italic;">这一生没留下特别的回响。</span>';
-    box.innerHTML='<h2>'+o.person+' 的一生 · '+G.born+'—'+G.year+'</h2>'+
+    var trackName = G.track&&M.tracks[G.track]?'（'+M.tracks[G.track].name+'）':'';
+    box.innerHTML='<h2>'+who+trackName+' 的一生 · '+G.born+'—'+G.year+'</h2>'+
       '<p class="final">'+verdict+'</p>'+
       '<div class="note"><span class="tag">终局六维</span>'+attrLines+'</div>'+
       '<div class="note"><span class="tag">终局资源</span>'+resLines+'</div>'+

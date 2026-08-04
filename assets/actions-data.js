@@ -220,5 +220,75 @@
     return { money: 1, position: 1 };
   };
 
+  // ===================================================================
+  // 两层人生模型（试点）：出生家庭（起点，开局给定） → 人生路径（过程走出来）
+  //   · 修正旧模型"出生即职业"的荒谬：出生只定 家庭/地域/性别/初始点，
+  //     职业（女工/佃农/难民…）靠"关键事件分叉 + 行动积累"走出来。
+  //   · 复用现有六条 origin 线：track.fromOrigin 直接借其 actions/events，
+  //     不重复造数据；六条 origin 保留作对照，引擎两种模式并存。
+  //   · 所有条件/年份为【设计示意值】，需试玩校准；史实骨架沿用 HI/MID/LO。
+  // ===================================================================
+  M.families = {
+    subeipoor: {
+      key: 'subeipoor', name: '苏北贫农家', place: '苏北乡村', born: 1910,
+      motif: '一家人交不完的租、还不清的债。你生在这里——往后长成什么样，看时代，也看你自己走哪条路。',
+      genderPool: ['男', '女'],
+      // 出生家庭只给"底子"：低学识、够用的体魄手艺、几乎没钱没声望
+      start: { body: 58, knowledge: 8, craft: 38, mind: 34, network: 12, fame: 6 },
+      startRes: { money: 6, health: 80, relation: 60, position: 12 },
+      // 幼年学龄通用行动：不绑职业，谁都能做（复用 tenant 的通用动作，解决"幼年空转"）
+      commonActions: ['farm', 'care-mother', 'market', 'night-school', 'rest'],
+      // 这个家庭能长出的人生路径（主干固定、有历史逻辑）
+      tracks: ['sold-mill', 'flee-refugee', 'stay-farm']
+    }
+  };
+
+  // 人生路径：fromOrigin 指向复用哪条 origin 的行动+事件；enter 定义"何时走上这条路"
+  //   enter.type: 'event'   → 命中某入口事件（含 cond 附加条件）即走上此路，并触发该事件后果
+  //               'default' → 到 minAge 仍无其它分叉命中时的兜底主干
+  //   enter.override:true   → 即便已在别的路径上，也能被强制切换（如战争把人变难民）
+  M.tracks = {
+    'sold-mill': {
+      key: 'sold-mill', name: '纱厂女工', fromOrigin: 'millworker',
+      enter: { type: 'event', event: 'contract', cond: { gender: '女', resLow: { money: 12 }, yearFrom: 1920 } },
+      note: '家遭难、被一纸包身契卖进纱厂当童工，从此在压榨、罢工与夜校里挣命。'
+    },
+    'flee-refugee': {
+      key: 'flee-refugee', name: '逃荒难民', fromOrigin: 'refugee',
+      enter: { type: 'event', event: 'homeland-fall', cond: { yearFrom: 1937 }, override: true, chance: 0.6 },
+      note: '战火烧到家门口，举家南逃，在流亡路上守住性命与最后一点尊严。'
+    },
+    'stay-farm': {
+      key: 'stay-farm', name: '留乡佃农', fromOrigin: 'tenant',
+      enter: { type: 'default', minAge: 13 },
+      note: '守着几亩租田、交不完的租过一辈子，直到 1949 年第一次分到自己的地。'
+    }
+  };
+
+  // 取某出身/路径的入口事件对象（供引擎在"分叉判定"时读取其后果）
+  M.findEvent = function (originKey, eventId) {
+    var list = M.events[originKey] || [];
+    for (var i = 0; i < list.length; i++) if (list[i].id === eventId) return list[i];
+    return null;
+  };
+
+  // 组装"当前可用行动池"：家庭通用行动 + （已走上的路径所借 origin 的行动），按 id 去重
+  M.actionPoolFor = function (familyKey, trackKey) {
+    var fam = M.families[familyKey];
+    if (!fam) return [];
+    var seen = {}, pool = [];
+    function push(a) { if (a && !seen[a.id]) { seen[a.id] = 1; pool.push(a); } }
+    // 通用行动：从 tenant 池里按 id 捞（commonActions 目前都来自 tenant）
+    var base = M.origins.tenant.actions;
+    (fam.commonActions || []).forEach(function (id) {
+      for (var i = 0; i < base.length; i++) if (base[i].id === id) { push(base[i]); break; }
+    });
+    if (trackKey && M.tracks[trackKey]) {
+      var o = M.origins[M.tracks[trackKey].fromOrigin];
+      if (o) o.actions.forEach(push);
+    }
+    return pool;
+  };
+
   window.MINGUO = M;
 })();
