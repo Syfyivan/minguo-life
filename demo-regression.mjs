@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 globalThis.window = globalThis;
 await import('./assets/game-content.js');
 await import('./assets/life-expansion.js');
+await import('./assets/complete-life.js');
 await import('./assets/demo-engine.js');
 
 const Game = globalThis.MINGUO_GAME;
@@ -20,6 +21,10 @@ const baseDecisions = {
   'shanghai-war': 'protect-workers',
   'postwar-settlement': 'rebuild-local',
   'final-1949': 'stay-mainland',
+  'later-life-livelihood': 'change-work',
+  'later-life-relationships': 'build-local-network',
+  'late-life-care': 'community-care',
+  'late-life-record': 'sort-records',
 };
 
 function runScenario(definition) {
@@ -32,12 +37,28 @@ function runScenario(definition) {
   const decisions = { ...baseDecisions, ...(definition.decisions || {}) };
   let turns = 0;
 
-  while (!state.over && turns < 80) {
-    Game.advanceYear(state, Game.recommendedActions(state));
+  while (!state.over && turns < 140) {
+    const availableActions = Game.availableActions(state);
+    const preferred = [];
+    if (!state.information.channels.includes('newspaper') && availableActions.some((action) => action.id === 'read-newspaper')) preferred.push('read-newspaper');
+    if (['hong-kong', 'taiwan', 'overseas'].includes(definition.expectedPost1949)) {
+      const earningAction = ['run-business', 'workroom', 'write-and-teach', 'clinic-service', 'salaried-technical-work'].find((id) => availableActions.some((action) => action.id === id));
+      if (earningAction) preferred.push(earningAction);
+    }
+    preferred.push(...Game.recommendedActions(state));
+    const actions = [];
+    let remainingSpirit = state.spirit;
+    const slots = Game.stageOf(state.age).slots;
+    for (const id of preferred) {
+      if (actions.length >= slots || actions.includes(id)) continue;
+      const action = availableActions.find((item) => item.id === id);
+      if (action && action.spirit <= remainingSpirit) { actions.push(id); remainingSpirit -= action.spirit; }
+    }
+    Game.advanceYear(state, actions);
     while (state.pendingDecision) {
       const requested = decisions[state.pendingDecision.id];
-      const option = state.pendingDecision.options.find((item) => item.id === requested && item.enabled)
-        || state.pendingDecision.options.find((item) => item.enabled);
+      const option = state.pendingDecision.options.find((item) => item.id === requested && item.enabled && !item.hidden)
+        || state.pendingDecision.options.find((item) => item.enabled && !item.hidden);
       assert.ok(option, `${definition.id}: ${state.pendingDecision.id} has no enabled option`);
       Game.choose(state, option.id);
     }
@@ -47,51 +68,65 @@ function runScenario(definition) {
   assert.equal(state.over, true, `${definition.id}: life should end`);
   assert.equal(state.routeKey, definition.expectedRoute, `${definition.id}: final route`);
   assert.ok(state.facts.some((fact) => fact.id === 'final-1949'), `${definition.id}: 1949 fact`);
+  assert.ok(state.endYear > 1949, `${definition.id}: life continues after 1949`);
+  assert.equal(state.life.status, 'dead', `${definition.id}: death is the only ending`);
+  assert.ok(state.facts.some((fact) => fact.id === 'protagonist-death-confirmed'), `${definition.id}: protagonist death must be confirmed`);
+  assert.equal(state.post1949Choice, definition.expectedPost1949, `${definition.id}: post-1949 path`);
+  assert.ok(state.post1949.arrival, `${definition.id}: arrival needs a record`);
+  assert.ok(state.post1949.livelihood, `${definition.id}: post-1949 livelihood needs a record`);
   assert.doesNotMatch(Game.buildEndingNarrative(state), /成功|失败|安稳|挣扎|爬得很高|万幸/);
   assert.equal(state.identity.name, definition.name, `${definition.id}: identity must stay stable`);
   assert.equal(state.annualNarratives.length, state.endYear - state.identity.born + 1, `${definition.id}: every year needs a life scene`);
+  assert.ok(state.annualNarratives.every((entry) => entry.text.length >= 80), `${definition.id}: annual scenes must be concrete stories`);
   assert.ok(state.contactHistory.length > 0, `${definition.id}: persistent contacts need evidence`);
   return state;
 }
 
 const definitions = [
-  { id: 'subei-stay', familyKey: 'subeipoor', gender: '男', name: '李禾生', expectedRoute: 'subei-stay' },
-  { id: 'subei-soldier', familyKey: 'subeipoor', gender: '男', name: '李长河', expectedRoute: 'subei-soldier', decisions: { 'subei-war': 'join-army' } },
-  { id: 'subei-refugee', familyKey: 'subeipoor', gender: '女', name: '李秀禾', expectedRoute: 'subei-refugee', decisions: { 'subei-war': 'flee-south' } },
-  { id: 'subei-millworker', familyKey: 'subeipoor', gender: '女', name: '李春棉', expectedRoute: 'subei-millworker', decisions: { 'subei-livelihood': 'enter-mill', 'subei-war': 'remain-worker' } },
-  { id: 'shen-scholar', familyKey: 'jiangnanshen', gender: '男', name: '沈砚清', expectedRoute: 'shen-scholar' },
-  { id: 'shen-newwoman', familyKey: 'jiangnanshen', gender: '女', name: '沈毓宁', expectedRoute: 'shen-newwoman', decisions: { 'shen-path': 'new-woman' } },
-  { id: 'shen-refugee', familyKey: 'jiangnanshen', gender: '女', name: '沈清和', expectedRoute: 'shen-refugee', decisions: { 'shen-path': 'new-woman', 'shen-war': 'move-with-family' } },
-  { id: 'shanghai-heir', familyKey: 'shanghaigongshang', gender: '男', name: '顾承安', expectedRoute: 'shanghai-heir' },
-  { id: 'shanghai-newwoman', familyKey: 'shanghaigongshang', gender: '女', name: '顾明仪', expectedRoute: 'shanghai-newwoman', decisions: { 'shanghai-path': 'urban-new-woman' } },
+  { id: 'subei-stay', familyKey: 'subeipoor', gender: '男', name: '李禾生', expectedRoute: 'subei-stay', expectedPost1949: 'mainland' },
+  { id: 'subei-soldier', familyKey: 'subeipoor', gender: '男', name: '李长河', expectedRoute: 'subei-soldier', expectedPost1949: 'in-motion', decisions: { 'subei-war': 'join-army', 'final-1949': 'remain-in-motion' } },
+  { id: 'subei-refugee', familyKey: 'subeipoor', gender: '女', name: '李秀禾', expectedRoute: 'subei-refugee', expectedPost1949: 'unsettled', decisions: { 'subei-war': 'flee-south', 'final-1949': 'leave-unsettled' } },
+  { id: 'subei-millworker', familyKey: 'subeipoor', gender: '女', name: '李春棉', expectedRoute: 'subei-millworker', expectedPost1949: 'mainland', decisions: { 'subei-livelihood': 'enter-mill', 'subei-war': 'remain-worker' } },
+  { id: 'shen-scholar', familyKey: 'jiangnanshen', gender: '男', name: '沈砚清', expectedRoute: 'shen-scholar', expectedPost1949: 'taiwan', decisions: { 'final-1949': 'move-taiwan' } },
+  { id: 'shen-newwoman', familyKey: 'jiangnanshen', gender: '女', name: '沈毓宁', expectedRoute: 'shen-newwoman', expectedPost1949: 'mainland', decisions: { 'shen-path': 'new-woman' } },
+  { id: 'shen-refugee', familyKey: 'jiangnanshen', gender: '女', name: '沈清和', expectedRoute: 'shen-refugee', expectedPost1949: 'in-motion', decisions: { 'shen-path': 'new-woman', 'shen-war': 'move-with-family', 'final-1949': 'remain-in-motion' } },
+  { id: 'shen-professional', familyKey: 'jiangnanshen', gender: '男', name: '沈济安', expectedRoute: 'shen-professional', expectedPost1949: 'hong-kong', decisions: { 'shen-path': 'professional-service', 'final-1949': 'move-hong-kong' } },
+  { id: 'shanghai-heir', familyKey: 'shanghaigongshang', gender: '男', name: '顾承安', expectedRoute: 'shanghai-heir', expectedPost1949: 'taiwan', decisions: { 'final-1949': 'move-taiwan' } },
+  { id: 'shanghai-newwoman', familyKey: 'shanghaigongshang', gender: '女', name: '顾明仪', expectedRoute: 'shanghai-newwoman', expectedPost1949: 'overseas', decisions: { 'shanghai-path': 'urban-new-woman', 'final-1949': 'move-overseas' } },
+  { id: 'shanghai-professional', familyKey: 'shanghaigongshang', gender: '女', name: '顾衡仪', expectedRoute: 'shanghai-professional', expectedPost1949: 'unsettled', decisions: { 'shanghai-path': 'salaried-professional', 'shanghai-war': 'relocate-own-work', 'final-1949': 'leave-unsettled' } },
 ];
 
 const states = definitions.map(runScenario);
 const report = Game.inspectCoverage(states);
 assert.equal(report.familyCount, 3);
-assert.equal(report.routeCount, 9);
+assert.equal(report.routeCount, 11);
+assert.equal(report.post1949PathCount, 6);
 assert.equal(report.factEndingCount, states.length);
+assert.equal(report.deathEndingCount, states.length);
+assert.equal(report.post1949ContinuationCount, states.length);
 assert.equal(report.subjectEvidenceCount, states.length);
 assert.equal(report.informationEvidenceCount, states.length);
 assert.equal(report.contactEvidenceCount, states.length);
 assert.equal(report.familyLifecycleCount, states.length);
 assert.equal(report.annualNarrativeRate, 1);
-assert.equal(report.authoredActionCount, 50);
-assert.equal(report.keyDecisionCount, 33);
-assert.equal(report.decisionOptionCount, 96);
-assert.equal(report.authoredOrdinaryEventCount, 105);
-assert.equal(report.choiceEchoEventCount, 63);
+assert.equal(report.authoredActionCount, 66);
+assert.equal(report.keyDecisionCount, 42);
+assert.equal(report.decisionOptionCount, 143);
+assert.equal(report.authoredOrdinaryEventCount, 171);
+assert.equal(report.choiceEchoEventCount, 105);
 assert.equal(report.denseLifeCount, states.length);
 assert.equal(report.persistentContactCount, 9);
 
 const bundle = Game.inspectWholeGameProgressBundle(states);
-assert.equal(bundle.wholeGameStageLabel, '完整一生内容版已闭环');
+assert.equal(bundle.wholeGameStageLabel, '出生到死亡的完整人生文字版已闭环');
 
 console.log(`[minguo-life] engine ${Game.VERSION}`);
 console.log(`[scenarios] ${states.length}/${definitions.length} complete`);
 console.log(`[families] ${report.familyCount}/3`);
-console.log(`[routes] ${report.routeCount}/9 ${report.routeKeys.join(', ')}`);
+console.log(`[routes] ${report.routeCount}/11 ${report.routeKeys.join(', ')}`);
+console.log(`[post-1949] ${report.post1949PathCount}/6 ${report.post1949PathKeys.join(', ')}`);
 console.log(`[fact-endings] ${report.factEndingCount}/${states.length}`);
+console.log(`[death-endings] ${report.deathEndingCount}/${states.length}`);
 console.log(`[subject-evidence] ${report.subjectEvidenceCount}/${states.length}`);
 console.log(`[information-evidence] ${report.informationEvidenceCount}/${states.length}`);
 console.log(`[contact-evidence] ${report.contactEvidenceCount}/${states.length}`);

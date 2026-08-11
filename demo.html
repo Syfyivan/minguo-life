@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>民国人生 · 纯文字 Demo v0.4</title>
+<title>民国人生 · 完整人生文字版 Demo v0.5</title>
 <style>
 @font-face{font-family:Lora;src:url('./_shared/fonts/Lora-Regular.ttf') format('truetype');font-display:swap}
 @font-face{font-family:Lora;src:url('./_shared/fonts/Lora-Bold.ttf') format('truetype');font-weight:700;font-display:swap}
@@ -44,6 +44,7 @@ h1{margin:.25em 0 .05em;font-size:32px}
 .subjects{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.subject{padding:7px;background:rgba(255,255,255,.28);border-radius:5px;font-size:11px}.subject b{display:block;font-size:12px}.subject span{color:var(--muted)}
 .contacts{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.contact{padding:9px;background:rgba(255,255,255,.28);border-radius:5px;font-size:11px}.contact b{display:block;font-size:12px}.contact span{display:block;color:var(--muted)}.contact .bond{margin-top:4px;color:var(--green);font-family:Pixel,monospace}
 .today{margin:12px 0;padding:13px 15px;background:rgba(255,255,255,.34);border:1px solid var(--rule);border-left:4px solid var(--gold);border-radius:7px}.today b{color:var(--red)}
+.turn-feedback{margin:8px 0;padding:10px 13px;background:rgba(53,107,100,.08);border-left:4px solid var(--green);border-radius:6px;font-size:13px}.turn-feedback:empty{display:none}.milestone{margin:10px 0;padding:10px 13px;color:#fff;background:var(--blue);border-radius:7px;font-family:Pixel,monospace}.milestone:empty{display:none}
 .year-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:18px 0 7px}.year-head h2{margin:0;color:var(--red);font-size:20px}.spirit{padding:3px 9px;border:1px solid var(--rule);border-radius:12px;color:var(--green);font:12px Pixel,monospace}
 .slots{display:grid;gap:8px}.slot{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;background:var(--paper2);border:1px solid var(--rule);border-radius:8px}.slot-no{padding:2px 7px;color:#fff;background:var(--green);border-radius:3px;font:10px Pixel,monospace}.picked{flex:1;min-width:180px}.picked.empty{color:var(--muted);font-style:italic}
 .actions{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:18px 0}
@@ -52,15 +53,16 @@ h1{margin:.25em 0 .05em;font-size:32px}
 .curve{width:100%;height:190px;margin-top:14px;background:rgba(255,255,255,.3);border:1px solid var(--rule);border-radius:8px}.caption{text-align:center;color:var(--muted);font-size:12px}
 .log{max-height:310px;overflow:auto;padding:8px 14px;background:rgba(255,255,255,.28);border:1px solid var(--rule);border-radius:8px;font-size:13px}.log-row{padding:5px 0;border-bottom:1px dashed var(--rule)}.log-row:last-child{border:0}.log-year{display:inline-block;margin-right:6px;padding:1px 5px;color:#fff;background:var(--muted);border-radius:2px;font:9px Pixel,monospace}.log-row.info .log-year{background:var(--blue)}.log-row.route .log-year,.log-row.choice .log-year{background:var(--green)}.log-row.bad{color:#842a23}
 .ending{padding:22px;background:var(--paper2);border:2px solid var(--red);border-radius:12px}.ending h2{margin-top:0;color:var(--red)}.ending li{margin:7px 0}.facts{margin-top:16px;padding:12px;background:rgba(255,255,255,.3);border-radius:7px;font-size:13px}.disc{text-align:center;color:var(--muted);font-size:12px;font-style:italic}
+.life-chapters{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin:16px 0}.life-chapter{padding:12px;background:rgba(255,255,255,.35);border:1px solid var(--rule);border-radius:8px}.life-chapter h3{margin:0 0 5px;color:var(--green);font:13px Pixel,monospace}.life-chapter p{margin:0;font-size:13px}.death-summary{padding:12px 14px;color:#fff;background:var(--red);border-radius:8px}
 .mask{position:fixed;inset:0;z-index:40;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(45,36,28,.58)}.mask.on{display:flex}.panel{width:min(680px,100%);max-height:84vh;overflow:auto;background:var(--paper);border:2px solid var(--rule);border-radius:12px}.panel-head{display:flex;justify-content:space-between;padding:12px 16px;color:#fff;background:var(--green);font-family:Pixel,monospace}.close{border:0;background:none;color:#fff;font-size:18px}.panel-body{padding:12px 16px}.action-guide{margin:2px 0 10px;padding:9px 11px;background:rgba(53,107,100,.08);border-left:3px solid var(--green);color:var(--muted);font-size:12px}.action-option{width:100%;margin:7px 0;padding:10px 12px;text-align:left;background:var(--paper2);border:1px solid var(--rule);border-radius:7px}.action-option:hover:not(:disabled){border-color:var(--red)}.action-option b{display:block}.action-option small{display:block;color:var(--muted)}.effect-line{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}.effect-chip{padding:2px 7px;border-radius:10px;background:rgba(255,255,255,.48);color:var(--green);font-size:11px}.effect-chip.risk{color:var(--red)}.effect-chip.context{color:var(--blue)}.effect-chip.spirit{color:#7d5311}.unavailable{display:block;margin-top:5px;color:var(--red);font-size:11px}
-@media(max-width:760px){.families{grid-template-columns:1fr}.family .motif{min-height:0}.status-grid{grid-template-columns:1fr}.subjects{grid-template-columns:repeat(2,1fr)}.bars{grid-template-columns:1fr}h1{font-size:26px}}
+@media(max-width:760px){.families{grid-template-columns:1fr}.family .motif{min-height:0}.status-grid{grid-template-columns:1fr}.subjects{grid-template-columns:repeat(2,1fr)}.bars{grid-template-columns:1fr}.life-chapters{grid-template-columns:1fr}h1{font-size:26px}}
 @media(max-width:760px){.contacts{grid-template-columns:1fr}.start-fields{grid-template-columns:1fr 1fr}.start-fields label:first-child{grid-column:1/-1}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
 </style>
 </head>
 <body>
 <header class="cover">
-  <div class="seal">DEMO<br>v0.4</div>
+  <div class="seal">DEMO<br>v0.5</div>
   <h1>民国人生 · 纯文字 Demo</h1>
   <div class="sub">从出生家庭出发，让行动、关系与时代共同写出一条人生路径</div>
   <nav class="nav">
@@ -72,7 +74,7 @@ h1{margin:.25em 0 .05em;font-size:32px}
 
 <main class="wrap">
   <section class="screen on" id="screen-pick">
-    <div class="note warn"><span class="tag">当前定位</span>这是可从出生玩到 1949 年的完整一生内容版。三棵家庭树、九条路径、50 个行动、96 个关键选项、105 个生活场景、持续人物、主体状态、信息边界、存档与事实型终局已经进入同一运行时。</div>
+    <div class="note warn"><span class="tag">当前定位</span>这是从出生持续玩到主人公真实死亡的完整人生文字验证版。1949 年只是中段分水岭；其后可进入大陆、香港、台湾、其他海外、继续流动或落点未定六种后半生。当前共有三棵出生家庭树、十一条主要谋生路径、66 个年度行动、143 个关键选项与 171 个作者场景。</div>
     <div class="note"><span class="tag">玩法节奏</span>一回合是一年。你安排少量关键行动，生活场景和时代冲击随后发生；关键年份出现抉择。想快速看设计可以使用“自动到下个抉择”，想仔细玩则可每年自行安排。</div>
     <div class="note"><span class="tag">随机编号说明</span>“随机编号（世界种子）”只决定同等条件下抽到哪段日常、人物如何独立回应，不代表难度。可以填写任意正整数，也可以点“随机”；同一家庭、同一编号、相同行动与选择会复现同一段人生。</div>
     <div id="savedStart"></div>
@@ -92,6 +94,8 @@ h1{margin:.25em 0 .05em;font-size:32px}
     </div>
     <section class="status-card"><h3>持续人物</h3><div class="contacts" id="contactGrid"></div></section>
     <div class="today" id="todayEvent" aria-live="polite"></div>
+    <div class="turn-feedback" id="turnFeedback" aria-live="polite"></div>
+    <div class="milestone" id="milestoneBanner"></div>
 
     <div class="year-head"><h2 id="yearTitle"></h2><span class="spirit" id="spiritTag"></span></div>
     <div class="slots" id="slotGrid"></div>
@@ -131,6 +135,7 @@ h1{margin:.25em 0 .05em;font-size:32px}
 
 <script src="./assets/game-content.js"></script>
 <script src="./assets/life-expansion.js"></script>
+<script src="./assets/complete-life.js"></script>
 <script src="./assets/demo-engine.js"></script>
 <script>
 (function () {
@@ -157,12 +162,17 @@ h1{margin:.25em 0 .05em;font-size:32px}
   }
   function effectChips(action) {
     var preview = Game.describeActionEffects(G, action);
+    return qualitativeChips(preview, true);
+  }
+  function qualitativeChips(preview, includeSpirit) {
+    preview = preview || { gains: [], risks: [], affectedPeople: [], channels: [] };
     var chips = [];
     if (preview.gains.length) chips.push('<span class="effect-chip">主要收益 ↑ ' + esc(preview.gains.join('、')) + '</span>');
     if (preview.risks.length) chips.push('<span class="effect-chip risk">代价或风险 ↓ ' + esc(preview.risks.join('、')) + '</span>');
     if (preview.affectedPeople.length) chips.push('<span class="effect-chip context">影响人物与关系：' + esc(preview.affectedPeople.join('、')) + '</span>');
     if (preview.channels.length) chips.push('<span class="effect-chip context">获得信息渠道：' + esc(preview.channels.join('、')) + '</span>');
-    chips.push('<span class="effect-chip spirit">' + (preview.spiritKind === 'recover' ? '恢复精神 +' : '消耗精神 ') + preview.spiritAmount + '</span>');
+    if (includeSpirit) chips.push('<span class="effect-chip spirit">' + (preview.spiritKind === 'recover' ? '恢复精神 +' : '消耗精神 ') + preview.spiritAmount + '</span>');
+    if (!chips.length) chips.push('<span class="effect-chip context">直接改变生活安排，长期后果会在后续年份确认</span>');
     return '<span class="effect-line">' + chips.join('') + '</span>';
   }
   function plannedSpirit(exceptIndex) { return plan.reduce(function (sum, id, index) { var action = index === exceptIndex ? null : actionById(id); return sum + (action ? action.spirit : 0); }, 0); }
@@ -178,7 +188,7 @@ h1{margin:.25em 0 .05em;font-size:32px}
       var family = Content.families[familyKey];
       var card = document.createElement('article'); card.className = 'family';
       card.innerHTML = '<h3>' + esc(family.name) + '</h3><div class="place">' + esc(family.place) + ' · ' + family.born + ' 年出生</div><p class="motif">' + esc(family.motif) + '</p>' +
-        '<div class="start-fields"><label>角色姓名<input data-name value="' + esc(family.defaultNames['男']) + '"></label><label>性别<select data-gender><option value="男">男</option><option value="女">女</option></select></label><label>随机编号（世界种子）<span class="seed-row"><input data-seed type="number" min="1" max="4294967295" step="1" value="' + (familyKey === 'subeipoor' ? '1108' : familyKey === 'jiangnanshen' ? '2108' : '3108') + '"><button class="btn" data-random-seed type="button">随机</button></span><span class="field-help">任意正整数；相同编号可复现。</span></label></div>' +
+        '<div class="start-fields"><label>角色姓名<input data-name value="' + esc(family.defaultNames['男']) + '"></label><label>性别<select data-gender><option value="男">男</option><option value="女">女</option></select></label><label>随机编号（世界种子，可不修改）<span class="seed-row"><input data-seed type="number" min="1" max="4294967295" step="1" value="' + (familyKey === 'subeipoor' ? '1108' : familyKey === 'jiangnanshen' ? '2108' : '3108') + '"><button class="btn" data-random-seed type="button">随机</button></span><span class="field-help">可以随意填正整数；同一编号和相同选择会复现同一人生。</span></label></div>' +
         '<button class="btn green" data-start type="button">从这个家庭开始</button>';
       var genderSelect = card.querySelector('[data-gender]');
       var nameInput = card.querySelector('[data-name]');
@@ -222,9 +232,11 @@ h1{margin:.25em 0 .05em;font-size:32px}
 
   function renderStatus() {
     var route = G.routeKey ? Content.routes[G.routeKey] : null;
-    el('routeStatus').innerHTML = '<b>' + (route ? esc(route.name) : '路径尚未确定') + '</b>' + (route ? '<div>' + esc(route.summary) + '</div>' : '<div>童年行动正在形成后续门槛。</div>');
+    var postPath = G.post1949Choice && Content.post1949Paths[G.post1949Choice];
+    el('routeStatus').innerHTML = '<b>' + (route ? esc(route.name) : '路径尚未确定') + '</b>' + (route ? '<div>' + esc(route.summary) + '</div>' : '<div>童年行动正在形成后续门槛。</div>') + (postPath ? '<div style="margin-top:6px"><b>1949 年后：</b>' + esc(postPath.name) + (G.post1949.place ? ' · ' + esc(G.post1949.place) : '') + '</div>' : '');
     var channels = G.information.channels.length ? G.information.channels.map(function (key) { return Content.channelLabels[key] || key; }).join(' / ') : '暂无稳定信息渠道';
-    el('infoStatus').innerHTML = '<div style="margin-top:6px;color:var(--muted)">知情渠道：' + esc(channels) + '</div>';
+    var lifeStatus = G.life.dangerSince ? '身体从 ' + G.life.dangerSince + ' 年起进入明显风险期' : '主人公仍在生活中';
+    el('infoStatus').innerHTML = '<div style="margin-top:6px;color:var(--muted)">知情渠道：' + esc(channels) + '</div><div style="color:var(--muted)">生命状态：' + esc(lifeStatus) + '</div>';
     var subjectGrid = el('subjectGrid'); subjectGrid.innerHTML = '';
     Object.keys(G.subjects).forEach(function (key) {
       var subject = G.subjects[key];
@@ -243,7 +255,10 @@ h1{margin:.25em 0 .05em;font-size:32px}
 
   function renderToday() {
     var event = G.lastOrdinaryEvent;
-    el('todayEvent').innerHTML = event ? '<b>' + esc(event.year + ' · ' + event.title) + '</b><div>' + esc(event.text) + '</div>' : '<b>本年生活尚未发生</b><div>安排行动后，日常场景与时代冲击会依次进入账本。</div>';
+    el('todayEvent').innerHTML = event ? '<b>' + esc(event.year + ' · ' + event.title) + '</b><div>' + esc(event.text) + '</div>' + qualitativeChips(event.effects, false) : '<b>本年生活尚未发生</b><div>安排行动后，日常场景与时代冲击会依次进入账本。</div>';
+    var feedback = G.lastActionFeedback;
+    el('turnFeedback').innerHTML = feedback ? '<b>' + feedback.year + ' 年行动回响</b><div>' + (feedback.actions.length ? '你亲自做了：' + esc(feedback.actions.join('、')) + '。' : '你没有额外安排，把时间留给日常。') + '</div>' + qualitativeChips(feedback, false) : '';
+    el('milestoneBanner').textContent = G.year >= 1950 && G.facts.some(function (fact) { return fact.id === 'final-1949'; }) ? '1949 年的民国阶段已经结束，但这个人的人生仍在继续。' : '';
   }
 
   function ensurePlan() {
@@ -273,7 +288,6 @@ h1{margin:.25em 0 .05em;font-size:32px}
     var body = el('actionBody'); body.innerHTML = '';
     var guide = document.createElement('div'); guide.className = 'action-guide'; guide.textContent = '这里显示立即可预见的收益方向与代价，不公开精确属性点；长期剧情后果仍要到往后的人生中确认。同一年重复做同一件事，效果会递减。'; body.appendChild(guide);
     Game.availableActions(G, { includeDisabled: true }).forEach(function (action) {
-      if (!action.enabled && (action.disabledReason === '当前家庭不可用' || action.disabledReason === '当前路径不可用')) return;
       var spiritOkay = G.spirit - plannedSpirit(slotIndex) - action.spirit >= 0;
       var enabled = action.enabled && spiritOkay;
       var button = document.createElement('button'); button.className = 'action-option'; button.disabled = !enabled;
@@ -293,8 +307,9 @@ h1{margin:.25em 0 .05em;font-size:32px}
     var decision = G.pendingDecision; var card = document.createElement('section'); card.className = 'decision';
     card.innerHTML = '<h2>' + esc(decision.title) + '</h2><div class="prompt">' + esc(decision.prompt) + '</div>';
     decision.options.forEach(function (option) {
+      if (option.hidden) return;
       var button = document.createElement('button'); button.className = 'choice'; button.disabled = !option.enabled;
-      button.innerHTML = '<b>' + esc(option.label) + '</b><small>' + (option.enabled ? esc(option.fact || '') : esc(option.disabledReason)) + '</small>';
+      button.innerHTML = '<b>' + esc(option.label) + '</b>' + qualitativeChips(option.effects, false) + '<small>' + (option.enabled ? '这是可立即执行的选择；长期结果会在以后确认。' : '暂不可选：' + esc(option.disabledReason)) + '</small>';
       button.onclick = function () { Game.choose(G, option.id); planYear = null; render(); };
       card.appendChild(button);
     });
@@ -324,7 +339,9 @@ h1{margin:.25em 0 .05em;font-size:32px}
   function renderEnding() {
     showScreen('end'); var route = G.routeKey ? Content.routes[G.routeKey] : null;
     var routeHistory = G.routeHistory.map(function (entry) { return entry.year + '：' + Content.routes[entry.to].name; }).join(' → ');
-    el('endingBox').innerHTML = '<h2>' + esc(G.identity.name) + '的一生 · ' + G.identity.born + '—' + G.endYear + '</h2><p>' + (route ? '终局主要路径：' + esc(route.name) + '。' : '') + '</p><ul>' + G.endingFacts.map(function (fact) { return '<li>' + esc(fact) + '</li>'; }).join('') + '</ul><div class="facts"><b>路径记录</b><div>' + esc(routeHistory || '没有形成独立路径记录') + '</div><b>事实账本</b><div>' + G.facts.map(function (fact) { return fact.year + ' · ' + esc(fact.text); }).join('<br>') + '</div></div>';
+    var chapters = Game.buildLifeChapters(G);
+    function factLine(fact) { var text = String(fact.text || '').replace(new RegExp('^' + fact.year + '\\s*年[，,：:]?\\s*'), ''); return fact.year + ' · ' + esc(text); }
+    el('endingBox').innerHTML = '<h2>' + esc(G.identity.name) + '的一生 · ' + G.identity.born + '—' + G.endYear + '</h2><div class="death-summary">' + esc(G.life.deathOccurredYear + ' 年，享年 ' + (G.life.deathOccurredYear - G.identity.born) + ' 岁；在' + G.life.deathPlace + '因' + G.life.cause + '去世。死亡于 ' + G.life.deathConfirmedYear + ' 年完成确认。') + '</div><div class="life-chapters">' + chapters.map(function (chapter) { return '<section class="life-chapter"><h3>' + esc(chapter.title) + '</h3><p>' + esc(chapter.text) + '</p></section>'; }).join('') + '</div><h3>一生事实回收</h3><ul>' + G.endingFacts.map(function (fact) { return '<li>' + esc(fact) + '</li>'; }).join('') + '</ul><div class="facts"><b>路径记录</b><div>' + esc(routeHistory || (route ? route.name : '没有形成独立路径记录')) + '</div><b>事实账本</b><div>' + G.facts.map(factLine).join('<br>') + '</div></div>';
     writeAutoSave();
   }
 
@@ -333,8 +350,9 @@ h1{margin:.25em 0 .05em;font-size:32px}
     if (G.over) return renderEnding();
     showScreen('play');
     var stage = Game.stageOf(G.age);
+    var chapterLabels = { childhood: '成长', livelihood: '成年谋生', war: '战争转折', postwar: '战后重接', post1949: '1949 后半生', 'late-life': '晚年', death: '死亡确认' };
     el('hudWho').textContent = G.identity.name + ' · ' + G.identity.familyName;
-    el('hudStage').textContent = stage.name;
+    el('hudStage').textContent = (chapterLabels[G.chapter] || stage.name) + ' · ' + stage.name;
     el('hudTime').textContent = G.year + ' 年 · ' + G.age + ' 岁';
     el('yearTitle').textContent = G.year + ' 年 · 安排 ' + stage.slots + ' 件事';
     renderBars(); renderStatus(); renderToday(); renderSlots(); renderDecision(); renderCurve(); renderLog();
@@ -350,7 +368,7 @@ h1{margin:.25em 0 .05em;font-size:32px}
   function inspectState() { return G ? JSON.parse(JSON.stringify(G)) : null; }
   function advanceToDecision() {
     if (!G || G.pendingDecision || G.over) return G;
-    var remaining = 60;
+    var remaining = 140;
     while (!G.pendingDecision && !G.over && remaining > 0) {
       Game.advanceYear(G, Game.recommendedActions(G)); remaining -= 1;
     }

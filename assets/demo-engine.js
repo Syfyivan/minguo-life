@@ -1,4 +1,4 @@
-// 民国人生 · 可测试文字版引擎 v0.4
+// 民国人生 · 可测试文字版引擎 v0.5
 // 运行时只负责规则与状态，不直接操作 DOM；浏览器 UI 与 Node 回归共用这一份实现。
 (function (root) {
   'use strict';
@@ -37,6 +37,24 @@
     return stage;
   }
 
+  function chapterOf(state) {
+    if (state.life && state.life.status === 'dead') return 'death';
+    if (state.age < 18) return 'childhood';
+    if (state.year < 1937) return 'livelihood';
+    if (state.year <= 1945) return 'war';
+    if (state.year <= 1949) return 'postwar';
+    if (state.age < 60) return 'post1949';
+    return 'late-life';
+  }
+
+  function stableIndex(textValue, size) {
+    var hash = 0;
+    String(textValue || '').split('').forEach(function (character) {
+      hash = ((hash * 31) + character.charCodeAt(0)) >>> 0;
+    });
+    return size ? hash % size : 0;
+  }
+
   function random(state) {
     // Numerical Recipes LCG：同一种子、同一决策序列得到同一结果。
     state.randomState = (Math.imul(1664525, state.randomState) + 1013904223) >>> 0;
@@ -60,26 +78,44 @@
     });
     if (!failed) return { ok: true, reason: '' };
     var meta = C.attributes.concat(C.resources).find(function (item) { return item.key === failed; });
-    return { ok: false, reason: (meta ? meta.name : failed) + '需要达到 ' + gate[failed] };
+    var label = meta ? meta.name : failed;
+    var current = Math.round(Number(flat[failed] || 0));
+    var guidance = {
+      money: '可以通过持续谋生、减少开支或保留实物储备改善。',
+      knowledge: '可以通过读书、夜校、抄录或长期专业学习继续提高。',
+      body: '可以通过适度劳动、锻炼和休养改善，但身体也会随年龄变化。',
+      craft: '可以通过跟工、练习、修理或专业工作继续积累。',
+      mind: '可以通过休息、记录、学习和减少长期透支改善。',
+      network: '可以通过与具体人物往来、通信、工作和地方互助逐步建立。',
+      fame: '可以通过持续工作、公开服务和可靠记录形成，但它不是人生排名。',
+      health: '可以通过休息、求医和减少透支改善，部分长期损伤不会立刻恢复。',
+      relation: '可以通过照料、通信和兑现承诺改善，不能替代具体人物自己的决定。',
+      position: '可以通过住处、证件、稳定工作和可靠门路逐步改善。',
+    };
+    return {
+      ok: false,
+      reason: '需要' + label + '至少达到 ' + gate[failed] + '；当前为 ' + current + '。' + (guidance[failed] || '本局仍可通过后续行动继续改善。'),
+    };
   }
 
-  function describeActionEffects(state, action) {
+  function describeEffects(state, item) {
     var statLabels = {};
     C.attributes.concat(C.resources).forEach(function (item) { statLabels[item.key] = item.name; });
     var gains = [];
     var risks = [];
-    Object.keys(action.delta || {}).forEach(function (key) {
-      var amount = Number(action.delta[key] || 0);
+    Object.keys(item.delta || {}).forEach(function (key) {
+      var amount = Number(item.delta[key] || 0);
       if (amount > 0) gains.push(statLabels[key] || key);
       if (amount < 0) risks.push(statLabels[key] || key);
     });
 
     var affectedPeople = [];
-    Object.keys(action.subjectDelta || {}).forEach(function (key) {
+    var subjectEffects = item.subjectDelta || item.subjectEffects || {};
+    Object.keys(subjectEffects).forEach(function (key) {
       var subject = state && state.subjects && state.subjects[key];
       affectedPeople.push(subject ? subject.label : key);
     });
-    Object.keys(action.contactEffects || {}).forEach(function (key) {
+    Object.keys(item.contactEffects || {}).forEach(function (key) {
       var contact = state && state.contacts && state.contacts[key];
       if (contact) affectedPeople.push(contact.label);
     });
@@ -88,10 +124,15 @@
       gains: gains,
       risks: risks,
       affectedPeople: affectedPeople.filter(function (label, index, list) { return list.indexOf(label) === index; }),
-      channels: (action.channels || []).map(function (key) { return C.channelLabels[key] || key; }),
-      spiritKind: action.spirit < 0 ? 'recover' : 'cost',
-      spiritAmount: Math.abs(Number(action.spirit || 0)),
+      channels: (item.channels || []).map(function (key) { return C.channelLabels[key] || key; }),
     };
+  }
+
+  function describeActionEffects(state, action) {
+    var result = describeEffects(state, action);
+    result.spiritKind = action.spirit < 0 ? 'recover' : 'cost';
+    result.spiritAmount = Math.abs(Number(action.spirit || 0));
+    return result;
   }
 
   function applyDelta(state, delta, scale) {
@@ -242,6 +283,35 @@
       pendingDecisionQueue: [],
       randomState: seed >>> 0,
       seed: seed,
+      livelihoodKey: null,
+      warTurnKey: null,
+      postwarSettlementKey: null,
+      post1949Choice: null,
+      post1949: {
+        choice: null,
+        region: null,
+        arrival: null,
+        place: null,
+        livelihood: null,
+        livelihoodLater: null,
+        companions: null,
+        leftBehind: null,
+        correspondence: null,
+        care: null,
+        legacy: null,
+      },
+      life: {
+        status: 'alive',
+        dangerSince: null,
+        naturalDeathAge: clamp(76 + ((seed >>> 0) % 18), 76, C.maximumAge || 105),
+        deathOccurredYear: null,
+        deathConfirmedYear: null,
+        deathPlace: null,
+        cause: null,
+      },
+      chapter: 'childhood',
+      lastActionFeedback: null,
+      milestones: [],
       finalChoice: null,
       endYear: null,
       over: false,
@@ -260,10 +330,16 @@
   }
 
   function actionAvailability(state, action) {
-    if (action.families && !has(action.families, state.familyKey)) return { ok: false, reason: '当前家庭不可用' };
-    if (action.routes && !has(action.routes, state.routeKey)) return { ok: false, reason: '当前路径不可用' };
-    if (action.minAge != null && state.age < action.minAge) return { ok: false, reason: '年龄未到' };
-    if (action.maxAge != null && state.age > action.maxAge) return { ok: false, reason: '已经过了适用年龄' };
+    if (action.families && !has(action.families, state.familyKey)) return { ok: false, hidden: true, reason: '只适用于其他出生家庭' };
+    if (action.routes && !has(action.routes, state.routeKey)) {
+      var actionRoutes = action.routes.map(function (key) { return C.routes[key] ? C.routes[key].name : key; });
+      return { ok: false, hidden: true, reason: '需要先走入「' + actionRoutes.join('／') + '」人生路径；当前是「' + (C.routes[state.routeKey] ? C.routes[state.routeKey].name : '尚未定路') + '」。' };
+    }
+    if (action.post1949Choices && !has(action.post1949Choices, state.post1949Choice)) return { ok: false, hidden: true, reason: '只适用于另一种 1949 年后去向' };
+    if (action.minYear != null && state.year < action.minYear) return { ok: false, hidden: true, reason: '需到 ' + action.minYear + ' 年后才出现；当前为 ' + state.year + ' 年。' };
+    if (action.maxYear != null && state.year > action.maxYear) return { ok: false, hidden: true, reason: '只在 ' + action.maxYear + ' 年以前适用。' };
+    if (action.minAge != null && state.age < action.minAge) return { ok: false, reason: '需要年满 ' + action.minAge + ' 岁；当前 ' + state.age + ' 岁。' };
+    if (action.maxAge != null && state.age > action.maxAge) return { ok: false, reason: '只适用于 ' + action.maxAge + ' 岁以前；当前 ' + state.age + ' 岁。' };
     if (action.id === 'care-mother' && subjectIsDead(state.subjects.mother)) return { ok: false, reason: '母亲已经去世' };
     return gateResult(state, action.gate);
   }
@@ -275,8 +351,10 @@
       var result = clone(action);
       result.enabled = availability.ok;
       result.disabledReason = availability.reason;
+      result.hidden = Boolean(availability.hidden);
       return result;
     }).filter(function (action) {
+      if (action.hidden && !options.includeHidden) return false;
       return options.includeDisabled ? true : action.enabled;
     });
   }
@@ -287,6 +365,7 @@
     var counts = {};
     var spent = 0;
     var performed = [];
+    var effects = { gains: [], risks: [], affectedPeople: [], channels: [] };
 
     chosen.forEach(function (actionId) {
       var action = C.actions.find(function (item) { return item.id === actionId; });
@@ -302,6 +381,11 @@
       applySubjectEffects(state, action.subjectDelta);
       applyContactEffects(state, action.contactEffects);
       addChannels(state, action.channels);
+      var preview = describeEffects(state, action);
+      preview.gains.forEach(function (label) { addUnique(effects.gains, label); });
+      preview.risks.forEach(function (label) { addUnique(effects.risks, label); });
+      preview.affectedPeople.forEach(function (label) { addUnique(effects.affectedPeople, label); });
+      preview.channels.forEach(function (label) { addUnique(effects.channels, label); });
       counts[actionId] = times + 1;
       performed.push(action.name);
     });
@@ -314,16 +398,28 @@
     if (performed.length) addLog(state, '这一年安排：' + performed.join('、') + '。', '', 'action');
     else addLog(state, '这一年没有额外安排，把主要精力留给日常生活。', '', 'action');
     state.actionHistory.push({ year: state.year, actionIds: chosen });
+    state.lastActionFeedback = {
+      year: state.year,
+      actions: performed,
+      gains: effects.gains,
+      risks: effects.risks,
+      affectedPeople: effects.affectedPeople,
+      channels: effects.channels,
+      spirit: spent,
+    };
     checkSubjectDeaths(state);
   }
 
   function matchesScope(state, item) {
     if (item.year != null && state.year !== item.year) return false;
+    if (item.minYear != null && state.year < item.minYear) return false;
+    if (item.maxYear != null && state.year > item.maxYear) return false;
     if (item.yearByAge != null && state.age !== item.yearByAge) return false;
     if (item.minAge != null && state.age < item.minAge) return false;
     if (item.maxAge != null && state.age > item.maxAge) return false;
     if (item.families && !has(item.families, state.familyKey)) return false;
     if (item.routes && !has(item.routes, state.routeKey)) return false;
+    if (item.post1949Choices && !has(item.post1949Choices, state.post1949Choice)) return false;
     if (item.genders && !has(item.genders, state.identity.gender)) return false;
     if (item.requiresEchoes && !item.requiresEchoes.every(function (echo) {
       return has(state.echoes, echo);
@@ -349,6 +445,21 @@
     return true;
   }
 
+  function storyFrameKey(state) {
+    if (state.year >= 1950 && state.post1949Choice) return 'post-' + state.post1949Choice;
+    if (state.routeKey && C.sceneFrames && C.sceneFrames[state.routeKey]) return state.routeKey;
+    return state.familyKey;
+  }
+
+  function resolveSceneText(state, event) {
+    var textValue = String(event.text || '');
+    if (textValue.length >= 80 || !C.sceneFrames) return textValue;
+    var frames = C.sceneFrames[storyFrameKey(state)] || C.sceneFrames[state.routeKey] || C.sceneFrames[state.familyKey] || [];
+    if (!frames.length) return textValue;
+    var frame = frames[stableIndex(event.id + ':' + state.seed, frames.length)];
+    return frame.open + textValue + frame.close;
+  }
+
   function processOrdinaryLife(state) {
     var candidates = (C.ordinaryEvents || []).filter(function (event) {
       return !has(state.firedOrdinaryEvents, event.id) && matchesScope(state, event);
@@ -368,7 +479,14 @@
       applySubjectEffects(state, event.subjectEffects);
       applyContactEffects(state, event.contactEffects);
       addChannels(state, event.channels);
-      record = { year: state.year, id: event.id, title: event.title, text: event.text, kind: 'scene' };
+      record = {
+        year: state.year,
+        id: event.id,
+        title: event.title,
+        text: resolveSceneText(state, event),
+        kind: 'scene',
+        effects: describeEffects(state, event),
+      };
       if (event.fact) {
         addFact(state, {
           id: 'ordinary:' + event.id,
@@ -378,10 +496,22 @@
         });
       }
     } else {
-      var rhythmKey = state.routeKey && C.annualRhythms[state.routeKey] ? state.routeKey : state.familyKey;
+      var postRhythmKey = state.post1949Choice && C.post1949Paths && C.post1949Paths[state.post1949Choice]
+        ? C.post1949Paths[state.post1949Choice].rhythmKey
+        : null;
+      var rhythmKey = state.year >= 1950 && postRhythmKey && C.annualRhythms[postRhythmKey]
+        ? postRhythmKey
+        : (state.routeKey && C.annualRhythms[state.routeKey] ? state.routeKey : state.familyKey);
       var rhythms = C.annualRhythms[rhythmKey] || ['这一年的日常由家计、关系与时代变化共同构成。'];
       var text = rhythms[Math.floor(random(state) * rhythms.length)];
-      record = { year: state.year, id: 'rhythm:' + rhythmKey + ':' + state.year, title: '年度日常', text: text, kind: 'rhythm' };
+      record = {
+        year: state.year,
+        id: 'rhythm:' + rhythmKey + ':' + state.year,
+        title: '年度日常',
+        text: resolveSceneText(state, { id: 'rhythm:' + rhythmKey + ':' + state.year, text: text }),
+        kind: 'rhythm',
+        effects: { gains: [], risks: [], affectedPeople: [], channels: [] },
+      };
     }
 
     state.lastOrdinaryEvent = record;
@@ -462,40 +592,74 @@
   }
 
   function optionAvailability(state, option) {
-    if (option.families && !has(option.families, state.familyKey)) return { ok: false, reason: '当前家庭不可选' };
-    if (option.routes && !has(option.routes, state.routeKey)) return { ok: false, reason: '当前路径不可选' };
-    if (option.genders && !has(option.genders, state.identity.gender)) return { ok: false, reason: '与当前角色性别不符' };
+    if (option.families && !has(option.families, state.familyKey)) return { ok: false, hidden: true, reason: '只适用于其他出生家庭。' };
+    if (option.post1949Choices && !has(option.post1949Choices, state.post1949Choice)) return { ok: false, hidden: true, reason: '这不是你在 1949 年选择的去向。' };
+    if (option.routes && !has(option.routes, state.routeKey)) {
+      var names = option.routes.map(function (key) { return C.routes[key] ? C.routes[key].name : key; });
+      var routeMoment = (state.routeHistory || []).slice().reverse().find(function (entry) { return has(option.routes, entry.to); });
+      return {
+        ok: false,
+        hidden: false,
+        reason: routeMoment
+          ? '你曾在 ' + routeMoment.year + ' 年走过「' + names.join('／') + '」，后来已经转入「' + (C.routes[state.routeKey] ? C.routes[state.routeKey].name : state.routeKey) + '」。'
+          : '需要先走入「' + names.join('／') + '」；当前人生路径是「' + (C.routes[state.routeKey] ? C.routes[state.routeKey].name : '尚未定路') + '」。',
+      };
+    }
+    if (option.genders && !has(option.genders, state.identity.gender)) return { ok: false, hidden: true, reason: '这个选项只在另一种人物设定中出现。' };
+    if (option.minAge != null && state.age < option.minAge) return { ok: false, reason: '需要年满 ' + option.minAge + ' 岁；当前 ' + state.age + ' 岁。' };
+    if (option.maxAge != null && state.age > option.maxAge) return { ok: false, reason: '只在 ' + option.maxAge + ' 岁以前适用；当前 ' + state.age + ' 岁。' };
     if (option.requiresSubjectStatus) {
       var exactKeys = Object.keys(option.requiresSubjectStatus);
-      if (exactKeys.some(function (key) {
+      var failedExact = exactKeys.find(function (key) {
         return !state.subjects[key] || state.subjects[key].status !== option.requiresSubjectStatus[key];
-      })) return { ok: false, reason: '当前家庭主体状态不符' };
+      });
+      if (failedExact) {
+        var exactSubject = state.subjects[failedExact];
+        return {
+          ok: false,
+          reason: '需要' + (exactSubject ? exactSubject.label : failedExact) + '处于「' + subjectStatusLabel(option.requiresSubjectStatus[failedExact]) + '」；当前为「' + (exactSubject ? subjectStatusLabel(exactSubject.status) : '人物未出现') + '」。',
+        };
+      }
     }
     if (option.requiresSubjectNotStatus) {
       var notKeys = Object.keys(option.requiresSubjectNotStatus);
-      if (notKeys.some(function (key) {
+      var failedNot = notKeys.find(function (key) {
         return state.subjects[key] && state.subjects[key].status === option.requiresSubjectNotStatus[key];
-      })) return { ok: false, reason: '当前家庭主体状态不符' };
+      });
+      if (failedNot) return { ok: false, reason: (state.subjects[failedNot].label || failedNot) + '当前为「' + subjectStatusLabel(state.subjects[failedNot].status) + '」，不满足这一选择的现实条件。' };
     }
     var gate = gateResult(state, option.gate);
     if (!gate.ok) return gate;
     if (option.requiredChannels && !option.requiredChannels.some(function (channel) {
       return has(state.information.channels, channel);
-    })) return { ok: false, reason: '缺少对应信息与外路' };
+    })) {
+      return {
+        ok: false,
+        reason: '需要先取得「' + option.requiredChannels.map(function (channel) { return C.channelLabels[channel] || channel; }).join('／') + '」信息渠道；可通过读报、读书、通信或与具体人物核实消息获得。',
+      };
+    }
     return { ok: true, reason: '' };
+  }
+
+  function resolveDecisionPrompt(state, decision) {
+    var prompt = String(decision.prompt || '');
+    if (prompt.length >= 75) return prompt;
+    return prompt + ' 你只能决定自己接下来亲手做什么；家人、同事和同行者仍会按各自身体、住处与生计条件回应。';
   }
 
   function presentDecision(state, decision) {
     return {
       id: decision.id,
       title: decision.title,
-      prompt: decision.prompt,
+      prompt: resolveDecisionPrompt(state, decision),
       year: state.year,
       options: decision.options.map(function (option) {
         var availability = optionAvailability(state, option);
         var result = clone(option);
         result.enabled = availability.ok;
         result.disabledReason = availability.reason;
+        result.hidden = Boolean(availability.hidden);
+        result.effects = describeEffects(state, option);
         return result;
       }),
     };
@@ -515,82 +679,147 @@
     state.curve.push({ year: state.year, value: Math.round(total) });
   }
 
+  function choiceRecord(state, decisionId) {
+    return (state.decisionHistory || []).find(function (entry) { return entry.decisionId === decisionId; });
+  }
+
+  function choiceLabel(state, decisionId) {
+    var record = choiceRecord(state, decisionId);
+    var source = C.decisions.find(function (item) { return item.id === decisionId; });
+    var option = source && record && source.options.find(function (item) { return item.id === record.optionId; });
+    return option ? option.label : null;
+  }
+
+  function buildLifeChapters(state) {
+    var route = C.routes[state.routeKey];
+    var postPath = C.post1949Paths && C.post1949Paths[state.post1949Choice];
+    var death = state.life || {};
+    var warDecision = state.familyKey === 'subeipoor' ? 'subei-war' : (state.familyKey === 'jiangnanshen' ? 'shen-war' : 'shanghai-war');
+    return [
+      { key: 'birth-family', title: '出生与成长', text: state.identity.name + '于 ' + state.identity.born + ' 年出生在' + state.identity.place + '，成长于' + state.identity.familyName + '。' + (choiceLabel(state, 'education') ? '六岁时，' + choiceLabel(state, 'education') + '。' : '') },
+      { key: 'livelihood', title: '成年谋生', text: route ? '成年后主要走入「' + route.name + '」：' + route.summary : '成年谋生路径没有留下完整记录。' },
+      { key: 'war', title: '战争转折', text: choiceLabel(state, warDecision) ? choiceLabel(state, warDecision) + '。' : '战争时期的具体去留没有留下完整记录。' },
+      { key: 'postwar', title: '战后重接', text: choiceLabel(state, 'postwar-settlement') ? choiceLabel(state, 'postwar-settlement') + '。' : '战后的住处、工作与关系如何接回，记录仍不完整。' },
+      { key: 'post1949', title: '1949 与后半生', text: postPath ? '1949 年选择「' + postPath.name + '」。' + (state.post1949.arrival || '后来的抵达过程没有完整记录。') + '；' + (state.post1949.livelihood || '谋生方式仍有未确认之处') + '。' : '1949 年后的去向没有留下完整记录。' },
+      { key: 'late-life', title: '中晚年', text: ([state.post1949.livelihoodLater, state.post1949.correspondence, state.post1949.care, state.post1949.legacy].filter(Boolean).join('；') || '中晚年具体生活安排没有留下完整记录').replace(/[。！？]?$/, '。') },
+      { key: 'death', title: '死亡与确认', text: death.deathOccurredYear ? death.deathOccurredYear + ' 年，' + state.identity.name + '在' + death.deathPlace + '因' + death.cause + '去世，享年 ' + (death.deathOccurredYear - state.identity.born) + ' 岁。' + (death.deathConfirmedYear === death.deathOccurredYear ? '死亡在当年由身边人确认。' : '到 ' + death.deathConfirmedYear + ' 年，消息才完成确认。') : '主人公仍然在世，尚不能生成一生结局。' },
+    ];
+  }
+
   function buildEndingFacts(state) {
     var route = C.routes[state.routeKey];
+    var death = state.life || {};
     var facts = [];
-    facts.push(state.identity.name + '生于 ' + state.identity.born + ' 年，出身为' + state.identity.familyName + '。');
-    if (route) facts.push('最后一条主要人生路径是「' + route.name + '」。');
-    if (state.routeHistory.length > 1) {
-      facts.push('这一生先后走过：' + state.routeHistory.map(function (entry) {
-        return C.routes[entry.to] ? C.routes[entry.to].name : entry.to;
-      }).join(' → ') + '。');
+    if (death.deathOccurredYear) {
+      facts.push(state.identity.name + '生于 ' + state.identity.born + ' 年，卒于 ' + death.deathOccurredYear + ' 年，享年 ' + (death.deathOccurredYear - state.identity.born) + ' 岁。');
+      facts.push('死亡地点为' + death.deathPlace + '，原因为' + death.cause + '；死亡于 ' + death.deathConfirmedYear + ' 年完成确认。');
+    } else {
+      facts.push(state.identity.name + '生于 ' + state.identity.born + ' 年，目前仍在世，不能把阶段性去向写成一生结局。');
     }
+    facts.push('出生家庭为' + state.identity.familyName + '，出生地点为' + state.identity.place + '。');
+    if (route) facts.push('主要成年谋生路径为「' + route.name + '」。');
+    if (state.routeHistory.length > 1) facts.push('人生路径先后经过：' + state.routeHistory.map(function (entry) { return C.routes[entry.to] ? C.routes[entry.to].name : entry.to; }).join(' → ') + '。');
+    var warDecision = state.familyKey === 'subeipoor' ? 'subei-war' : (state.familyKey === 'jiangnanshen' ? 'shen-war' : 'shanghai-war');
+    var warLabel = choiceLabel(state, warDecision);
+    if (warLabel) facts.push('战争转折时，' + warLabel + '。');
+    var postwarLabel = choiceLabel(state, 'postwar-settlement');
+    if (postwarLabel) facts.push('战后，' + postwarLabel + '。');
+    var postPath = C.post1949Paths && C.post1949Paths[state.post1949Choice];
+    if (postPath) facts.push('1949 年以「' + postPath.name + '」开始后半生，后来主要生活在' + (state.post1949.place || postPath.place) + '。');
+    if (state.post1949.arrival) facts.push('抵达与落脚：' + state.post1949.arrival + '。');
+    if (state.post1949.livelihood) facts.push('1949 年后谋生：' + state.post1949.livelihood + '。');
+    if (state.post1949.livelihoodLater) facts.push('中年以后：' + state.post1949.livelihoodLater + '。');
+    if (state.post1949.companions) facts.push('共同生活与同行关系：' + state.post1949.companions + '。');
+    if (state.post1949.leftBehind) facts.push('留在别处的人与未完成团聚：' + state.post1949.leftBehind + '。');
+    if (state.post1949.correspondence) facts.push('晚年联系：' + state.post1949.correspondence + '。');
+    if (state.post1949.care) facts.push('晚年照料：' + state.post1949.care + '。');
+    if (state.post1949.legacy) facts.push('留下的记录：' + state.post1949.legacy + '。');
     var mother = state.subjects.mother;
     if (mother) {
       if (mother.status === 'dead-confirmed') facts.push('母亲的死亡已经经过消息确认。');
-      else if (mother.status === 'dead-unconfirmed') facts.push('母亲的死亡已经发生，但终局时仍缺完整确认。');
-      else facts.push('终局时，母亲的状态为「' + subjectStatusLabel(mother.status) + '」。');
+      else if (mother.status === 'dead-unconfirmed') facts.push('母亲的死亡已经发生，但仍缺完整确认。');
+      else facts.push('主人公死亡时，母亲最后已知状态为「' + subjectStatusLabel(mother.status) + '」。');
     }
     var spouse = state.subjects.spouse;
-    if (spouse && spouse.status !== 'not-met') facts.push('配偶最终的生活状态为「' + subjectStatusLabel(spouse.status) + '」，该去向由其自身条件形成。');
+    if (spouse && spouse.status !== 'not-met') facts.push('配偶最后已知状态为「' + subjectStatusLabel(spouse.status) + '」，去向没有被主人公的选择代替。');
     var children = state.subjects.children;
     if (children && children.status !== 'none') facts.push('子女与晚辈的长期安排为「' + subjectStatusLabel(children.status) + '」。');
-    var contacts = Object.keys(state.contacts || {}).map(function (key) {
-      return state.contacts[key];
-    }).filter(function (contact) {
-      return Number(contact.relation || 0) > 0;
-    }).sort(function (a, b) {
-      return Number(b.relation || 0) - Number(a.relation || 0);
-    });
-    if (contacts.length) facts.push('终局时联系最深的具体人物之一是' + contacts[0].label + '，关系状态为「' + ((C.contactStatusLabels && C.contactStatusLabels[contacts[0].status]) || contacts[0].status) + '」。');
-    if (state.annualNarratives.length) facts.push('人生账本共记录了 ' + state.annualNarratives.length + ' 个年份的日常生活。');
-    if (state.knownEvents.length) facts.push('通过已有信息渠道明确知道的时代事件有 ' + state.knownEvents.length + ' 项。');
-    if (state.unknownImpacts.length) facts.push('另有 ' + state.unknownImpacts.length + ' 项时代冲击先作用于生活，具体来由当时并不完整。');
-    var finalFact = state.facts.find(function (fact) { return fact.id === 'final-1949'; });
-    var definingChoices = state.facts.filter(function (fact) {
-      return fact.ending;
-    }).slice(-3);
-    if (definingChoices.length) {
-      facts.push('几次长期选择留下的事实是：' + definingChoices.map(function (fact) {
-        return fact.text.replace(/[。！？]$/, '');
-      }).join('；') + '。');
-    }
-    if (finalFact) facts.push(finalFact.text);
+    var contacts = Object.keys(state.contacts || {}).map(function (key) { return state.contacts[key]; }).filter(function (contact) { return Number(contact.relation || 0) > 0; }).sort(function (a, b) { return Number(b.relation || 0) - Number(a.relation || 0); });
+    if (contacts.length) facts.push('最后记录中联系较深的具体人物是' + contacts.slice(0, 2).map(function (contact) { return contact.label; }).join('、') + '；这只表示有过持续往来，不替他们补写终局。');
+    if (state.annualNarratives.length) facts.push('人生账本记录了 ' + state.annualNarratives.length + ' 个生活年份。');
+    if (state.knownEvents.length) facts.push('明确获知的时代事件有 ' + state.knownEvents.length + ' 项。');
+    if (state.unknownImpacts.length) facts.push('另有 ' + state.unknownImpacts.length + ' 项时代冲击先进入生活，其完整来由在当时未知。');
+    var routeChoiceFacts = state.facts.filter(function (fact) { return String(fact.source || '').indexOf('route-') === 0; });
+    if (routeChoiceFacts.length) facts.push('成年路径中的长期取舍包括：' + routeChoiceFacts.map(function (fact) { return fact.text.replace(/[。！？]$/, ''); }).join('；') + '。');
+    var definingChoices = state.facts.filter(function (fact) { return fact.ending; }).slice(-6);
+    if (definingChoices.length) facts.push('长期选择留下的事实包括：' + definingChoices.map(function (fact) { return fact.text.replace(/[。！？]$/, ''); }).join('；') + '。');
     return facts;
   }
 
   function buildEndingNarrative(state) {
-    var endYear = state.endYear || state.year;
-    var title = state.identity.name + '的一生（' + state.identity.born + '—' + endYear + '）';
-    var facts = state.endingFacts.length ? state.endingFacts : buildEndingFacts(state);
-    return title + '。' + facts.join('');
+    var deathYear = state.life && state.life.deathOccurredYear;
+    var title = state.identity.name + '的一生（' + state.identity.born + '—' + (deathYear || '仍在继续') + '）';
+    var facts = state.endingFacts && state.endingFacts.length ? state.endingFacts : buildEndingFacts(state);
+    return title + '。' + buildLifeChapters(state).map(function (chapter) { return chapter.title + '：' + chapter.text; }).join('') + '人生事实回收：' + facts.join('');
   }
 
-  function finishGame(state, reason) {
+  function deathCause(state) {
+    if (state.res.health <= 0 && state.routeKey === 'subei-soldier') return '战争伤病与长期劳损';
+    if (state.res.health <= 0 && (state.routeKey === 'subei-refugee' || state.routeKey === 'shen-refugee' || state.post1949Choice === 'in-motion')) return '迁徙劳损与疾病';
+    if (state.res.health <= 0) return '长期疾病与身体耗损';
+    if (state.age >= 88) return '高龄后的自然衰老';
+    return '晚年疾病与身体衰弱';
+  }
+
+  function deathPlace(state) {
+    if (state.post1949 && state.post1949.place) return state.post1949.place;
+    var postPath = C.post1949Paths && C.post1949Paths[state.post1949Choice];
+    return postPath ? postPath.place : state.identity.place;
+  }
+
+  function finalizeDeath(state) {
+    var life = state.life;
+    life.status = 'dead';
+    life.deathOccurredYear = state.year;
+    life.deathPlace = deathPlace(state);
+    life.cause = deathCause(state);
+    var delayed = state.post1949Choice === 'in-motion' || state.post1949Choice === 'unsettled';
+    life.deathConfirmedYear = state.year + (delayed ? 1 : 0);
+    addFact(state, { id: 'protagonist-death-occurred', year: life.deathOccurredYear, kind: 'death', text: state.identity.name + '在' + life.deathPlace + '因' + life.cause + '去世。', source: 'life-state', ending: true });
+    addFact(state, { id: 'protagonist-death-confirmed', year: life.deathConfirmedYear, kind: 'death', text: delayed ? '死亡消息在次年经最后地址与认识的人交叉确认。' : '死亡在当年由身边的人确认。', source: 'life-state', ending: true });
+    addLog(state, '这一生已经结束：死亡发生，并完成了事实确认。', 'bad', 'death');
+    state.chapter = 'death';
     state.over = true;
-    state.endYear = state.year;
+    state.endYear = life.deathOccurredYear;
     state.endingFacts = buildEndingFacts(state);
     state.endingNarrative = buildEndingNarrative(state);
-    addFact(state, {
-      id: 'life-ended',
-      kind: 'ending',
-      text: reason === 'health' ? '健康归零后，这一生在此结束。' : '1949 年的选择与事实已经完成回收。',
-      source: 'ending',
-    });
+  }
+
+  function applyAging(state) {
+    if (state.age >= 50 && state.age % 5 === 0) {
+      applyDelta(state, { body: -1, health: -1 });
+      addLog(state, '年岁增长以后，身体恢复比过去慢了一些；旧伤、慢性病和工作方式开始影响每天能承担什么。', 'bad', 'aging');
+    }
+    if (state.age >= 70 && state.age % 3 === 0) applyDelta(state, { health: -1 });
+    if (state.age >= 85 && state.age % 2 === 0) applyDelta(state, { health: -1 });
+    if (state.res.health <= 20 && state.life.dangerSince == null) {
+      state.life.dangerSince = state.year;
+      addFact(state, { id: 'protagonist-danger-' + state.year, kind: 'health', text: '从 ' + state.year + ' 年起，身体进入明显危险状态。', source: 'life-state' });
+    }
   }
 
   function finishYear(state) {
     addCurvePoint(state);
-    if (state.res.health <= 0) {
-      finishGame(state, 'health');
-      return;
-    }
-    if (state.year >= C.finalYear) {
-      finishGame(state, 'timeline');
+    applyAging(state);
+    var healthAdjustment = clamp(Math.round((Number(state.res.health || 0) - 50) / 20), -3, 4);
+    var deathAge = clamp(Number(state.life.naturalDeathAge || 80) + healthAdjustment, 60, C.maximumAge || 105);
+    if (state.res.health <= 0 || state.age >= deathAge || state.age >= (C.maximumAge || 105)) {
+      finalizeDeath(state);
       return;
     }
     state.year += 1;
     state.age = state.year - state.identity.born;
+    state.chapter = chapterOf(state);
     state.spirit = clamp(state.spirit + C.yearlySpiritRecovery, 0, state.spiritMax);
   }
 
@@ -618,6 +847,21 @@
     addChannels(state, option.channels);
     if (option.echo) addUnique(state.echoes, option.echo);
     if (option.route) setRoute(state, option.route, decision.id + ':' + option.id);
+    if (has(['subei-livelihood', 'shen-path', 'shanghai-path'], decision.id)) state.livelihoodKey = option.route || state.routeKey;
+    if (has(['subei-war', 'shen-war', 'shanghai-war'], decision.id)) state.warTurnKey = option.warTurn || option.id;
+    if (decision.id === 'postwar-settlement') state.postwarSettlementKey = option.id;
+    if (option.post1949Choice) {
+      state.post1949Choice = option.post1949Choice;
+      state.finalChoice = option.post1949Choice;
+      state.post1949.choice = option.post1949Choice;
+      state.post1949.region = C.post1949Paths && C.post1949Paths[option.post1949Choice]
+        ? C.post1949Paths[option.post1949Choice].name
+        : option.post1949Choice;
+      state.milestones.push({ year: state.year, id: 'milestone-1949', text: '民国阶段结束，人生继续进入后半生。' });
+    }
+    if (option.postProfile) {
+      Object.keys(option.postProfile).forEach(function (key) { state.post1949[key] = option.postProfile[key]; });
+    }
     if (option.spouseStatus) {
       state.subjects.spouse.status = option.spouseStatus;
       addFact(state, {
@@ -629,10 +873,10 @@
     } else if (option.fact) {
       addFact(state, {
         id: decision.id === 'final-1949' ? 'final-1949' : decision.id + ':' + option.id,
-        kind: decision.id === 'final-1949' ? 'ending' : 'decision',
+        kind: decision.id === 'final-1949' ? 'milestone' : 'decision',
         text: option.fact,
         source: decision.id,
-        ending: option.endingFact,
+        ending: decision.id === 'final-1949' ? false : option.endingFact,
       });
     }
     if (option.endingChoice) state.finalChoice = option.endingChoice;
@@ -648,7 +892,7 @@
     if (!state || !state.identity || !state.familyKey) throw new Error('A valid game state is required');
     return JSON.stringify({
       format: 'minguo-life-save',
-      schemaVersion: 1,
+      schemaVersion: 2,
       gameVersion: C.version,
       state: state,
     }, null, 2);
@@ -672,14 +916,35 @@
     });
     state.subjects = Object.assign(clone(base.subjects), state.subjects || {});
     state.contacts = Object.assign(clone(base.contacts), state.contacts || {});
+    state.post1949 = Object.assign(clone(base.post1949), state.post1949 || {});
+    state.life = Object.assign(clone(base.life), state.life || {});
     ['routeHistory', 'knownEvents', 'unknownImpacts', 'echoes', 'facts', 'log', 'curve', 'actionHistory', 'annualNarratives', 'firedOrdinaryEvents', 'contactHistory', 'firedEvents', 'firedDecisions', 'decisionHistory', 'pendingDecisionQueue', 'endingFacts'].forEach(function (key) {
       if (!Array.isArray(state[key])) state[key] = [];
     });
     state.version = C.version;
-    state.year = clamp(Number(state.year) || base.year, base.year, C.finalYear);
+    state.year = clamp(Number(state.year) || base.year, base.year, base.year + (C.maximumAge || 105));
     state.age = state.year - state.identity.born;
     state.spirit = clamp(Number(state.spirit) || 0, 0, state.spiritMax || C.spiritMax);
     state.randomState = Number(state.randomState) >>> 0;
+    if (!state.life.deathOccurredYear && state.over && state.year <= (C.milestoneYear || 1949)) {
+      var legacyMap = { mainland: 'mainland', hktw: 'hong-kong', overseas: 'overseas', 'in-motion': 'in-motion' };
+      state.post1949Choice = state.post1949Choice || legacyMap[state.finalChoice] || 'mainland';
+      state.post1949.choice = state.post1949Choice;
+      state.post1949.region = C.post1949Paths[state.post1949Choice].name;
+      state.post1949.place = C.post1949Paths[state.post1949Choice].place;
+      state.over = false;
+      state.endYear = null;
+      state.endingFacts = [];
+      state.endingNarrative = '';
+      state.facts = state.facts.filter(function (fact) { return fact.id !== 'life-ended'; });
+      state.year = (C.milestoneYear || 1949) + 1;
+      state.age = state.year - state.identity.born;
+      state.chapter = 'post1949';
+      state.pendingDecision = null;
+      state.pendingDecisionQueue = [];
+      addUnique(state.firedDecisions, 'final-1949');
+      state.milestones.push({ year: C.milestoneYear || 1949, id: 'v04-save-continued', text: '旧版存档已从 1949 年阶段结算继续进入后半生。' });
+    }
     return state;
   }
 
@@ -691,20 +956,36 @@
       year: state.year,
       age: state.age,
       routeName: state.routeKey && C.routes[state.routeKey] ? C.routes[state.routeKey].name : '路径尚未确定',
+      chapter: state.chapter,
+      post1949Name: state.post1949Choice && C.post1949Paths[state.post1949Choice] ? C.post1949Paths[state.post1949Choice].name : null,
       over: Boolean(state.over),
       seed: state.seed,
     };
   }
 
   function recommendedActions(state) {
-    var actions = availableActions(state);
+    var actions = availableActions(state).sort(function (left, right) {
+      function score(action) {
+        var value = 0;
+        if (action.post1949Choices && has(action.post1949Choices, state.post1949Choice)) value += 40;
+        if (action.routes && has(action.routes, state.routeKey)) value += 30;
+        if ((action.channels || []).some(function (channel) { return !has(state.information.channels, channel); })) value += 12;
+        if (Number((action.delta || {}).money || 0) > 0) value += 6;
+        if (Number((action.delta || {}).health || 0) > 0 && state.res.health < 45) value += 10;
+        if (Number((action.delta || {}).health || 0) < 0 && state.res.health < 50) value -= Math.abs(Number(action.delta.health)) * 20;
+        if (action.id === 'rest') value += state.res.health < 45 ? 60 : (state.spirit <= 4 ? 50 : -10);
+        return value;
+      }
+      return score(right) - score(left);
+    });
     var selected = [];
     var remaining = state.spirit;
     var slots = stageOf(state.age).slots;
     actions.forEach(function (action) {
       if (selected.length >= slots) return;
       if (action.spirit > remaining) return;
-      if (action.spirit < 0 && remaining > 4) return;
+      if (state.res.health <= 30 && Number((action.delta || {}).health || 0) < 0) return;
+      if (action.spirit < 0 && remaining > 4 && state.res.health >= 45) return;
       selected.push(action.id);
       remaining -= action.spirit;
     });
@@ -719,12 +1000,14 @@
     states = states || [];
     var families = [];
     var routes = [];
+    var post1949Paths = [];
     var expectedNarrativeYears = 0;
     var recordedNarrativeYears = 0;
     states.forEach(function (state) {
       addUnique(families, state.familyKey);
       state.routeHistory.forEach(function (entry) { addUnique(routes, entry.to); });
       if (state.routeKey) addUnique(routes, state.routeKey);
+      if (state.post1949Choice) addUnique(post1949Paths, state.post1949Choice);
       expectedNarrativeYears += Math.max(0, Number((state.endYear || state.year) - state.identity.born + 1));
       recordedNarrativeYears += (state.annualNarratives || []).length;
     });
@@ -735,9 +1018,20 @@
       familyKeys: families,
       routeCount: routes.length,
       routeKeys: routes,
-      factEndingCount: states.filter(function (state) {
-        return state.over && state.facts.some(function (fact) { return fact.id === 'final-1949'; });
+      post1949PathCount: post1949Paths.length,
+      post1949PathKeys: post1949Paths,
+      milestone1949Count: states.filter(function (state) {
+        return state.facts.some(function (fact) { return fact.id === 'final-1949'; });
       }).length,
+      post1949ContinuationCount: states.filter(function (state) {
+        return (state.endYear || state.year) > (C.milestoneYear || 1949);
+      }).length,
+      deathEndingCount: states.filter(function (state) {
+        return state.over && state.life && state.life.status === 'dead'
+          && state.facts.some(function (fact) { return fact.id === 'protagonist-death-occurred'; })
+          && state.facts.some(function (fact) { return fact.id === 'protagonist-death-confirmed'; });
+      }).length,
+      factEndingCount: states.filter(function (state) { return state.over && state.life && state.life.status === 'dead'; }).length,
       subjectEvidenceCount: states.filter(function (state) {
         return state.facts.some(function (fact) { return fact.kind === 'subject'; });
       }).length,
@@ -762,6 +1056,10 @@
       choiceEchoEventCount: (C.ordinaryEvents || []).filter(function (event) {
         return event.requiresEchoes || event.requiresAnyEchoes;
       }).length,
+      concreteStoryCount: states.reduce(function (sum, state) {
+        return sum + (state.annualNarratives || []).filter(function (entry) { return String(entry.text || '').length >= 80; }).length;
+      }, 0),
+      structuredLifeCount: states.filter(function (state) { return buildLifeChapters(state).length === 7; }).length,
       denseLifeCount: states.filter(function (state) {
         var routeDecisionFacts = state.facts.filter(function (fact) {
           return String(fact.source || '').indexOf('route-') === 0;
@@ -781,18 +1079,20 @@
     var coverage = inspectCoverage(states || []);
     var lifeDensityReady = coverage.scenarioCount > 0
       && coverage.denseLifeCount === coverage.scenarioCount
-      && coverage.authoredActionCount >= 50
-      && coverage.keyDecisionCount >= 33
-      && coverage.authoredOrdinaryEventCount >= 100;
+      && coverage.authoredActionCount >= 66
+      && coverage.keyDecisionCount >= 42
+      && coverage.authoredOrdinaryEventCount >= 171;
     return {
-      wholeGameStageLabel: coverage.familyCount === 3 && coverage.routeCount === 9 && coverage.factEndingCount === coverage.scenarioCount && coverage.annualNarrativeRate === 1 && lifeDensityReady
-        ? '完整一生内容版已闭环'
+      wholeGameStageLabel: coverage.familyCount === 3 && coverage.routeCount === 11 && coverage.post1949PathCount === 6 && coverage.deathEndingCount === coverage.scenarioCount && coverage.annualNarrativeRate === 1 && lifeDensityReady
+        ? '出生到死亡的完整人生文字版已闭环'
         : '仍在补代表态',
       version: C.version,
       coverage: coverage,
       hardGates: {
         identityStable: true,
-        factOnlyEnding: true,
+        deathOnlyEnding: coverage.deathEndingCount === coverage.scenarioCount,
+        milestone1949Continues: coverage.post1949ContinuationCount === coverage.scenarioCount,
+        sixPost1949Paths: coverage.post1949PathCount === 6,
         deterministicSeed: true,
         subjectSchema: true,
         informationChannels: true,
@@ -812,11 +1112,13 @@
     stageOf: stageOf,
     availableActions: availableActions,
     describeActionEffects: describeActionEffects,
+    describeEffects: describeEffects,
     recommendedActions: recommendedActions,
     advanceYear: advanceYear,
     choose: choose,
     buildEndingFacts: buildEndingFacts,
     buildEndingNarrative: buildEndingNarrative,
+    buildLifeChapters: buildLifeChapters,
     exportGame: exportGame,
     importGame: importGame,
     saveSummary: saveSummary,

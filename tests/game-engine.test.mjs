@@ -4,6 +4,7 @@ import test from 'node:test';
 globalThis.window = globalThis;
 await import('../assets/game-content.js');
 await import('../assets/life-expansion.js');
+await import('../assets/complete-life.js');
 await import('../assets/demo-engine.js');
 
 const Game = globalThis.MINGUO_GAME;
@@ -21,6 +22,10 @@ const DEFAULT_DECISIONS = {
   'shanghai-war': 'protect-workers',
   'postwar-settlement': 'rebuild-local',
   'final-1949': 'stay-mainland',
+  'later-life-livelihood': 'change-work',
+  'later-life-relationships': 'build-local-network',
+  'late-life-care': 'community-care',
+  'late-life-record': 'sort-records',
 };
 
 const ROUTE_SETUPS = {
@@ -31,8 +36,19 @@ const ROUTE_SETUPS = {
   'shen-scholar': { familyKey: 'jiangnanshen', gender: '男', decisions: { 'shen-path': 'scholar', 'shen-war': 'stay-public-work' } },
   'shen-newwoman': { familyKey: 'jiangnanshen', gender: '女', decisions: { 'shen-path': 'new-woman', 'shen-war': 'stay-public-work' } },
   'shen-refugee': { familyKey: 'jiangnanshen', gender: '女', decisions: { 'shen-path': 'new-woman', 'shen-war': 'move-with-family' } },
+  'shen-professional': { familyKey: 'jiangnanshen', gender: '女', decisions: { 'shen-path': 'professional-service', 'shen-war': 'stay-public-work' } },
   'shanghai-heir': { familyKey: 'shanghaigongshang', gender: '男', decisions: { 'shanghai-path': 'business-heir', 'shanghai-war': 'protect-workers' } },
   'shanghai-newwoman': { familyKey: 'shanghaigongshang', gender: '女', decisions: { 'shanghai-path': 'urban-new-woman', 'shanghai-war': 'protect-workers' } },
+  'shanghai-professional': { familyKey: 'shanghaigongshang', gender: '女', decisions: { 'shanghai-path': 'salaried-professional', 'shanghai-war': 'relocate-own-work' } },
+};
+
+const POST1949_OPTIONS = {
+  mainland: 'stay-mainland',
+  'hong-kong': 'move-hong-kong',
+  taiwan: 'move-taiwan',
+  overseas: 'move-overseas',
+  'in-motion': 'remain-in-motion',
+  unsettled: 'leave-unsettled',
 };
 
 function cloneSetup(setup) {
@@ -57,13 +73,13 @@ function playScenario({
   const decisionMap = { ...DEFAULT_DECISIONS, ...decisions };
   let turns = 0;
 
-  while (!state.over && turns < 80) {
+  while (!state.over && turns < 140) {
     const actionIds = actionPicker(state, Game.availableActions(state));
     Game.advanceYear(state, actionIds);
     while (state.pendingDecision) {
       const decision = state.pendingDecision;
       const requested = decisionMap[decision.id];
-      const available = decision.options.filter((option) => option.enabled);
+      const available = decision.options.filter((option) => option.enabled && !option.hidden);
       const option = available.find((item) => item.id === requested) || available[0];
       assert.ok(option, `decision ${decision.id} must have an available option`);
       Game.choose(state, option.id);
@@ -72,7 +88,7 @@ function playScenario({
   }
 
   assert.equal(state.over, true, `${familyKey} scenario should reach an ending`);
-  assert.ok(turns < 80, `${familyKey} scenario should not stall`);
+  assert.ok(turns < 140, `${familyKey} scenario should not stall`);
   return state;
 }
 
@@ -166,7 +182,7 @@ test('information channels change what the player can name about an era shock', 
   assert.ok(informed.information.channels.includes('newspaper'));
 });
 
-test('all three families can complete a life with fact-only endings', () => {
+test('all three families continue beyond 1949 and end only after a confirmed death', () => {
   const scenarios = [
     playScenario({ familyKey: 'subeipoor' }),
     playScenario({ familyKey: 'jiangnanshen' }),
@@ -178,7 +194,55 @@ test('all three families can complete a life with fact-only endings', () => {
     const ending = Game.buildEndingNarrative(state);
     assert.doesNotMatch(ending, bannedRanks);
     assert.ok(state.facts.some((fact) => fact.id === 'final-1949'));
+    assert.ok(state.endYear > 1949);
+    assert.equal(state.life.status, 'dead');
+    assert.ok(state.facts.some((fact) => fact.id === 'protagonist-death-occurred'));
+    assert.ok(state.facts.some((fact) => fact.id === 'protagonist-death-confirmed'));
+    assert.ok(state.life.deathPlace);
+    assert.ok(state.life.cause);
     assert.ok(state.endingFacts.length >= 4);
+  }
+});
+
+test('1949 is a milestone rather than an ending', () => {
+  const state = Game.createGame({ familyKey: 'subeipoor', gender: '男', name: '李禾生', seed: 9 });
+  const decisions = { ...DEFAULT_DECISIONS };
+  while (state.year <= 1949 && !state.over) {
+    Game.advanceYear(state, Game.recommendedActions(state));
+    while (state.pendingDecision) {
+      const requested = decisions[state.pendingDecision.id];
+      const option = state.pendingDecision.options.find((item) => item.enabled && !item.hidden && item.id === requested)
+        || state.pendingDecision.options.find((item) => item.enabled && !item.hidden);
+      Game.choose(state, option.id);
+    }
+  }
+  assert.equal(state.over, false);
+  assert.equal(state.year, 1950);
+  assert.equal(state.post1949Choice, 'mainland');
+  assert.ok(state.facts.some((fact) => fact.id === 'final-1949' && fact.kind === 'milestone'));
+});
+
+test('six post-1949 destinations are distinct and all continue to death', () => {
+  for (const [path, optionId] of Object.entries(POST1949_OPTIONS)) {
+    const state = playScenario({
+      familyKey: 'shanghaigongshang',
+      seed: 41,
+      decisions: { 'final-1949': optionId },
+      actionPicker(current, available) {
+        const selected = [];
+        let budget = current.spirit;
+        const newspaper = available.find((action) => action.id === 'read-newspaper');
+        const business = available.find((action) => action.id === 'run-business');
+        if (newspaper && newspaper.spirit <= budget) { selected.push(newspaper.id); budget -= newspaper.spirit; }
+        if (business && business.spirit <= budget) selected.push(business.id);
+        return selected;
+      },
+    });
+    assert.equal(state.post1949Choice, path);
+    assert.ok(state.post1949.arrival);
+    assert.ok(state.post1949.livelihood);
+    assert.ok(state.endYear > 1949);
+    assert.equal(state.life.status, 'dead');
   }
 });
 
@@ -222,6 +286,36 @@ test('every played year receives one ordinary-life narrative', () => {
   assert.equal(new Set(years).size, years.length);
   assert.ok(state.annualNarratives.some((entry) => entry.kind === 'scene'));
   assert.ok(state.annualNarratives.some((entry) => entry.kind === 'rhythm'));
+  assert.ok(state.annualNarratives.every((entry) => entry.text.length >= 80), 'every rendered annual scene should be a concrete small story');
+});
+
+test('choices are written as executable personal actions and locks explain the current gap', () => {
+  const allLabels = Game.content.decisions.flatMap((decision) => decision.options.map((option) => option.label));
+  for (const vague of ['进入队伍', '带能同行的人向南逃', '留在大陆', '迁往香港或台湾']) {
+    assert.ok(!allLabels.includes(vague), `vague label should have been replaced: ${vague}`);
+  }
+
+  const state = Game.createGame({ familyKey: 'shanghaigongshang', gender: '男', name: '锁条件', seed: 21 });
+  while (state.year < 1949 && !state.over) {
+    Game.advanceYear(state, []);
+    while (state.pendingDecision) {
+      const option = state.pendingDecision.options.find((item) => item.enabled && !item.hidden);
+      Game.choose(state, option.id);
+    }
+  }
+  Game.advanceYear(state, []);
+  const overseas = state.pendingDecision.options.find((option) => option.id === 'move-overseas');
+  assert.equal(overseas.enabled, false);
+  assert.match(overseas.disabledReason, /至少达到|需要先取得/);
+  assert.match(overseas.disabledReason, /当前为|信息渠道/);
+});
+
+test('a death ending exposes seven coherent life chapters', () => {
+  const state = playScenario({ familyKey: 'jiangnanshen', gender: '女', decisions: { 'shen-path': 'professional-service' } });
+  const chapters = Game.buildLifeChapters(state);
+  assert.deepEqual(chapters.map((chapter) => chapter.key), ['birth-family', 'livelihood', 'war', 'postwar', 'post1949', 'late-life', 'death']);
+  assert.match(chapters.at(-1).text, /去世.*享年.*确认/);
+  assert.match(Game.buildEndingNarrative(state), /出生与成长.*成年谋生.*战争转折.*1949 与后半生.*死亡与确认/);
 });
 
 test('persistent contacts keep their own status and relationship history', () => {
@@ -254,11 +348,11 @@ test('family lifecycle allows care without forcing marriage or children', () => 
   assert.ok(unmarried.facts.some((fact) => fact.source === 'family-future'));
 });
 
-test('portable saves round-trip without changing the life ledger', () => {
+test('portable v0.5 saves round-trip without changing the life ledger', () => {
   const state = playScenario({ familyKey: 'subeipoor', decisions: { 'subei-war': 'join-army' } });
   const restored = Game.importGame(Game.exportGame(state));
 
-  assert.equal(restored.version, '0.4.0');
+  assert.equal(restored.version, '0.5.0');
   assert.deepEqual(restored.identity, state.identity);
   assert.deepEqual(restored.facts, state.facts);
   assert.deepEqual(restored.annualNarratives, state.annualNarratives);
@@ -283,7 +377,7 @@ test('abilities and resources stay inside the published 0 to 100 domain', () => 
   }
 });
 
-test('v0.2 states receive v0.4 contact and annual-life defaults on import', () => {
+test('v0.2 states receive v0.5 complete-life defaults on import', () => {
   const legacy = Game.createGame({ familyKey: 'subeipoor', gender: '男', name: '旧存档', seed: 19 });
   legacy.version = '0.2.0';
   delete legacy.contacts;
@@ -292,10 +386,55 @@ test('v0.2 states receive v0.4 contact and annual-life defaults on import', () =
   delete legacy.contactHistory;
 
   const restored = Game.importGame(legacy);
-  assert.equal(restored.version, '0.4.0');
+  assert.equal(restored.version, '0.5.0');
   assert.equal(Object.keys(restored.contacts).length, 3);
   assert.deepEqual(restored.annualNarratives, []);
   assert.deepEqual(restored.contactHistory, []);
+});
+
+test('v0.4 endings at 1949 resume as an unfinished life in 1950', () => {
+  const legacy = Game.createGame({ familyKey: 'shanghaigongshang', gender: '女', name: '旧版人物', seed: 49 });
+  legacy.version = '0.4.0';
+  legacy.year = 1949;
+  legacy.age = legacy.year - legacy.identity.born;
+  legacy.over = true;
+  legacy.endYear = 1949;
+  legacy.finalChoice = 'hktw';
+  legacy.facts.push({ id: 'life-ended', year: 1949, text: '旧版终局。', ending: true });
+  legacy.endingFacts = ['旧版在 1949 年结束'];
+  legacy.endingNarrative = '旧版终局。';
+  delete legacy.post1949Choice;
+  delete legacy.post1949;
+  delete legacy.life;
+
+  const restored = Game.importGame(legacy);
+  assert.equal(restored.version, '0.5.0');
+  assert.equal(restored.over, false);
+  assert.equal(restored.year, 1950);
+  assert.equal(restored.chapter, 'post1949');
+  assert.equal(restored.post1949Choice, 'hong-kong');
+  assert.equal(restored.post1949.region, '迁往香港');
+  assert.equal(restored.endYear, null);
+  assert.equal(restored.endingNarrative, '');
+  assert.ok(!restored.facts.some((fact) => fact.id === 'life-ended'));
+  assert.ok(restored.milestones.some((milestone) => milestone.id === 'v04-save-continued'));
+});
+
+test('recommended actions stay appropriate to the protagonist age and route', () => {
+  const state = Game.createGame({ familyKey: 'shanghaigongshang', gender: '女', name: '成年人物', seed: 30 });
+  while (state.year < 1930) {
+    Game.advanceYear(state, []);
+    while (state.pendingDecision) {
+      const decision = state.pendingDecision;
+      const requested = { ...DEFAULT_DECISIONS, 'shanghai-path': 'business-heir' }[decision.id];
+      const available = decision.options.filter((option) => option.enabled && !option.hidden);
+      Game.choose(state, available.find((option) => option.id === requested)?.id || available[0].id);
+    }
+  }
+
+  const recommendations = Game.recommendedActions(state);
+  assert.ok(recommendations.some((id) => ['run-business', 'learn-business', 'help-workers'].includes(id)));
+  assert.ok(!recommendations.includes('learn-characters'));
 });
 
 test('each route owns at least nine authored ordinary-life scenes', () => {
@@ -305,13 +444,13 @@ test('each route owns at least nine authored ordinary-life scenes', () => {
   }
 });
 
-test('the complete-life pack reaches the published content-density baseline', () => {
+test('the birth-to-death pack reaches the published content-density baseline', () => {
   const content = Game.content;
-  assert.equal(content.actions.length, 50);
-  assert.equal(content.decisions.length, 33);
-  assert.equal(content.decisions.reduce((sum, decision) => sum + decision.options.length, 0), 96);
-  assert.equal(content.ordinaryEvents.length, 105);
-  assert.equal(content.ordinaryEvents.filter((event) => event.requiresEchoes).length, 63);
+  assert.equal(content.actions.length, 66);
+  assert.equal(content.decisions.length, 42);
+  assert.equal(content.decisions.reduce((sum, decision) => sum + decision.options.length, 0), 143);
+  assert.equal(content.ordinaryEvents.length, 171);
+  assert.equal(content.ordinaryEvents.filter((event) => event.requiresEchoes).length, 105);
   assert.equal(new Set(content.actions.map((action) => action.id)).size, content.actions.length);
   assert.equal(new Set(content.decisions.map((decision) => decision.id)).size, content.decisions.length);
   assert.equal(new Set(content.ordinaryEvents.map((event) => event.id)).size, content.ordinaryEvents.length);
@@ -348,7 +487,7 @@ test('route choices produce guaranteed next-year echoes and ending facts', () =>
   assert.match(Game.buildEndingNarrative(state), /1942 年/);
 });
 
-test('all 96 key-decision options are reachable in a compatible life', () => {
+test('all 143 key-decision options are reachable in a compatible life', () => {
   for (const decision of Game.content.decisions) {
     for (const target of decision.options) {
       const routeKey = decision.routes?.[0] || target.routes?.[0];
@@ -357,6 +496,8 @@ test('all 96 key-decision options are reachable in a compatible life', () => {
         : setupForFamily(decision.families?.[0] || 'shanghaigongshang');
       if (target.genders?.includes('女')) setup.gender = '女';
       setup.decisions[decision.id] = target.id;
+      const postPath = target.post1949Choices?.[0] || decision.post1949Choices?.[0];
+      if (postPath) setup.decisions['final-1949'] = POST1949_OPTIONS[postPath];
 
       const state = playScenario({
         ...setup,
@@ -378,18 +519,21 @@ test('all 96 key-decision options are reachable in a compatible life', () => {
   }
 });
 
-test('all 50 annual actions can be performed in a compatible life', () => {
+test('all 66 annual actions can be performed in a compatible life', () => {
   for (const target of Game.content.actions) {
     const routeKey = target.routes?.[0];
     const setup = routeKey
       ? cloneSetup(ROUTE_SETUPS[routeKey])
       : setupForFamily(target.families?.[0] || 'shanghaigongshang');
+    if (target.post1949Choices?.[0]) setup.decisions['final-1949'] = POST1949_OPTIONS[target.post1949Choices[0]];
 
     const state = playScenario({
       ...setup,
       name: `行动-${target.id}`,
       actionPicker(current, available) {
         if (available.some((action) => action.id === target.id)) return [target.id];
+        if (target.post1949Choices?.includes('overseas') && !current.information.channels.includes('newspaper') && available.some((action) => action.id === 'read-newspaper')) return ['read-newspaper'];
+        if (target.post1949Choices?.includes('overseas') && available.some((action) => action.id === 'run-business')) return ['run-business'];
         if (target.id === 'write-and-teach') {
           if (available.some((action) => action.id === 'read-books')) return ['read-books'];
           if (available.some((action) => action.id === 'study-new')) return ['study-new'];

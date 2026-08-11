@@ -19,14 +19,14 @@ table{width:100%;border-collapse:collapse;background:rgba(255,255,255,.25);font-
 </head>
 <body>
 <header class="cover">
-  <small class="pix">DESIGN V1.1 · TEXT DEMO V0.4</small>
+  <small class="pix">DESIGN V1.2 · TEXT DEMO V0.5</small>
   <h1>民国人生 · 正式设计总览</h1>
-  <p>三棵出生家庭树 · 九条可玩路径 · 逐年生活 · 持久人物 · 事实型终局</p>
+  <p>三棵出生家庭树 · 十一条成年路径 · 六种 1949 后半生 · 从出生到死亡</p>
   <nav class="nav"><a href="index.html">人生总图</a><a href="demo.html">进入文字版 Demo</a><a href="PROTOTYPE_STATUS.md">版本状态</a></nav>
 </header>
 
 <main class="wrap">
-  <p class="note"><b>当前结论：</b>正式游戏的完整一生设计已经完成。九条路径除了入口、战时和终局，还各有两个中段行动、两次专属抉择与六条选择回响；标准人生会发生 13～14 次关键抉择。</p>
+  <p class="note"><b>当前结论：</b>1949 已从终局改为中段分水岭。十一条路径会继续进入六种地域后半生，处理抵达、谋生、同行者、通信、照料、衰老和真实死亡；终局固定回收七章完整生平。</p>
 
   <h2>设计硬约束</h2>
   <section class="rules">
@@ -47,26 +47,28 @@ table{width:100%;border-collapse:collapse;background:rgba(255,255,255,.25);font-
     <div class="step">关键抉择</div><div class="arrow">›</div>
     <div class="step">主体回应</div><div class="arrow">›</div>
     <div class="step">事实账本</div><div class="arrow">›</div>
-    <div class="step">1949 去留</div>
+    <div class="step">1949 去向</div><div class="arrow">›</div>
+    <div class="step">中晚年</div><div class="arrow">›</div>
+    <div class="step">死亡确认</div>
   </section>
 
   <h2>三棵家庭树</h2>
   <section class="grid">
     <article class="card"><h3>苏北贫农家</h3><p>租债、病母、水患、兵役名额与薄弱门路构成共同前提。</p><b>留乡 · 进厂 · 士兵 · 难民／逃亡</b></article>
-    <article class="card"><h3>江南沈家</h3><p>家学、薄产、婚约、学校网络和家门责任彼此牵制。</p><b>读书人 · 新女性 · 举家流亡</b></article>
-    <article class="card"><h3>上海工商家</h3><p>账房、工友家口、父辈家业和外部门路共同承担战损与币制冲击。</p><b>实业继承 · 城市新女性</b></article>
+    <article class="card"><h3>江南沈家</h3><p>家学、薄产、婚约、学校网络和家门责任彼此牵制。</p><b>读书人 · 新女性 · 举家流亡 · 医护与地方服务</b></article>
+    <article class="card"><h3>上海工商家</h3><p>账房、工友家口、父辈家业和外部门路共同承担战损与币制冲击。</p><b>实业继承 · 城市新女性 · 技术职员与独立营生</b></article>
   </section>
 
   <h2>完整一生内容密度</h2>
   <section class="grid">
-    <article class="card done"><h3>50 个年度行动</h3><p>通用生活与九条路线专属营生共同组成可重复的年度安排。</p></article>
-    <article class="card done"><h3>33 组／96 个选项</h3><p>每局 13～14 次关键抉择，不只在开局选择一次路径。</p></article>
-    <article class="card done"><h3>105 个生活场景</h3><p>其中 63 条是一一对应的跨年选择回响，保证后果不会被随机日常挤掉。</p></article>
+    <article class="card done"><h3>66 个年度行动</h3><p>通用生活、十一条路线营生与六种地域后半生共同组成年度安排。</p></article>
+    <article class="card done"><h3>42 组／143 个选项</h3><p>从开蒙、谋生和战争一直选择到职业转换、关系、照料与记录。</p></article>
+    <article class="card done"><h3>171 个生活场景</h3><p>其中 105 条是一一对应的跨年选择回响，短事件会扩为具体小故事。</p></article>
   </section>
 
-  <h2>九条路径的五段闭环</h2>
+  <h2>十一条路径的完整人生闭环</h2>
   <table>
-    <thead><tr><th>路径</th><th>入口</th><th>战争／制度冲击</th><th>战后承接</th><th>1949 回收</th></tr></thead>
+    <thead><tr><th>路径</th><th>入口</th><th>战争／制度冲击</th><th>战后承接</th><th>1949 与后半生</th></tr></thead>
     <tbody>
       <tr><td>苏北留乡</td><td>1922 接住租地和家口</td><td>水灾、病母、抓丁与名额后账</td><td>旧屋、租账与生计重接</td><td>土地和家口关系变化</td></tr>
       <tr><td>苏北进厂</td><td>1922 离乡进纱厂</td><td>工潮、自由身、战时工友互助</td><td>复工、欠薪与家口安置</td><td>留城、返乡或继续流动</td></tr>
@@ -75,8 +77,10 @@ table{width:100%;border-collapse:collapse;background:rgba(255,255,255,.25);font-
       <tr><td>沈家读书人</td><td>1921 继续新学</td><td>公共写作、教书与战争</td><td>薪资、物价和学校网络</td><td>留任、迁居或外路离开</td></tr>
       <tr><td>沈家新女性</td><td>1921 教育与自立</td><td>婚约、救济与公共工作</td><td>教育和个人生计重建</td><td>个人与婚家分别回收</td></tr>
       <tr><td>沈家流亡</td><td>1937 与愿同行者南迁</td><td>家门、婚家分别安置</td><td>留后方或试探归城</td><td>不把全家写成同一去向</td></tr>
+      <tr><td>沈家医护服务</td><td>1921 学习医护与登记</td><td>药品、救护与专业边界</td><td>诊所、出诊与家门重接</td><td>专业工作适应新的生活地点</td></tr>
       <tr><td>工商家实业继承</td><td>1921 进入账房</td><td>工潮、父辈交账、厂务疏散</td><td>厂务、欠账和工友安置</td><td>货币风暴后的个人去留</td></tr>
       <tr><td>工商家新女性</td><td>1921 建立个人工作</td><td>教育、工作室与救济网络</td><td>战后重开个人营生</td><td>个人与婚家分别应对币制冲击</td></tr>
+      <tr><td>工商家技术职员</td><td>1921 离开继承位置做受薪工作</td><td>单位职责、工具、委托和内迁</td><td>靠个人技术重接营生</td><td>职业独立进入不同地域后半生</td></tr>
     </tbody>
   </table>
 
@@ -86,16 +90,17 @@ table{width:100%;border-collapse:collapse;background:rgba(255,255,255,.25);font-
     <div class="year"><b>1925</b>工潮连接工人与工商家</div><div class="year"><b>1931—1933</b>水灾、死亡发生与确认</div>
     <div class="year"><b>1934—1935</b>公共工作与父辈交账</div><div class="year"><b>1937—1938</b>抓丁、南迁、疏散与主体去留</div>
     <div class="year"><b>1940—1942</b>后方落脚与士兵失联</div><div class="year"><b>1945—1947</b>战后重接与归返确认</div>
-    <div class="year"><b>1948</b>货币风暴</div><div class="year"><b>1949</b>土地、家计与个人去留</div>
+    <div class="year"><b>1948</b>货币风暴</div><div class="year"><b>1949</b>民国阶段结束与个人去向</div>
+    <div class="year"><b>50—80 岁</b>职业、联系、照料和记录</div><div class="year"><b>死亡</b>发生、地点、原因与确认</div>
   </section>
 
   <h2>设计完成与制作边界</h2>
   <section class="grid">
-    <article class="card done"><h3>完整一生设计已完成</h3><p>3 个家庭、9 条路径、50 个行动、96 个关键选项、主体关系、信息渠道和事实终局。</p></article>
-    <article class="card done"><h3>文字验证已完成</h3><p>9 条固定种子人生、370/370 年度叙事、105 个生活场景和 63 条选择回响。</p></article>
+    <article class="card done"><h3>完整人生设计已收定</h3><p>3 个家庭、11 条路径、6 种地域后半生、晚年、死亡和七章事实终局。</p></article>
+    <article class="card done"><h3>文字版进入完整回归</h3><p>标准人生必须跨过 1949，逐年生活到死亡，并同时覆盖六种去向。</p></article>
     <article class="card todo"><h3>正式产品继续制作</h3><p>美术、音频、正式引擎、新地域扩展、外部史实审校、玩家测试与商业调优。</p></article>
   </section>
 </main>
-<footer class="foot">民国人生 · 正式设计 v1.1 · 文字版 v0.4 · 玩法数值与虚构人物不等于历史事实</footer>
+<footer class="foot">民国人生 · 正式设计 v1.2 · 文字版 v0.5 · 玩法数值与虚构人物不等于历史事实</footer>
 </body>
 </html>
