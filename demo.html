@@ -33,8 +33,9 @@ h1{margin:.25em 0 .05em;font-size:32px}
 .families{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:1.2em 0}
 .family{padding:16px;background:var(--paper2);border:1px solid var(--rule);border-top:4px solid var(--green);border-radius:10px}
 .family h3{margin:0 0 4px}.family .place{color:var(--muted);font-size:13px}.family .motif{min-height:106px;font-size:13px}
-.start-fields{display:grid;grid-template-columns:1fr 76px 92px;gap:8px;margin:12px 0}.start-fields label{font-size:12px;color:var(--muted)}
+.start-fields{display:grid;grid-template-columns:1fr 76px minmax(122px,1.2fr);gap:8px;margin:12px 0}.start-fields label{font-size:12px;color:var(--muted)}
 .start-fields input,.start-fields select{width:100%;margin-top:3px;padding:7px;border:1px solid var(--rule);border-radius:5px;background:var(--paper)}
+.seed-row{display:flex;gap:5px;align-items:center}.seed-row input{min-width:0}.seed-row .btn{width:auto;padding:5px 8px;font-size:10px;white-space:nowrap}.field-help{display:block;margin-top:4px;color:var(--muted);font-size:10px;line-height:1.35}
 .family .btn{width:100%}
 .hud{position:sticky;top:0;z-index:10;margin:1em 0;padding:12px 16px;background:rgba(234,221,196,.96);border:1px solid var(--rule);border-radius:10px;box-shadow:0 2px 9px rgba(0,0,0,.08)}
 .hud-top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;border-bottom:1px dashed var(--rule);padding-bottom:8px;margin-bottom:8px}.who{font-weight:700}.stage{margin-left:7px;padding:2px 7px;border-radius:3px;color:#fff;background:var(--green);font:10px Pixel,monospace}.time{color:var(--red);font:13px Pixel,monospace}
@@ -51,7 +52,7 @@ h1{margin:.25em 0 .05em;font-size:32px}
 .curve{width:100%;height:190px;margin-top:14px;background:rgba(255,255,255,.3);border:1px solid var(--rule);border-radius:8px}.caption{text-align:center;color:var(--muted);font-size:12px}
 .log{max-height:310px;overflow:auto;padding:8px 14px;background:rgba(255,255,255,.28);border:1px solid var(--rule);border-radius:8px;font-size:13px}.log-row{padding:5px 0;border-bottom:1px dashed var(--rule)}.log-row:last-child{border:0}.log-year{display:inline-block;margin-right:6px;padding:1px 5px;color:#fff;background:var(--muted);border-radius:2px;font:9px Pixel,monospace}.log-row.info .log-year{background:var(--blue)}.log-row.route .log-year,.log-row.choice .log-year{background:var(--green)}.log-row.bad{color:#842a23}
 .ending{padding:22px;background:var(--paper2);border:2px solid var(--red);border-radius:12px}.ending h2{margin-top:0;color:var(--red)}.ending li{margin:7px 0}.facts{margin-top:16px;padding:12px;background:rgba(255,255,255,.3);border-radius:7px;font-size:13px}.disc{text-align:center;color:var(--muted);font-size:12px;font-style:italic}
-.mask{position:fixed;inset:0;z-index:40;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(45,36,28,.58)}.mask.on{display:flex}.panel{width:min(620px,100%);max-height:84vh;overflow:auto;background:var(--paper);border:2px solid var(--rule);border-radius:12px}.panel-head{display:flex;justify-content:space-between;padding:12px 16px;color:#fff;background:var(--green);font-family:Pixel,monospace}.close{border:0;background:none;color:#fff;font-size:18px}.panel-body{padding:12px 16px}.action-option{width:100%;margin:7px 0;padding:10px 12px;text-align:left;background:var(--paper2);border:1px solid var(--rule);border-radius:7px}.action-option:hover:not(:disabled){border-color:var(--red)}.action-option b{display:block}.action-option small{color:var(--muted)}
+.mask{position:fixed;inset:0;z-index:40;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(45,36,28,.58)}.mask.on{display:flex}.panel{width:min(680px,100%);max-height:84vh;overflow:auto;background:var(--paper);border:2px solid var(--rule);border-radius:12px}.panel-head{display:flex;justify-content:space-between;padding:12px 16px;color:#fff;background:var(--green);font-family:Pixel,monospace}.close{border:0;background:none;color:#fff;font-size:18px}.panel-body{padding:12px 16px}.action-guide{margin:2px 0 10px;padding:9px 11px;background:rgba(53,107,100,.08);border-left:3px solid var(--green);color:var(--muted);font-size:12px}.action-option{width:100%;margin:7px 0;padding:10px 12px;text-align:left;background:var(--paper2);border:1px solid var(--rule);border-radius:7px}.action-option:hover:not(:disabled){border-color:var(--red)}.action-option b{display:block}.action-option small{display:block;color:var(--muted)}.effect-line{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}.effect-chip{padding:2px 7px;border-radius:10px;background:rgba(255,255,255,.48);color:var(--green);font-size:11px}.effect-chip.risk{color:var(--red)}.effect-chip.context{color:var(--blue)}.effect-chip.spirit{color:#7d5311}.unavailable{display:block;margin-top:5px;color:var(--red);font-size:11px}
 @media(max-width:760px){.families{grid-template-columns:1fr}.family .motif{min-height:0}.status-grid{grid-template-columns:1fr}.subjects{grid-template-columns:repeat(2,1fr)}.bars{grid-template-columns:1fr}h1{font-size:26px}}
 @media(max-width:760px){.contacts{grid-template-columns:1fr}.start-fields{grid-template-columns:1fr 1fr}.start-fields label:first-child{grid-column:1/-1}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
@@ -73,6 +74,7 @@ h1{margin:.25em 0 .05em;font-size:32px}
   <section class="screen on" id="screen-pick">
     <div class="note warn"><span class="tag">当前定位</span>这是可从出生玩到 1949 年的完整一生内容版。三棵家庭树、九条路径、50 个行动、96 个关键选项、105 个生活场景、持续人物、主体状态、信息边界、存档与事实型终局已经进入同一运行时。</div>
     <div class="note"><span class="tag">玩法节奏</span>一回合是一年。你安排少量关键行动，生活场景和时代冲击随后发生；关键年份出现抉择。想快速看设计可以使用“自动到下个抉择”，想仔细玩则可每年自行安排。</div>
+    <div class="note"><span class="tag">随机编号说明</span>“随机编号（世界种子）”只决定同等条件下抽到哪段日常、人物如何独立回应，不代表难度。可以填写任意正整数，也可以点“随机”；同一家庭、同一编号、相同行动与选择会复现同一段人生。</div>
     <div id="savedStart"></div>
     <h2 class="pix">选择出生家庭</h2>
     <div class="families" id="familyGrid"></div>
@@ -147,6 +149,22 @@ h1{margin:.25em 0 .05em;font-size:32px}
   function esc(value) { return String(value == null ? '' : value).replace(/[&<>'"]/g, function (char) { return ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'})[char]; }); }
   function showScreen(name) { ['pick','play','end'].forEach(function (key) { el('screen-' + key).classList.toggle('on', key === name); }); window.scrollTo({ top: 0, behavior: 'smooth' }); }
   function actionById(id) { return Content.actions.find(function (action) { return action.id === id; }); }
+  function randomSeed() {
+    if (window.crypto && window.crypto.getRandomValues) {
+      var values = new Uint32Array(1); window.crypto.getRandomValues(values); return values[0] || 1;
+    }
+    return Math.max(1, Math.floor((Date.now() * Math.random()) % 4294967295));
+  }
+  function effectChips(action) {
+    var preview = Game.describeActionEffects(G, action);
+    var chips = [];
+    if (preview.gains.length) chips.push('<span class="effect-chip">主要收益 ↑ ' + esc(preview.gains.join('、')) + '</span>');
+    if (preview.risks.length) chips.push('<span class="effect-chip risk">代价或风险 ↓ ' + esc(preview.risks.join('、')) + '</span>');
+    if (preview.affectedPeople.length) chips.push('<span class="effect-chip context">影响人物与关系：' + esc(preview.affectedPeople.join('、')) + '</span>');
+    if (preview.channels.length) chips.push('<span class="effect-chip context">获得信息渠道：' + esc(preview.channels.join('、')) + '</span>');
+    chips.push('<span class="effect-chip spirit">' + (preview.spiritKind === 'recover' ? '恢复精神 +' : '消耗精神 ') + preview.spiritAmount + '</span>');
+    return '<span class="effect-line">' + chips.join('') + '</span>';
+  }
   function plannedSpirit(exceptIndex) { return plan.reduce(function (sum, id, index) { var action = index === exceptIndex ? null : actionById(id); return sum + (action ? action.spirit : 0); }, 0); }
   function setSaveNote(message) { el('saveNote').textContent = message || ''; }
   function readStoredSave(key) { try { return window.localStorage.getItem(key); } catch (error) { return null; } }
@@ -160,13 +178,14 @@ h1{margin:.25em 0 .05em;font-size:32px}
       var family = Content.families[familyKey];
       var card = document.createElement('article'); card.className = 'family';
       card.innerHTML = '<h3>' + esc(family.name) + '</h3><div class="place">' + esc(family.place) + ' · ' + family.born + ' 年出生</div><p class="motif">' + esc(family.motif) + '</p>' +
-        '<div class="start-fields"><label>角色姓名<input data-name value="' + esc(family.defaultNames['男']) + '"></label><label>性别<select data-gender><option value="男">男</option><option value="女">女</option></select></label><label>世界种子<input data-seed type="number" min="1" value="' + (familyKey === 'subeipoor' ? '1108' : familyKey === 'jiangnanshen' ? '2108' : '3108') + '"></label></div>' +
-        '<button class="btn green" type="button">从这个家庭开始</button>';
+        '<div class="start-fields"><label>角色姓名<input data-name value="' + esc(family.defaultNames['男']) + '"></label><label>性别<select data-gender><option value="男">男</option><option value="女">女</option></select></label><label>随机编号（世界种子）<span class="seed-row"><input data-seed type="number" min="1" max="4294967295" step="1" value="' + (familyKey === 'subeipoor' ? '1108' : familyKey === 'jiangnanshen' ? '2108' : '3108') + '"><button class="btn" data-random-seed type="button">随机</button></span><span class="field-help">任意正整数；相同编号可复现。</span></label></div>' +
+        '<button class="btn green" data-start type="button">从这个家庭开始</button>';
       var genderSelect = card.querySelector('[data-gender]');
       var nameInput = card.querySelector('[data-name]');
       var seedInput = card.querySelector('[data-seed]');
       genderSelect.onchange = function () { nameInput.value = family.defaultNames[genderSelect.value]; };
-      card.querySelector('button').onclick = function () { startFamily(familyKey, genderSelect.value, nameInput.value, Number(seedInput.value) || 1); };
+      card.querySelector('[data-random-seed]').onclick = function () { seedInput.value = randomSeed(); };
+      card.querySelector('[data-start]').onclick = function () { startFamily(familyKey, genderSelect.value, nameInput.value, Math.max(1, Math.floor(Number(seedInput.value) || 1))); };
       grid.appendChild(card);
     });
     renderSavedStart();
@@ -252,12 +271,13 @@ h1{margin:.25em 0 .05em;font-size:32px}
   function openActions(slotIndex) {
     lastModalFocus = document.activeElement;
     var body = el('actionBody'); body.innerHTML = '';
+    var guide = document.createElement('div'); guide.className = 'action-guide'; guide.textContent = '这里显示立即可预见的收益方向与代价，不公开精确属性点；长期剧情后果仍要到往后的人生中确认。同一年重复做同一件事，效果会递减。'; body.appendChild(guide);
     Game.availableActions(G, { includeDisabled: true }).forEach(function (action) {
       if (!action.enabled && (action.disabledReason === '当前家庭不可用' || action.disabledReason === '当前路径不可用')) return;
       var spiritOkay = G.spirit - plannedSpirit(slotIndex) - action.spirit >= 0;
       var enabled = action.enabled && spiritOkay;
       var button = document.createElement('button'); button.className = 'action-option'; button.disabled = !enabled;
-      button.innerHTML = '<b>' + esc(action.name) + '</b><small>' + esc(action.note || '') + ' · 精神 ' + (action.spirit >= 0 ? '-' + action.spirit : '+' + (-action.spirit)) + (!enabled ? ' · ' + esc(action.disabledReason || '精神不足') : '') + '</small>';
+      button.innerHTML = '<b>' + esc(action.name) + '</b><small>' + esc(action.note || '') + '</small>' + effectChips(action) + (!enabled ? '<span class="unavailable">暂不可用：' + esc(action.disabledReason || '本年剩余精神不足') + '</span>' : '');
       button.onclick = function () { plan[slotIndex] = action.id; closeActions(); renderSlots(); };
       body.appendChild(button);
     });

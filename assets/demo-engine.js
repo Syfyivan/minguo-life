@@ -59,7 +59,39 @@
       return Number(flat[key] || 0) < Number(gate[key]);
     });
     if (!failed) return { ok: true, reason: '' };
-    return { ok: false, reason: failed + ' 需要达到 ' + gate[failed] };
+    var meta = C.attributes.concat(C.resources).find(function (item) { return item.key === failed; });
+    return { ok: false, reason: (meta ? meta.name : failed) + '需要达到 ' + gate[failed] };
+  }
+
+  function describeActionEffects(state, action) {
+    var statLabels = {};
+    C.attributes.concat(C.resources).forEach(function (item) { statLabels[item.key] = item.name; });
+    var gains = [];
+    var risks = [];
+    Object.keys(action.delta || {}).forEach(function (key) {
+      var amount = Number(action.delta[key] || 0);
+      if (amount > 0) gains.push(statLabels[key] || key);
+      if (amount < 0) risks.push(statLabels[key] || key);
+    });
+
+    var affectedPeople = [];
+    Object.keys(action.subjectDelta || {}).forEach(function (key) {
+      var subject = state && state.subjects && state.subjects[key];
+      affectedPeople.push(subject ? subject.label : key);
+    });
+    Object.keys(action.contactEffects || {}).forEach(function (key) {
+      var contact = state && state.contacts && state.contacts[key];
+      if (contact) affectedPeople.push(contact.label);
+    });
+
+    return {
+      gains: gains,
+      risks: risks,
+      affectedPeople: affectedPeople.filter(function (label, index, list) { return list.indexOf(label) === index; }),
+      channels: (action.channels || []).map(function (key) { return C.channelLabels[key] || key; }),
+      spiritKind: action.spirit < 0 ? 'recover' : 'cost',
+      spiritAmount: Math.abs(Number(action.spirit || 0)),
+    };
   }
 
   function applyDelta(state, delta, scale) {
@@ -779,6 +811,7 @@
     createGame: createGame,
     stageOf: stageOf,
     availableActions: availableActions,
+    describeActionEffects: describeActionEffects,
     recommendedActions: recommendedActions,
     advanceYear: advanceYear,
     choose: choose,

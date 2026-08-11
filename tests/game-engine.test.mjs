@@ -190,6 +190,30 @@ test('the same seed and decisions reproduce the same life ledger', () => {
   assert.equal(Game.buildEndingNarrative(first), Game.buildEndingNarrative(second));
 });
 
+test('action previews explain direction without exposing exact stat deltas', () => {
+  const state = Game.createGame({ familyKey: 'subeipoor', gender: '女', name: '李秀禾', seed: 17 });
+  const play = Game.availableActions(state, { includeDisabled: true }).find((action) => action.id === 'play');
+  const care = Game.availableActions(state, { includeDisabled: true }).find((action) => action.id === 'care-mother');
+  const preview = Game.describeActionEffects(state, play);
+  const carePreview = Game.describeActionEffects(state, care);
+
+  assert.deepEqual(preview.gains, ['体魄', '心智']);
+  assert.equal(preview.spiritKind, 'recover');
+  assert.equal(preview.spiritAmount, 2);
+  assert.ok(carePreview.affectedPeople.includes('母亲'));
+  const talk = Game.availableActions(state, { includeDisabled: true }).find((action) => action.id === 'talk-neighbors');
+  const talkPreview = Game.describeActionEffects(state, talk);
+  assert.deepEqual(talkPreview.affectedPeople, ['周淑兰']);
+});
+
+test('locked actions use readable Chinese requirements', () => {
+  const state = Game.createGame({ familyKey: 'jiangnanshen', gender: '男', name: '沈砚清', seed: 18 });
+  const action = Game.availableActions(state, { includeDisabled: true }).find((item) => item.id === 'record-life-ledger');
+
+  assert.equal(action.enabled, false);
+  assert.doesNotMatch(action.disabledReason, /knowledge|money|body|mind/);
+});
+
 test('every played year receives one ordinary-life narrative', () => {
   const state = playScenario({ familyKey: 'jiangnanshen', gender: '女', decisions: { 'shen-path': 'new-woman' } });
   const years = state.annualNarratives.map((entry) => entry.year);
