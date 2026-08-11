@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 
 globalThis.window = globalThis;
 await import('./assets/game-content.js');
+await import('./assets/life-expansion.js');
 await import('./assets/demo-engine.js');
 
 const Game = globalThis.MINGUO_GAME;
@@ -75,11 +76,16 @@ assert.equal(report.informationEvidenceCount, states.length);
 assert.equal(report.contactEvidenceCount, states.length);
 assert.equal(report.familyLifecycleCount, states.length);
 assert.equal(report.annualNarrativeRate, 1);
-assert.equal(report.authoredOrdinaryEventCount, 42);
+assert.equal(report.authoredActionCount, 50);
+assert.equal(report.keyDecisionCount, 33);
+assert.equal(report.decisionOptionCount, 96);
+assert.equal(report.authoredOrdinaryEventCount, 105);
+assert.equal(report.choiceEchoEventCount, 63);
+assert.equal(report.denseLifeCount, states.length);
 assert.equal(report.persistentContactCount, 9);
 
 const bundle = Game.inspectWholeGameProgressBundle(states);
-assert.equal(bundle.wholeGameStageLabel, '正式设计验证版已闭环');
+assert.equal(bundle.wholeGameStageLabel, '完整一生内容版已闭环');
 
 console.log(`[minguo-life] engine ${Game.VERSION}`);
 console.log(`[scenarios] ${states.length}/${definitions.length} complete`);
@@ -91,5 +97,9 @@ console.log(`[information-evidence] ${report.informationEvidenceCount}/${states.
 console.log(`[contact-evidence] ${report.contactEvidenceCount}/${states.length}`);
 console.log(`[family-lifecycle] ${report.familyLifecycleCount}/${states.length}`);
 console.log(`[annual-narrative] ${report.recordedNarrativeYears}/${report.expectedNarrativeYears}`);
+console.log(`[authored-actions] ${report.authoredActionCount}`);
+console.log(`[key-decisions/options] ${report.keyDecisionCount}/${report.decisionOptionCount}`);
 console.log(`[authored-ordinary-events] ${report.authoredOrdinaryEventCount}`);
+console.log(`[choice-echo-events] ${report.choiceEchoEventCount}`);
+console.log(`[dense-lives] ${report.denseLifeCount}/${states.length}`);
 console.log(`[stage] ${bundle.wholeGameStageLabel}`);

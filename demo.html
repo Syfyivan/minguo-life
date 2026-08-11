@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>民国人生 · 纯文字 Demo v0.3</title>
+<title>民国人生 · 纯文字 Demo v0.4</title>
 <style>
 @font-face{font-family:Lora;src:url('./_shared/fonts/Lora-Regular.ttf') format('truetype');font-display:swap}
 @font-face{font-family:Lora;src:url('./_shared/fonts/Lora-Bold.ttf') format('truetype');font-weight:700;font-display:swap}
@@ -59,7 +59,7 @@ h1{margin:.25em 0 .05em;font-size:32px}
 </head>
 <body>
 <header class="cover">
-  <div class="seal">DEMO<br>v0.3</div>
+  <div class="seal">DEMO<br>v0.4</div>
   <h1>民国人生 · 纯文字 Demo</h1>
   <div class="sub">从出生家庭出发，让行动、关系与时代共同写出一条人生路径</div>
   <nav class="nav">
@@ -71,7 +71,7 @@ h1{margin:.25em 0 .05em;font-size:32px}
 
 <main class="wrap">
   <section class="screen on" id="screen-pick">
-    <div class="note warn"><span class="tag">当前定位</span>这是可从出生玩到 1949 年的正式设计验证版。三棵家庭树、九条路径、每年生活叙事、持续人物、主体状态、信息边界、存档与事实型终局已经进入同一运行时。</div>
+    <div class="note warn"><span class="tag">当前定位</span>这是可从出生玩到 1949 年的完整一生内容版。三棵家庭树、九条路径、50 个行动、96 个关键选项、105 个生活场景、持续人物、主体状态、信息边界、存档与事实型终局已经进入同一运行时。</div>
     <div class="note"><span class="tag">玩法节奏</span>一回合是一年。你安排少量关键行动，生活场景和时代冲击随后发生；关键年份出现抉择。想快速看设计可以使用“自动到下个抉择”，想仔细玩则可每年自行安排。</div>
     <div id="savedStart"></div>
     <h2 class="pix">选择出生家庭</h2>
@@ -128,6 +128,7 @@ h1{margin:.25em 0 .05em;font-size:32px}
 </div>
 
 <script src="./assets/game-content.js"></script>
+<script src="./assets/life-expansion.js"></script>
 <script src="./assets/demo-engine.js"></script>
 <script>
 (function () {

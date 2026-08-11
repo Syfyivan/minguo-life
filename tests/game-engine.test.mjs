@@ -3,6 +3,7 @@ import test from 'node:test';
 
 globalThis.window = globalThis;
 await import('../assets/game-content.js');
+await import('../assets/life-expansion.js');
 await import('../assets/demo-engine.js');
 
 const Game = globalThis.MINGUO_GAME;
@@ -21,6 +22,28 @@ const DEFAULT_DECISIONS = {
   'postwar-settlement': 'rebuild-local',
   'final-1949': 'stay-mainland',
 };
+
+const ROUTE_SETUPS = {
+  'subei-stay': { familyKey: 'subeipoor', gender: '男', decisions: { 'subei-livelihood': 'stay-local', 'subei-war': 'stay-and-hide' } },
+  'subei-millworker': { familyKey: 'subeipoor', gender: '女', decisions: { 'subei-livelihood': 'enter-mill', 'subei-war': 'remain-worker' } },
+  'subei-soldier': { familyKey: 'subeipoor', gender: '男', decisions: { 'subei-livelihood': 'stay-local', 'subei-war': 'join-army' } },
+  'subei-refugee': { familyKey: 'subeipoor', gender: '女', decisions: { 'subei-livelihood': 'stay-local', 'subei-war': 'flee-south' } },
+  'shen-scholar': { familyKey: 'jiangnanshen', gender: '男', decisions: { 'shen-path': 'scholar', 'shen-war': 'stay-public-work' } },
+  'shen-newwoman': { familyKey: 'jiangnanshen', gender: '女', decisions: { 'shen-path': 'new-woman', 'shen-war': 'stay-public-work' } },
+  'shen-refugee': { familyKey: 'jiangnanshen', gender: '女', decisions: { 'shen-path': 'new-woman', 'shen-war': 'move-with-family' } },
+  'shanghai-heir': { familyKey: 'shanghaigongshang', gender: '男', decisions: { 'shanghai-path': 'business-heir', 'shanghai-war': 'protect-workers' } },
+  'shanghai-newwoman': { familyKey: 'shanghaigongshang', gender: '女', decisions: { 'shanghai-path': 'urban-new-woman', 'shanghai-war': 'protect-workers' } },
+};
+
+function cloneSetup(setup) {
+  return { ...setup, decisions: { ...(setup.decisions || {}) } };
+}
+
+function setupForFamily(familyKey) {
+  if (familyKey === 'subeipoor') return cloneSetup(ROUTE_SETUPS['subei-stay']);
+  if (familyKey === 'jiangnanshen') return cloneSetup(ROUTE_SETUPS['shen-scholar']);
+  return cloneSetup(ROUTE_SETUPS['shanghai-heir']);
+}
 
 function playScenario({
   familyKey,
@@ -211,11 +234,12 @@ test('portable saves round-trip without changing the life ledger', () => {
   const state = playScenario({ familyKey: 'subeipoor', decisions: { 'subei-war': 'join-army' } });
   const restored = Game.importGame(Game.exportGame(state));
 
-  assert.equal(restored.version, '0.3.0');
+  assert.equal(restored.version, '0.4.0');
   assert.deepEqual(restored.identity, state.identity);
   assert.deepEqual(restored.facts, state.facts);
   assert.deepEqual(restored.annualNarratives, state.annualNarratives);
   assert.deepEqual(restored.contacts, state.contacts);
+  assert.deepEqual(restored.decisionHistory, state.decisionHistory);
   assert.equal(Game.buildEndingNarrative(restored), Game.buildEndingNarrative(state));
 });
 
@@ -235,7 +259,7 @@ test('abilities and resources stay inside the published 0 to 100 domain', () => 
   }
 });
 
-test('v0.2 states receive v0.3 contact and annual-life defaults on import', () => {
+test('v0.2 states receive v0.4 contact and annual-life defaults on import', () => {
   const legacy = Game.createGame({ familyKey: 'subeipoor', gender: '男', name: '旧存档', seed: 19 });
   legacy.version = '0.2.0';
   delete legacy.contacts;
@@ -244,16 +268,116 @@ test('v0.2 states receive v0.3 contact and annual-life defaults on import', () =
   delete legacy.contactHistory;
 
   const restored = Game.importGame(legacy);
-  assert.equal(restored.version, '0.3.0');
+  assert.equal(restored.version, '0.4.0');
   assert.equal(Object.keys(restored.contacts).length, 3);
   assert.deepEqual(restored.annualNarratives, []);
   assert.deepEqual(restored.contactHistory, []);
 });
 
-test('each route owns at least three authored ordinary-life scenes', () => {
+test('each route owns at least nine authored ordinary-life scenes', () => {
   for (const routeKey of Object.keys(Game.content.routes)) {
     const scenes = Game.content.ordinaryEvents.filter((event) => event.routes?.includes(routeKey));
-    assert.ok(scenes.length >= 3, `${routeKey} should have at least three authored scenes`);
+    assert.ok(scenes.length >= 9, `${routeKey} should have at least nine authored scenes`);
+  }
+});
+
+test('the complete-life pack reaches the published content-density baseline', () => {
+  const content = Game.content;
+  assert.equal(content.actions.length, 50);
+  assert.equal(content.decisions.length, 33);
+  assert.equal(content.decisions.reduce((sum, decision) => sum + decision.options.length, 0), 96);
+  assert.equal(content.ordinaryEvents.length, 105);
+  assert.equal(content.ordinaryEvents.filter((event) => event.requiresEchoes).length, 63);
+  assert.equal(new Set(content.actions.map((action) => action.id)).size, content.actions.length);
+  assert.equal(new Set(content.decisions.map((decision) => decision.id)).size, content.decisions.length);
+  assert.equal(new Set(content.ordinaryEvents.map((event) => event.id)).size, content.ordinaryEvents.length);
+
+  const expandedDecisionIds = new Set([
+    'adolescent-direction',
+    'household-reserve',
+    'experience-handover',
+  ]);
+  const expandedDecisions = content.decisions.filter((decision) => decision.id.startsWith('route-') || expandedDecisionIds.has(decision.id));
+  for (const decision of expandedDecisions) {
+    assert.equal(new Set(decision.options.map((option) => option.id)).size, decision.options.length);
+    for (const choice of decision.options) {
+      assert.ok(choice.echo, `${decision.id}/${choice.id} needs an echo id`);
+      assert.equal(content.ordinaryEvents.filter((event) => event.requiresEchoes?.includes(choice.echo)).length, 1, `${choice.echo} needs one follow-up scene`);
+    }
+  }
+
+  for (const routeKey of Object.keys(content.routes)) {
+    assert.ok(content.actions.filter((action) => action.routes?.includes(routeKey)).length >= 2, `${routeKey} needs two route actions`);
+    assert.equal(content.decisions.filter((decision) => decision.id.startsWith('route-') && decision.routes?.includes(routeKey)).length, 2, `${routeKey} needs two route decisions`);
+  }
+});
+
+test('route choices produce guaranteed next-year echoes and ending facts', () => {
+  const state = playScenario({ familyKey: 'shanghaigongshang' });
+  const routeFacts = state.facts.filter((fact) => fact.source.startsWith('route-'));
+  const echoScenes = state.annualNarratives.filter((entry) => entry.id.startsWith('echo-'));
+
+  assert.equal(routeFacts.length, 2);
+  assert.ok(echoScenes.length >= 4);
+  assert.ok(state.firedDecisions.length >= 10);
+  assert.match(Game.buildEndingNarrative(state), /1929 年/);
+  assert.match(Game.buildEndingNarrative(state), /1942 年/);
+});
+
+test('all 96 key-decision options are reachable in a compatible life', () => {
+  for (const decision of Game.content.decisions) {
+    for (const target of decision.options) {
+      const routeKey = decision.routes?.[0] || target.routes?.[0];
+      const setup = routeKey
+        ? cloneSetup(ROUTE_SETUPS[routeKey])
+        : setupForFamily(decision.families?.[0] || 'shanghaigongshang');
+      if (target.genders?.includes('女')) setup.gender = '女';
+      setup.decisions[decision.id] = target.id;
+
+      const state = playScenario({
+        ...setup,
+        name: `选项-${decision.id}-${target.id}`,
+        actionPicker(current, available) {
+          const chosen = [];
+          if (!current.information.channels.includes('newspaper') && available.some((action) => action.id === 'read-newspaper')) chosen.push('read-newspaper');
+          if (available.some((action) => action.id === 'run-business')) chosen.push('run-business');
+          if (available.some((action) => action.id === 'rest')) chosen.push('rest');
+          return chosen;
+        },
+      });
+
+      assert.ok(
+        state.decisionHistory.some((entry) => entry.decisionId === decision.id && entry.optionId === target.id),
+        `${decision.id}/${target.id} should be selected in at least one compatible life`,
+      );
+    }
+  }
+});
+
+test('all 50 annual actions can be performed in a compatible life', () => {
+  for (const target of Game.content.actions) {
+    const routeKey = target.routes?.[0];
+    const setup = routeKey
+      ? cloneSetup(ROUTE_SETUPS[routeKey])
+      : setupForFamily(target.families?.[0] || 'shanghaigongshang');
+
+    const state = playScenario({
+      ...setup,
+      name: `行动-${target.id}`,
+      actionPicker(current, available) {
+        if (available.some((action) => action.id === target.id)) return [target.id];
+        if (target.id === 'write-and-teach') {
+          if (available.some((action) => action.id === 'read-books')) return ['read-books'];
+          if (available.some((action) => action.id === 'study-new')) return ['study-new'];
+        }
+        return [];
+      },
+    });
+
+    assert.ok(
+      state.actionHistory.some((entry) => entry.actionIds.includes(target.id)),
+      `${target.id} should be performed in at least one compatible life`,
+    );
   }
 });
 

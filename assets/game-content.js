@@ -1,11 +1,11 @@
-// 民国人生 · 文字版玩法内容 v0.3
-// 这是 demo 的权威玩法数据：家庭、路径、行动、持续人物、日常生活、时代事件与关键抉择。
+// 民国人生 · 文字版玩法核心内容 v0.4
+// 这是 demo 的权威核心数据；完整内容由本文件与 life-expansion.js 共同组成。
 // 所有数值仍是玩法示意值；史实名称与具体制度口径上线前仍需逐项校核。
 (function (root) {
   'use strict';
 
   var C = {
-    version: '0.3.0',
+    version: '0.4.0',
     firstYear: 1908,
     finalYear: 1949,
     spiritMax: 12,

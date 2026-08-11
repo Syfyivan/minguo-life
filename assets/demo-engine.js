@@ -1,4 +1,4 @@
-// 民国人生 · 可测试文字版引擎 v0.3
+// 民国人生 · 可测试文字版引擎 v0.4
 // 运行时只负责规则与状态，不直接操作 DOM；浏览器 UI 与 Node 回归共用这一份实现。
 (function (root) {
   'use strict';
@@ -125,6 +125,7 @@
       kind: fact.kind || 'life',
       text: fact.text || '',
       source: fact.source || 'runtime',
+      ending: Boolean(fact.ending),
     });
   }
 
@@ -204,6 +205,7 @@
       contactHistory: [],
       firedEvents: [],
       firedDecisions: [],
+      decisionHistory: [],
       pendingDecision: null,
       pendingDecisionQueue: [],
       randomState: seed >>> 0,
@@ -291,6 +293,15 @@
     if (item.families && !has(item.families, state.familyKey)) return false;
     if (item.routes && !has(item.routes, state.routeKey)) return false;
     if (item.genders && !has(item.genders, state.identity.gender)) return false;
+    if (item.requiresEchoes && !item.requiresEchoes.every(function (echo) {
+      return has(state.echoes, echo);
+    })) return false;
+    if (item.requiresAnyEchoes && !item.requiresAnyEchoes.some(function (echo) {
+      return has(state.echoes, echo);
+    })) return false;
+    if (item.excludesEchoes && item.excludesEchoes.some(function (echo) {
+      return has(state.echoes, echo);
+    })) return false;
     if (item.requiresSubjectStatus) {
       var exactKeys = Object.keys(item.requiresSubjectStatus);
       if (exactKeys.some(function (key) {
@@ -313,6 +324,12 @@
     var record;
 
     if (candidates.length) {
+      var highestPriority = candidates.reduce(function (highest, candidate) {
+        return Math.max(highest, Number(candidate.priority || 0));
+      }, -Infinity);
+      candidates = candidates.filter(function (candidate) {
+        return Number(candidate.priority || 0) === highestPriority;
+      });
       var event = candidates[Math.floor(random(state) * candidates.length)];
       addUnique(state.firedOrdinaryEvents, event.id);
       applyDelta(state, event.delta);
@@ -498,6 +515,14 @@
     if (state.knownEvents.length) facts.push('通过已有信息渠道明确知道的时代事件有 ' + state.knownEvents.length + ' 项。');
     if (state.unknownImpacts.length) facts.push('另有 ' + state.unknownImpacts.length + ' 项时代冲击先作用于生活，具体来由当时并不完整。');
     var finalFact = state.facts.find(function (fact) { return fact.id === 'final-1949'; });
+    var definingChoices = state.facts.filter(function (fact) {
+      return fact.ending;
+    }).slice(-3);
+    if (definingChoices.length) {
+      facts.push('几次长期选择留下的事实是：' + definingChoices.map(function (fact) {
+        return fact.text.replace(/[。！？]$/, '');
+      }).join('；') + '。');
+    }
     if (finalFact) facts.push(finalFact.text);
     return facts;
   }
@@ -575,10 +600,12 @@
         kind: decision.id === 'final-1949' ? 'ending' : 'decision',
         text: option.fact,
         source: decision.id,
+        ending: option.endingFact,
       });
     }
     if (option.endingChoice) state.finalChoice = option.endingChoice;
     addLog(state, '【抉择·' + decision.title + '】' + option.label + '。', 'choice', 'choice');
+    state.decisionHistory.push({ year: state.year, decisionId: decision.id, optionId: option.id });
     addUnique(state.firedDecisions, decision.id);
     state.pendingDecision = state.pendingDecisionQueue.shift() || null;
     if (!state.pendingDecision) finishYear(state);
@@ -613,7 +640,7 @@
     });
     state.subjects = Object.assign(clone(base.subjects), state.subjects || {});
     state.contacts = Object.assign(clone(base.contacts), state.contacts || {});
-    ['routeHistory', 'knownEvents', 'unknownImpacts', 'echoes', 'facts', 'log', 'curve', 'actionHistory', 'annualNarratives', 'firedOrdinaryEvents', 'contactHistory', 'firedEvents', 'firedDecisions', 'pendingDecisionQueue', 'endingFacts'].forEach(function (key) {
+    ['routeHistory', 'knownEvents', 'unknownImpacts', 'echoes', 'facts', 'log', 'curve', 'actionHistory', 'annualNarratives', 'firedOrdinaryEvents', 'contactHistory', 'firedEvents', 'firedDecisions', 'decisionHistory', 'pendingDecisionQueue', 'endingFacts'].forEach(function (key) {
       if (!Array.isArray(state[key])) state[key] = [];
     });
     state.version = C.version;
@@ -695,6 +722,23 @@
       recordedNarrativeYears: recordedNarrativeYears,
       annualNarrativeRate: expectedNarrativeYears ? recordedNarrativeYears / expectedNarrativeYears : 0,
       authoredOrdinaryEventCount: (C.ordinaryEvents || []).length,
+      authoredActionCount: (C.actions || []).length,
+      keyDecisionCount: (C.decisions || []).length,
+      decisionOptionCount: (C.decisions || []).reduce(function (sum, decision) {
+        return sum + (decision.options || []).length;
+      }, 0),
+      choiceEchoEventCount: (C.ordinaryEvents || []).filter(function (event) {
+        return event.requiresEchoes || event.requiresAnyEchoes;
+      }).length,
+      denseLifeCount: states.filter(function (state) {
+        var routeDecisionFacts = state.facts.filter(function (fact) {
+          return String(fact.source || '').indexOf('route-') === 0;
+        });
+        var echoScenes = state.annualNarratives.filter(function (entry) {
+          return String(entry.id || '').indexOf('echo-') === 0;
+        });
+        return state.firedDecisions.length >= 10 && routeDecisionFacts.length >= 2 && echoScenes.length >= 4;
+      }).length,
       persistentContactCount: Object.keys(C.families).reduce(function (sum, familyKey) {
         return sum + Object.keys(C.families[familyKey].contacts || {}).length;
       }, 0),
@@ -703,9 +747,14 @@
 
   function inspectWholeGameProgressBundle(states) {
     var coverage = inspectCoverage(states || []);
+    var lifeDensityReady = coverage.scenarioCount > 0
+      && coverage.denseLifeCount === coverage.scenarioCount
+      && coverage.authoredActionCount >= 50
+      && coverage.keyDecisionCount >= 33
+      && coverage.authoredOrdinaryEventCount >= 100;
     return {
-      wholeGameStageLabel: coverage.familyCount === 3 && coverage.routeCount === 9 && coverage.factEndingCount === coverage.scenarioCount && coverage.annualNarrativeRate === 1
-        ? '正式设计验证版已闭环'
+      wholeGameStageLabel: coverage.familyCount === 3 && coverage.routeCount === 9 && coverage.factEndingCount === coverage.scenarioCount && coverage.annualNarrativeRate === 1 && lifeDensityReady
+        ? '完整一生内容版已闭环'
         : '仍在补代表态',
       version: C.version,
       coverage: coverage,
@@ -718,6 +767,7 @@
         persistentContacts: true,
         familyLifecycle: true,
         annualNarrative: coverage.annualNarrativeRate === 1,
+        lifeDensity: lifeDensityReady,
         portableSave: true,
       },
     };
