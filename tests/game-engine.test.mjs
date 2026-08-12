@@ -17,6 +17,7 @@ await import('../assets/family-expansion-f13.js');
 await import('../assets/family-expansion-f14.js');
 await import('../assets/family-expansion-f11.js');
 await import('../assets/family-expansion-f08.js');
+await import('../assets/family-expansion-f12.js');
 await import('../assets/demo-engine.js');
 
 const Game = globalThis.MINGUO_GAME;
@@ -53,6 +54,10 @@ const DEFAULT_DECISIONS = {
   'tianjin-rent-school-1921': 'tianjin-protect-rent-pause-school',
   'tianjin-clerk-war': 'tianjin-split-records-addresses',
   'tianjin-postwar-reorganization-1948': 'tianjin-keep-current-records',
+  'hankou-commerce-path': 'trading-house-clerk-trial',
+  'hankou-commerce-credit-1921': 'credit-protect-home-reduce-stock',
+  'hankou-commerce-war': 'hankou-commerce-split-addresses-stock',
+  'hankou-commerce-transition-1948': 'hankou-commerce-keep-current-ledgers',
   'postwar-settlement': 'rebuild-local',
   'final-1949': 'stay-mainland',
   'later-life-livelihood': 'change-work',
@@ -106,6 +111,9 @@ const ROUTE_SETUPS = {
   'tianjin-commercial-clerk': { familyKey: 'tianjinclerks', gender: '男', decisions: { 'tianjin-clerk-path': 'commercial-clerk-trial', 'tianjin-clerk-war': 'tianjin-split-records-addresses' } },
   'tianjin-tailoring-garment-worker': { familyKey: 'tianjinclerks', gender: '女', decisions: { 'tianjin-clerk-path': 'tailoring-trial', 'tianjin-clerk-war': 'tianjin-local-bounded-work' } },
   'tianjin-postal-school-clerk': { familyKey: 'tianjinclerks', gender: '女', decisions: { 'tianjin-clerk-path': 'postal-school-trial', 'tianjin-clerk-war': 'tianjin-verified-unit-move' } },
+  'hankou-trading-house-clerk': { familyKey: 'hankoucommerce', gender: '男', decisions: { 'hankou-commerce-path': 'trading-house-clerk-trial', 'hankou-commerce-war': 'hankou-commerce-split-addresses-stock' } },
+  'hankou-warehouse-freight-clerk': { familyKey: 'hankoucommerce', gender: '女', decisions: { 'hankou-commerce-path': 'warehouse-freight-trial', 'hankou-commerce-war': 'hankou-commerce-verified-unit-move' } },
+  'hankou-dry-goods-small-trader': { familyKey: 'hankoucommerce', gender: '女', decisions: { 'hankou-commerce-path': 'dry-goods-trader-trial', 'hankou-commerce-war': 'hankou-commerce-local-bounded-trade' } },
 };
 
 const POST1949_OPTIONS = {
@@ -135,6 +143,7 @@ function setupForFamily(familyKey) {
   if (familyKey === 'guangdongcoastal') return cloneSetup(ROUTE_SETUPS['coastal-passenger-cargo-operator']);
   if (familyKey === 'hankouport') return cloneSetup(ROUTE_SETUPS['hankou-dock-cargo-worker']);
   if (familyKey === 'tianjinclerks') return cloneSetup(ROUTE_SETUPS['tianjin-commercial-clerk']);
+  if (familyKey === 'hankoucommerce') return cloneSetup(ROUTE_SETUPS['hankou-trading-house-clerk']);
   return cloneSetup(ROUTE_SETUPS['xian-repair']);
 }
 
@@ -261,7 +270,7 @@ test('information channels change what the player can name about an era shock', 
   assert.ok(informed.information.channels.includes('newspaper'));
 });
 
-test('all twelve playable families continue beyond 1949 and end only after a confirmed death', () => {
+test('all thirteen playable families continue beyond 1949 and end only after a confirmed death', () => {
   const scenarios = [
     playScenario({ familyKey: 'subeipoor' }),
     playScenario({ familyKey: 'jiangnanshen' }),
@@ -445,11 +454,11 @@ test('family lifecycle allows care without forcing marriage or children', () => 
   assert.ok(unmarried.facts.some((fact) => fact.source === 'family-future'));
 });
 
-test('portable v0.7.11 saves round-trip without changing the life ledger', () => {
+test('portable v0.7.12 saves round-trip without changing the life ledger', () => {
   const state = playScenario({ familyKey: 'subeipoor', decisions: { 'subei-war': 'join-army' } });
   const restored = Game.importGame(Game.exportGame(state));
 
-  assert.equal(restored.version, '0.7.11');
+  assert.equal(restored.version, '0.7.12');
   assert.equal(JSON.parse(Game.exportGame(restored)).schemaVersion, 6);
   assert.deepEqual(restored.identity, state.identity);
   assert.deepEqual(restored.facts, state.facts);
@@ -484,7 +493,7 @@ test('v0.2 states receive v0.7 complete-life and public-life defaults on import'
   delete legacy.contactHistory;
 
   const restored = Game.importGame(legacy);
-  assert.equal(restored.version, '0.7.11');
+  assert.equal(restored.version, '0.7.12');
   assert.equal(restored.publicLife.status, 'unaffiliated');
   assert.equal(Object.keys(restored.contacts).length, 3);
   assert.deepEqual(restored.annualNarratives, []);
@@ -507,7 +516,7 @@ test('v0.4 endings at 1949 resume as an unfinished life in 1950', () => {
   delete legacy.life;
 
   const restored = Game.importGame(legacy);
-  assert.equal(restored.version, '0.7.11');
+  assert.equal(restored.version, '0.7.12');
   assert.equal(restored.over, false);
   assert.equal(restored.year, 1950);
   assert.equal(restored.chapter, 'post1949');
@@ -797,11 +806,11 @@ test('keeping distance or staying nonparty remains a complete playable public-li
 
 test('the birth-to-death pack reaches the published content-density baseline', () => {
   const content = Game.content;
-  assert.equal(content.actions.length, 161);
-  assert.equal(content.decisions.length, 129);
-  assert.equal(content.decisions.reduce((sum, decision) => sum + decision.options.length, 0), 414);
-  assert.equal(content.ordinaryEvents.length, 620);
-  assert.equal(content.ordinaryEvents.filter((event) => event.requiresEchoes).length, 359);
+  assert.equal(content.actions.length, 170);
+  assert.equal(content.decisions.length, 139);
+  assert.equal(content.decisions.reduce((sum, decision) => sum + decision.options.length, 0), 444);
+  assert.equal(content.ordinaryEvents.length, 674);
+  assert.equal(content.ordinaryEvents.filter((event) => event.requiresEchoes).length, 389);
   assert.equal(new Set(content.actions.map((action) => action.id)).size, content.actions.length);
   assert.equal(new Set(content.decisions.map((decision) => decision.id)).size, content.decisions.length);
   assert.equal(new Set(content.ordinaryEvents.map((event) => event.id)).size, content.ordinaryEvents.length);
@@ -838,7 +847,7 @@ test('route choices produce guaranteed next-year echoes and ending facts', () =>
   assert.match(Game.buildEndingNarrative(state), /1942 年/);
 });
 
-test('all 414 key-decision options are reachable in a compatible life', () => {
+test('all 444 key-decision options are reachable in a compatible life', () => {
   for (const decision of Game.content.decisions) {
     for (const target of decision.options) {
       const routeKey = decision.routes?.[0] || target.routes?.[0];
@@ -887,7 +896,7 @@ test('all 414 key-decision options are reachable in a compatible life', () => {
   }
 });
 
-test('all 161 annual actions can be performed in a compatible life', () => {
+test('all 170 annual actions can be performed in a compatible life', () => {
   for (const target of Game.content.actions) {
     const routeKey = target.routes?.[0];
     const setup = routeKey
@@ -944,7 +953,7 @@ test('coverage inspection reports family, route, subject and ending evidence', (
   assert.equal(report.subjectEvidenceCount, scenarios.length);
   assert.equal(report.post1949EmploymentEvidenceCount, scenarios.length);
   assert.equal(report.annualNarrativeRate, 1);
-  assert.equal(report.persistentContactCount, 177);
+  assert.equal(report.persistentContactCount, 192);
 });
 
 test('a career is a concrete workplace with bosses, coworkers, customers and work records', () => {
