@@ -18,6 +18,60 @@
     unsettled: { name: '长期落点尚未确定', place: '1949 年时的暂住地', rhythmKey: 'post-unsettled' },
   };
 
+  // 1949 年后的“谋生”不是一个可以无限重复、只加属性的按钮。
+  // 每次求职、试工与续工都会进入可保存的状态，并指向一个具体岗位。
+  C.employmentStatusLabels = {
+    'not-started': '尚未安排',
+    seeking: '正在找门路',
+    casual: '已有按日短工',
+    trial: '正在试工',
+    employed: '已经留用',
+    'reduced-hours': '已经减少工时',
+  };
+  C.livelihoodTrackRoutes = {
+    care: ['shen-professional'],
+    literate: ['shen-scholar', 'shen-newwoman', 'shanghai-professional'],
+    skilled: ['subei-millworker', 'shanghai-heir', 'shanghai-newwoman'],
+  };
+  C.post1949Jobs = {
+    mainland: {
+      manual: { role: '装卸与修缮工', casualRole: '集市装卸短工', workplace: '当地运输站与修缮队', duties: '搬运到货、修补屋面并登记每天完成的工段', terms: '短工按日结算；留用后按旬核对工钱' },
+      skilled: { role: '机器检修工', casualRole: '农具与机器修理短工', workplace: '当地生产单位的修理间', duties: '检查传动、替换损件并把用料写入维修簿', terms: '先试工一个月，留用后按月结算' },
+      literate: { role: '文书登记员', casualRole: '代写与登记短工', workplace: '当地学校或办事处', duties: '誊写名册、核对来函并保管能够追查的登记页', terms: '按月领薪，职责以登记和抄写为限' },
+      care: { role: '诊所医护员', casualRole: '临时出诊助手', workplace: '当地诊所', duties: '接诊、配药并留下可复查的病历记录', terms: '按月领薪，药品短缺和夜间出诊另行登记' },
+    },
+    'hong-kong': {
+      manual: { role: '货仓理货工', casualRole: '码头货仓短工', workplace: '临海货仓', duties: '按货单分拣、搬运并当面核对当天工钱', terms: '短工按日结算；固定位置按月结算' },
+      skilled: { role: '棉纺机器看护工', casualRole: '纺织工场试班工', workplace: '九龙一间棉纺工场', duties: '看护纺机、处理断线并记录停机原因', terms: '先试做一个月，工钱按月结算，加班另记' },
+      literate: { role: '商号抄账员', casualRole: '商号临时抄单员', workplace: '上环一间进出口商号', duties: '核对货单、抄写往来账并整理来函', terms: '先试做一个月，按月结算工钱' },
+      care: { role: '街坊诊所登记员', casualRole: '诊所临时配药助手', workplace: '一间街坊诊所', duties: '登记病家、分装常用药并核对复诊地址', terms: '先试做一个月，夜间值班另行商量' },
+    },
+    taiwan: {
+      manual: { role: '货站搬运工', casualRole: '市场与货站短工', workplace: '城镇货站', duties: '按批次搬运、清点货包并核对当天工钱', terms: '短工按日结算；固定班次按月结算' },
+      skilled: { role: '工场机修员', casualRole: '机修试工', workplace: '一间小型工场', duties: '检修机器、登记零件并说明停机原因', terms: '先试工一个月，留用后按月结算' },
+      literate: { role: '学校事务员', casualRole: '临时文书员', workplace: '一所学校的事务室', duties: '整理名册、收发公文并核对用品账', terms: '按月领薪，住处与工作手续分别办理' },
+      care: { role: '诊所医护助理', casualRole: '临时医护助手', workplace: '一间城镇诊所', duties: '登记、配药并协助基础照料', terms: '先试做一个月，值班范围当面写清' },
+    },
+    overseas: {
+      manual: { role: '货栈工', casualRole: '码头货栈短工', workplace: '落脚城市的一处货栈', duties: '搬运、分拣并按工票核对当天收入', terms: '按日结算，工期随船货批次确定' },
+      skilled: { role: '修理店技工', casualRole: '修理店试工', workplace: '一间华人经营的修理店', duties: '拆检旧件、完成修理并学习当地工具叫法', terms: '先试工一个月，材料损耗单独登记' },
+      literate: { role: '商店文书员', casualRole: '临时抄单与翻译助手', workplace: '当地华人商店', duties: '抄写货单、整理来函并学习当地工作用语', terms: '按月结算，语言学习时间由自己安排' },
+      care: { role: '社区诊所助理', casualRole: '临时诊疗助手', workplace: '当地社区诊所', duties: '登记病家、分装药物并学习当地诊疗用语', terms: '先试做一个月，资格范围当面说明' },
+    },
+    'in-motion': {
+      manual: { role: '车站装卸工', casualRole: '车站装卸短工', workplace: '当前落脚地的车站货场', duties: '装卸一批货物并按工票核对口粮和工钱', terms: '按日结算，工期只写到本批货物结束' },
+      skilled: { role: '流动修理工', casualRole: '工具修理短工', workplace: '当前落脚地的修理摊', duties: '修补农具与日用品，用完工件数结算', terms: '逐件结算，不保证下一处仍有同样工作' },
+      literate: { role: '代写与记账人', casualRole: '代写书信与货单短工', workplace: '当前落脚地的集市', duties: '代写书信、抄货单并留下可转寄的地址', terms: '逐件结算，离开前当面清账' },
+      care: { role: '临时救护助手', casualRole: '临时药棚帮工', workplace: '当前落脚地的临时药棚', duties: '登记伤病、清洗器具并分装有限药品', terms: '按工期结算，药棚迁走后工作即结束' },
+    },
+    unsettled: {
+      manual: { role: '市场转运工', casualRole: '市场转运短工', workplace: '暂住地附近的市场', duties: '装卸货包、清点件数并核对当天工钱', terms: '按日结算，固定摊位空缺出现后再谈留用' },
+      skilled: { role: '修理工', casualRole: '修理铺试工', workplace: '暂住地的一间修理铺', duties: '修理工具、登记用料并完成当面验收', terms: '先试做一个月，再决定是否长期留下' },
+      literate: { role: '登记抄写员', casualRole: '临时抄写员', workplace: '暂住地的一处登记点', duties: '誊写名册、核对地址并区分已证实与口头消息', terms: '按工作批次结算，住处不随工作自动续期' },
+      care: { role: '诊所代班助理', casualRole: '诊所临时代班', workplace: '暂住地附近的诊所', duties: '登记、配药并协助基础照料', terms: '先按代班天数结算，再谈固定位置' },
+    },
+  };
+
   C.routes['shen-professional'] = {
     name: '医护与地方服务', family: 'jiangnanshen',
     summary: '把家学转成医护、登记与地方服务，在专业责任和家门之间谋生。',
@@ -172,17 +226,17 @@
       contactEffects: { tang_huizhen: { relation: 1 } }, note: '亲自谈清工作范围、报酬和交付日期，不把父辈家业当作默认担保。',
     },
 
-    { id: 'mainland-rebuild-work', name: '在本地重接营生与证件', minYear: 1950, post1949Choices: ['mainland'], spirit: 4, delta: { craft: 2, money: 3, position: 2 }, subjectDelta: { ledger: { strength: 2 } }, note: '逐项核对住处、工作和必要证明，让原有手艺在新的生活条件下继续使用。' },
+    { id: 'mainland-rebuild-work', name: '在本地重接营生与证件', livelihoodAction: true, minYear: 1950, post1949Choices: ['mainland'], spirit: 4, delta: { craft: 2, money: 3, position: 2 }, subjectDelta: { ledger: { strength: 2 } }, note: '逐项核对住处、工作和必要证明，让原有手艺在新的生活条件下继续使用。' },
     { id: 'mainland-keep-letters', name: '维持故乡与旧识通信', minYear: 1950, post1949Choices: ['mainland'], spirit: 2, delta: { relation: 3, network: 2, mind: 1 }, channels: ['conversation'], note: '把已经确认的地址分别抄写寄出，维持联系但不替失联的人补写去向。' },
-    { id: 'hongkong-find-work', name: '在香港寻找住处与工作', minYear: 1950, post1949Choices: ['hong-kong'], spirit: 4, delta: { money: 3, network: 2, position: 2, health: -1 }, note: '在街坊、码头、学校或商号逐处问工，并把床位租金和收入放在同一张账上。' },
+    { id: 'hongkong-find-work', name: '在香港逐处应聘并谈清工钱', livelihoodAction: true, minYear: 1950, post1949Choices: ['hong-kong'], spirit: 4, delta: { money: 3, network: 2, position: 2, health: -1 }, note: '按自己的经历选择商号、诊所、货仓或工场，完成面谈或试工，并在当年得到明确答复。' },
     { id: 'hongkong-room-network', name: '与同住者协调房租和照料', minYear: 1950, post1949Choices: ['hong-kong'], spirit: 3, delta: { relation: 3, network: 2, money: -1 }, subjectDelta: { support: { strength: 2 } }, note: '同住不等于一家人；需要把房租、做饭、照料和各自亲属来信分别商量。' },
-    { id: 'taiwan-settle-work', name: '在台湾办理住处并找工作', minYear: 1950, post1949Choices: ['taiwan'], spirit: 4, delta: { position: 2, money: 3, craft: 1, health: -1 }, note: '带着证件亲自核对住处与工作介绍，不把临时安排当作已经永久安顿。' },
+    { id: 'taiwan-settle-work', name: '在台湾核实并接下一份工作', livelihoodAction: true, minYear: 1950, post1949Choices: ['taiwan'], spirit: 4, delta: { position: 2, money: 3, craft: 1, health: -1 }, note: '带着证件完成面谈或试工，当年确认岗位、结算办法与是否留用。' },
     { id: 'taiwan-trace-contacts', name: '寻找同行者和旧关系消息', minYear: 1950, post1949Choices: ['taiwan'], spirit: 3, delta: { network: 3, relation: 2, mind: 1 }, channels: ['conversation'], note: '把最后已知单位、籍贯和地址分开登记，确认联系，也保留仍然没有消息的人。' },
-    { id: 'overseas-adapt-trade', name: '让旧手艺适应海外工作', minYear: 1950, post1949Choices: ['overseas'], spirit: 4, delta: { craft: 3, knowledge: 2, money: 3, health: -1 }, note: '从工具名称、工序和当地规矩重新学起，让原有经验成为能继续谋生的办法。' },
+    { id: 'overseas-adapt-trade', name: '用旧经验应聘当地工作', livelihoodAction: true, minYear: 1950, post1949Choices: ['overseas'], spirit: 4, delta: { craft: 3, knowledge: 2, money: 3, health: -1 }, note: '从工具名称、工序和当地规矩重新学起，完成一份有明确职责与结算办法的试工。' },
     { id: 'overseas-write-home', name: '经转寄地址给故乡写信', minYear: 1950, post1949Choices: ['overseas'], spirit: 3, delta: { relation: 3, mind: 2, money: -1 }, channels: ['newspaper'], subjectDelta: { connections: { strength: 2 } }, note: '使用已经核实的转寄地址写信；寄出证明你仍在寻找联系，不保证对方一定收到。' },
-    { id: 'motion-short-work', name: '在临时落脚处做短工', minYear: 1950, post1949Choices: ['in-motion'], spirit: 4, delta: { money: 2, craft: 2, health: -2, position: 1 }, note: '先问清工期、口粮和住处，再用力气或手艺换取下一段路需要的盘缠。' },
+    { id: 'motion-short-work', name: '在临时落脚处接一段短工', livelihoodAction: true, minYear: 1950, post1949Choices: ['in-motion'], spirit: 4, delta: { money: 2, craft: 2, health: -2, position: 1 }, note: '先问清岗位、工期、口粮和结算日；短工结束会明确记为结束，不冒充长期职位。' },
     { id: 'motion-secure-papers', name: '保管证件并核对下一段路', minYear: 1950, post1949Choices: ['in-motion'], spirit: 3, delta: { mind: 2, network: 2, position: 2, money: -1 }, channels: ['conversation'], note: '把证件、车船消息和联系人分别核实，减少因一句传闻再次走错方向的风险。' },
-    { id: 'unsettled-test-shelter', name: '续下暂住处并试做一份工作', minYear: 1950, post1949Choices: ['unsettled'], spirit: 3, delta: { position: 2, money: 2, craft: 1 }, subjectDelta: { support: { strength: 1 } }, note: '先把几个月的屋檐和收入接起来，同时保留以后更换落点的余地。' },
+    { id: 'unsettled-test-shelter', name: '续下暂住处并试做一份工作', livelihoodAction: true, minYear: 1950, post1949Choices: ['unsettled'], spirit: 3, delta: { position: 2, money: 2, craft: 1 }, subjectDelta: { support: { strength: 1 } }, note: '完成一份有岗位、期限和结算办法的试工，同时保留以后更换落点的余地。' },
     { id: 'unsettled-search-kin', name: '继续寻找家人、证件与可靠地址', minYear: 1950, post1949Choices: ['unsettled'], spirit: 3, delta: { network: 3, relation: 2, mind: 1 }, channels: ['conversation'], subjectDelta: { connections: { strength: 2 } }, note: '逐条核对姓名、最后地址和转寄人，把确定消息与传闻分开留下。' }
   );
 
@@ -211,8 +265,10 @@
       if (item.routes) event.routes = item.routes.slice();
       if (item.post1949Choices) event.post1949Choices = item.post1949Choices.slice();
       if (choice.post1949Choices) event.post1949Choices = choice.post1949Choices.slice();
+      if (choice.followupEmploymentStatuses) event.employmentStatuses = choice.followupEmploymentStatuses.slice();
       C.ordinaryEvents.push(event);
       delete choice.followup;
+      delete choice.followupEmploymentStatuses;
     });
     delete item.followYear;
     delete item.followAge;
@@ -284,6 +340,23 @@
     option('unsettled-search-family', '我先沿可靠地址寻找家人消息，同时维持眼前住处和零工', { network: 3, relation: 3, money: -1 }, 'post49:unsettled:family', '1950 年在维持暂住与零工的同时，沿可靠地址寻找家人消息。', '被划掉又重写的地址', '第二年，一条消息得到核实，其他地址已经失效；你的日常不能等所有人都有答案才继续。', { post1949Choices: ['unsettled'], postProfile: { arrival: '没有离开暂住地，继续寻找家人消息', place: '一处等待消息的暂住地', livelihood: '以零工维持寻找期间的生活', companions: '实际同住者各自承担自己的日常', leftBehind: '未找到的家人继续保留最后已知信息' }, endingFact: true }),
     option('unsettled-test-work', '我先试做一份三个月的工作，用这段时间判断是否值得留下', { craft: 2, money: 2, position: 2 }, 'post49:unsettled:work', '1950 年试做一份短期工作，以此判断是否在暂住地继续生活。', '一份到期后重新商量的工约', '第二年，工作曾经续期一次；是否长期留下仍取决于住处、家人消息和身体能否接住。', { post1949Choices: ['unsettled'], postProfile: { arrival: '以一份短期工作测试暂住地', place: '可能继续留下的暂住地', livelihood: '依靠短期工作观察长期可能', companions: '同住者不因你的试工自动留下', leftBehind: '其他路线仍没有完全关闭' }, endingFact: true })
   ];
+
+  var arrivalEmploymentModes = {
+    'mainland-local-work': 'trial', 'mainland-nearby-town': 'trial', 'mainland-two-places': 'casual',
+    'hongkong-bedspace-work': 'casual', 'hongkong-use-contact': 'interview', 'hongkong-share-rent': 'seeking',
+    'taiwan-register-work': 'trial', 'taiwan-find-colleagues': 'interview', 'taiwan-household-first': 'seeking',
+    'overseas-sponsored-room': 'interview', 'overseas-use-craft': 'trial', 'overseas-study-work': 'casual',
+    'motion-follow-work': 'casual', 'motion-stay-season': 'casual', 'motion-contact-kin': 'seeking',
+    'unsettled-check-papers': 'seeking', 'unsettled-search-family': 'casual', 'unsettled-test-work': 'trial',
+  };
+  arrivalOptions.forEach(function (choice) {
+    choice.employmentEntry = arrivalEmploymentModes[choice.id];
+  });
+
+  var hongKongContact = arrivalOptions.find(function (choice) { return choice.id === 'hongkong-use-contact'; });
+  hongKongContact.followup.title = '第一张写明工钱的单据';
+  hongKongContact.followup.text = '第二年，你按当年谈定的职责继续试做。试工完成后，对方必须当面说明是否留用；工作名称、结算办法和下一步都会作为明确事实留下，不再由介绍人含糊转述。';
+  hongKongContact.followupEmploymentStatuses = ['employed'];
 
   installDecision({
     id: 'post49-arrival', year: 1950, followYear: 1951, title: '下一段生活怎样真正落地',

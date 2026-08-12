@@ -353,7 +353,7 @@ test('portable v0.5 saves round-trip without changing the life ledger', () => {
   const state = playScenario({ familyKey: 'subeipoor', decisions: { 'subei-war': 'join-army' } });
   const restored = Game.importGame(Game.exportGame(state));
 
-  assert.equal(restored.version, '0.5.1');
+  assert.equal(restored.version, '0.5.2');
   assert.deepEqual(restored.identity, state.identity);
   assert.deepEqual(restored.facts, state.facts);
   assert.deepEqual(restored.annualNarratives, state.annualNarratives);
@@ -387,7 +387,7 @@ test('v0.2 states receive v0.5 complete-life defaults on import', () => {
   delete legacy.contactHistory;
 
   const restored = Game.importGame(legacy);
-  assert.equal(restored.version, '0.5.1');
+  assert.equal(restored.version, '0.5.2');
   assert.equal(Object.keys(restored.contacts).length, 3);
   assert.deepEqual(restored.annualNarratives, []);
   assert.deepEqual(restored.contactHistory, []);
@@ -409,7 +409,7 @@ test('v0.4 endings at 1949 resume as an unfinished life in 1950', () => {
   delete legacy.life;
 
   const restored = Game.importGame(legacy);
-  assert.equal(restored.version, '0.5.1');
+  assert.equal(restored.version, '0.5.2');
   assert.equal(restored.over, false);
   assert.equal(restored.year, 1950);
   assert.equal(restored.chapter, 'post1949');
@@ -496,6 +496,127 @@ test('1950 keeps personal daily life and regional era updates as separate record
   assert.match(hongKong.text, /人口|住屋|床位|房租/);
   assert.ok(hongKong.source.url.startsWith('https://'));
   assert.ok(state.eraHistory.every((entry) => entry.year === 1950));
+});
+
+test('a Hong Kong introduction produces a concrete trial job and a next step in 1950', () => {
+  const state = postwarState({ channel: true });
+  Game.advanceYear(state, []);
+  assert.equal(state.pendingDecision.id, 'post49-arrival');
+
+  Game.choose(state, 'hongkong-use-contact');
+
+  const employment = state.post1949.employment;
+  assert.equal(employment.status, 'trial');
+  assert.ok(employment.role);
+  assert.ok(employment.workplace);
+  assert.match(employment.lastResult, /面谈|试做/);
+  assert.match(employment.lastResult, new RegExp(employment.role));
+  assert.match(employment.nextStep, /试工|留用/);
+  assert.ok(state.facts.some((fact) => fact.kind === 'livelihood' && fact.year === 1950));
+});
+
+test('the next livelihood action finishes a trial instead of searching forever', () => {
+  const state = postwarState({ channel: true });
+  Game.advanceYear(state, []);
+  Game.choose(state, 'hongkong-use-contact');
+
+  const presented = Game.availableActions(state).find((action) => action.id === 'hongkong-find-work');
+  assert.match(presented.name, /完成.+试工.+留用/);
+  Game.advanceYear(state, ['hongkong-find-work']);
+
+  assert.equal(state.post1949.employment.status, 'employed');
+  assert.match(state.post1949.employment.lastResult, /确认留用/);
+  assert.doesNotMatch(state.post1949.employment.lastResult, /先试做|先试工/);
+  assert.ok(state.lastActionFeedback.outcomes.some((outcome) => /确认留用/.test(outcome)));
+  const continued = Game.availableActions(state).find((action) => action.id === 'hongkong-find-work');
+  assert.match(continued.name, /继续在.+担任/);
+  assert.doesNotMatch(continued.name, /寻找|应聘/);
+});
+
+test('all six post-1949 destinations turn livelihood actions into explicit work states', () => {
+  const actions = {
+    mainland: 'mainland-rebuild-work',
+    'hong-kong': 'hongkong-find-work',
+    taiwan: 'taiwan-settle-work',
+    overseas: 'overseas-adapt-trade',
+    'in-motion': 'motion-short-work',
+    unsettled: 'unsettled-test-shelter',
+  };
+  for (const [path, actionId] of Object.entries(actions)) {
+    const state = postwarState();
+    state.post1949Choice = path;
+    state.post1949.choice = path;
+    state.firedDecisions.push('post49-arrival');
+    Game.advanceYear(state, [actionId]);
+    const employment = state.post1949.employment;
+    assert.notEqual(employment.status, 'not-started', `${path} needs an employment state`);
+    assert.notEqual(employment.status, 'seeking', `${path} action needs a same-year result`);
+    assert.ok(employment.role, `${path} needs a concrete role`);
+    assert.ok(employment.workplace, `${path} needs a concrete workplace`);
+    assert.ok(employment.lastResult, `${path} needs an explicit outcome`);
+    assert.ok(employment.nextStep, `${path} needs a next step`);
+  }
+});
+
+test('old post-1949 saves expose the missing job record and recover on the next action', () => {
+  const legacy = postwarState();
+  legacy.version = '0.5.1';
+  delete legacy.post1949.employment;
+  const restored = Game.importGame(legacy);
+
+  assert.equal(restored.post1949.employment.status, 'seeking');
+  assert.match(restored.post1949.employment.lastResult, /旧存档.*没有记录具体岗位/);
+  assert.match(restored.post1949.employment.nextStep, /当年取得明确答复/);
+
+  restored.firedDecisions.push('post49-arrival');
+  Game.advanceYear(restored, ['hongkong-find-work']);
+  assert.ok(['casual', 'trial', 'employed'].includes(restored.post1949.employment.status));
+  assert.ok(restored.post1949.employment.role);
+});
+
+test('a current save waiting at the 1950 arrival choice is not mislabeled as legacy data', () => {
+  const state = postwarState();
+  Game.advanceYear(state, []);
+  assert.equal(state.pendingDecision.id, 'post49-arrival');
+
+  const restored = Game.importGame(Game.exportGame(state));
+  assert.equal(restored.post1949.employment.status, 'not-started');
+  assert.equal(restored.post1949.employment.lastResult, null);
+  assert.equal(restored.pendingDecision.id, 'post49-arrival');
+});
+
+test('an unsuccessful application states the reason, income status and next action', () => {
+  const state = postwarState();
+  state.firedDecisions.push('post49-arrival');
+  Object.keys(state.attrs).forEach((key) => { state.attrs[key] = 0; });
+  state.res.position = 0;
+
+  Game.advanceYear(state, ['hongkong-find-work']);
+
+  assert.equal(state.post1949.employment.status, 'seeking');
+  assert.equal(state.post1949.employment.role, null);
+  assert.match(state.post1949.employment.lastResult, /没有录用/);
+  assert.match(state.post1949.employment.lastResult, /没有固定工资职位/);
+  assert.match(state.post1949.employment.nextStep, /先接.+重新应聘/);
+});
+
+test('the age-50 livelihood choice updates the saved occupation instead of only changing prose', () => {
+  const state = postwarState();
+  state.firedDecisions.push('post49-arrival');
+  state.year = state.identity.born + 50;
+  state.age = 50;
+  Object.assign(state.post1949.employment, {
+    status: 'employed', track: 'manual', role: '货仓理货工', workplace: '临海货仓',
+    duties: '按货单分拣与搬运', terms: '按月结算', startedYear: 1950,
+  });
+
+  Game.advanceYear(state, []);
+  assert.equal(state.pendingDecision.id, 'later-life-livelihood');
+  Game.choose(state, 'change-work');
+
+  assert.equal(state.post1949.employment.status, 'employed');
+  assert.equal(state.post1949.employment.role, '货物清点与工段看守');
+  assert.match(state.post1949.employment.lastResult, /离开原来的“货仓理货工”.+改做货物清点与工段看守/);
 });
 
 test('era updates respect information channels instead of exposing omniscient history', () => {
@@ -645,6 +766,7 @@ test('coverage inspection reports family, route, subject and ending evidence', (
   assert.ok(report.routeKeys.includes('subei-soldier'));
   assert.equal(report.factEndingCount, scenarios.length);
   assert.equal(report.subjectEvidenceCount, scenarios.length);
+  assert.equal(report.post1949EmploymentEvidenceCount, scenarios.length);
   assert.equal(report.annualNarrativeRate, 1);
   assert.equal(report.persistentContactCount, 9);
 });

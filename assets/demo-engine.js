@@ -219,6 +219,248 @@
     return subject && (subject.status === 'dead-unconfirmed' || subject.status === 'dead-confirmed');
   }
 
+  function ensureEmployment(state) {
+    if (!state.post1949) state.post1949 = {};
+    var defaults = {
+      status: 'not-started',
+      track: null,
+      role: null,
+      workplace: null,
+      duties: null,
+      terms: null,
+      startedYear: null,
+      attempts: 0,
+      yearsWorked: 0,
+      lastResult: null,
+      lastResultYear: null,
+      nextStep: null,
+      history: [],
+    };
+    state.post1949.employment = Object.assign(defaults, state.post1949.employment || {});
+    if (!Array.isArray(state.post1949.employment.history)) state.post1949.employment.history = [];
+    return state.post1949.employment;
+  }
+
+  function livelihoodTrack(state) {
+    var routeGroups = C.livelihoodTrackRoutes || {};
+    var matched = Object.keys(routeGroups).find(function (track) {
+      return has(routeGroups[track], state.routeKey);
+    });
+    if (matched) return matched;
+    var knowledge = Number(state.attrs.knowledge || 0);
+    var craft = Number(state.attrs.craft || 0);
+    var body = Number(state.attrs.body || 0);
+    if (knowledge >= craft + 8) return 'literate';
+    if (craft >= body - 4) return 'skilled';
+    return 'manual';
+  }
+
+  function employmentProfile(state) {
+    var pathProfiles = C.post1949Jobs && C.post1949Jobs[state.post1949Choice];
+    if (!pathProfiles) return null;
+    var track = livelihoodTrack(state);
+    return { track: track, profile: pathProfiles[track] || pathProfiles.manual };
+  }
+
+  function employmentScore(state, track) {
+    var base;
+    if (track === 'care') base = Number(state.attrs.craft || 0) * 0.55 + Number(state.attrs.knowledge || 0) * 0.45;
+    else if (track === 'literate') base = Number(state.attrs.knowledge || 0) * 0.65 + Number(state.attrs.mind || 0) * 0.35;
+    else if (track === 'skilled') base = Number(state.attrs.craft || 0) * 0.7 + Number(state.attrs.knowledge || 0) * 0.3;
+    else base = Number(state.attrs.body || 0) * 0.55 + Number(state.attrs.craft || 0) * 0.45;
+    return Math.round(base * 0.7 + Number(state.attrs.network || 0) * 0.15 + Number(state.res.position || 0) * 0.15);
+  }
+
+  function employmentStatusLabel(status) {
+    return (C.employmentStatusLabels && C.employmentStatusLabels[status]) || status;
+  }
+
+  function employmentActionForState(state, action) {
+    if (!action.livelihoodAction || !state.post1949Choice) return action;
+    var current = ensureEmployment(state);
+    var selected = employmentProfile(state);
+    if (!selected) return action;
+    var profile = selected.profile;
+    if (current.status === 'employed' || current.status === 'reduced-hours') {
+      action.name = '继续在' + profile.workplace + '担任' + (current.role || profile.role);
+      action.note = '完成本年职责并核对工钱；这是延续当前职业，不是重新找一遍工作。';
+    } else if (current.status === 'trial') {
+      action.name = '完成「' + (current.role || profile.role) + '」试工并确认是否留用';
+      action.note = '按已经谈清的职责完成试工，当年得到“留用”或“不留用”的明确答复。';
+    } else if (current.status === 'casual') {
+      action.name = '继续做「' + (current.role || profile.casualRole) + '」并谈固定工期';
+      action.note = '先结清本段短工，再询问固定位置；没有留用也会写明工期结束和下一步。';
+    } else {
+      action.name = '应聘「' + profile.role + '」并在当年得到答复';
+      action.note = '完成面谈或试工，当年说明找到什么工作、为何未留用，以及下一步能做什么。';
+    }
+    return action;
+  }
+
+  function recordEmploymentOutcome(state, sourceId, result) {
+    var current = ensureEmployment(state);
+    current.lastResult = result;
+    current.lastResultYear = state.year;
+    current.history.push({
+      year: state.year,
+      source: sourceId,
+      status: current.status,
+      role: current.role,
+      workplace: current.workplace,
+      result: result,
+      nextStep: current.nextStep,
+    });
+    state.post1949.livelihood = employmentStatusLabel(current.status) + '：' + (current.role || '尚未接下具体工作') + (current.workplace ? '（' + current.workplace + '）' : '') + '。' + result;
+    addFact(state, {
+      id: 'employment:' + state.year + ':' + current.history.length,
+      kind: 'livelihood',
+      text: result,
+      source: sourceId,
+    });
+    addLog(state, '【谋生结果】' + result + ' 下一步：' + current.nextStep, current.status === 'employed' ? 'good' : 'turn', 'livelihood');
+    return result;
+  }
+
+  function resolveEmployment(state, sourceId, entryMode) {
+    if (!state.post1949Choice) return null;
+    var selected = employmentProfile(state);
+    if (!selected) return null;
+    var current = ensureEmployment(state);
+    var profile = selected.profile;
+    var score = employmentScore(state, selected.track);
+    var result;
+    current.track = selected.track;
+    current.workplace = current.workplace || profile.workplace;
+    current.duties = current.duties || profile.duties;
+    current.terms = current.terms || profile.terms;
+
+    if (entryMode === 'seeking') {
+      current.status = 'seeking';
+      current.role = null;
+      current.nextStep = '下一次安排谋生行动时，应聘「' + profile.role + '」并当年取得答复。';
+      result = '你这一年先处理住处、证件或同行者安排，没有把“准备找工作”写成已经就业；目前尚无工资职位。';
+      return recordEmploymentOutcome(state, sourceId, result);
+    }
+
+    if (current.status === 'employed' || current.status === 'reduced-hours') {
+      current.yearsWorked += 1;
+      current.nextStep = '明年可以继续这份工作，也可以在中年抉择中换工或减少工时。';
+      result = '你在' + current.workplace + '继续担任' + current.role + '，本年完成了' + current.duties + '；' + current.terms + '。';
+      return recordEmploymentOutcome(state, sourceId, result);
+    }
+
+    current.attempts += 1;
+    if (current.status === 'trial') {
+      current.status = 'employed';
+      current.role = profile.role;
+      current.terms = '试工已经完成，现按月结算工钱';
+      current.startedYear = current.startedYear || state.year;
+      current.yearsWorked += 1;
+      current.nextStep = '明年继续履行职责并核对工钱；若生活条件改变，再明确选择转工或减少工时。';
+      result = '你完成了' + current.workplace + '的试工。对方当面确认留用你担任' + current.role + '，职责是' + current.duties + '；' + current.terms + '。';
+      return recordEmploymentOutcome(state, sourceId, result);
+    }
+
+    if (entryMode === 'action' && score < 30) {
+      var gap = selected.track === 'care' ? '能证明的医护经历不足以承担当班范围'
+        : selected.track === 'literate' ? '试写的账式与对方现用格式仍对不上'
+          : selected.track === 'skilled' ? '当场试做还不能独立完成要求的检修'
+            : '当场能承担的工段和现有介绍都不足以排进固定班次';
+      current.status = 'seeking';
+      current.role = null;
+      current.nextStep = '先接「' + profile.casualRole + '」积累一段可核实的工钱和工段记录，再重新应聘「' + profile.role + '」。';
+      result = '你到' + current.workplace + '应聘' + profile.role + '，对方当面说明本次没有录用：' + gap + '。这一年没有固定工资职位，求职结果已经确认。';
+      return recordEmploymentOutcome(state, sourceId, result);
+    }
+
+    if (current.status === 'casual') {
+      if (state.post1949Choice === 'in-motion') {
+        current.role = profile.casualRole;
+        current.nextStep = '本段工期结束后，先结清工钱，再决定留在当地还是循下一条已核实消息移动。';
+        result = '你在' + current.workplace + '又接到一段' + current.role + '，完成了' + current.duties + '。工钱已经结清，但工期随这批活结束，没有被写成长期职位。';
+      } else {
+        current.status = 'trial';
+        current.role = profile.role;
+        current.nextStep = '完成一个月试工，并在期满当天确认是否正式留用。';
+        result = '你结清上一段短工后，' + current.workplace + '给了你一个月' + current.role + '试工。职责是' + current.duties + '；是否留用尚未发生，但答复日期和结算办法已经谈清。';
+      }
+      return recordEmploymentOutcome(state, sourceId, result);
+    }
+
+    if (entryMode === 'interview' || entryMode === 'trial') {
+      current.status = 'trial';
+      current.role = profile.role;
+      current.startedYear = current.startedYear || state.year;
+      current.nextStep = '按约完成一个月试工，并在期满当天确认是否正式留用。';
+      result = '你在' + current.workplace + '完成面谈和当场试做，对方明确给你一个月' + current.role + '试工。职责是' + current.duties + '；' + current.terms + '。';
+      return recordEmploymentOutcome(state, sourceId, result);
+    }
+
+    if (entryMode === 'casual' || score < 42) {
+      current.status = 'casual';
+      current.role = profile.casualRole;
+      current.startedYear = current.startedYear || state.year;
+      current.nextStep = state.post1949Choice === 'in-motion'
+        ? '工期结束先结清工钱，再按下一处已核实的工作消息决定去留。'
+        : '先结清这段短工，再凭已经完成的工段争取一个有期限的试工位置。';
+      result = '你在' + current.workplace + '找到一段' + current.role + '，工作是' + current.duties + '；' + profile.terms + '。这是一份已经领到工钱的短工，不是长期录用。';
+      return recordEmploymentOutcome(state, sourceId, result);
+    }
+
+    if (score < 65) {
+      current.status = 'trial';
+      current.role = profile.role;
+      current.startedYear = current.startedYear || state.year;
+      current.nextStep = '按约完成一个月试工，并在期满当天确认是否正式留用。';
+      result = '你在' + current.workplace + '完成面谈和当场试做，对方明确给你一个月' + current.role + '试工。职责是' + current.duties + '；' + current.terms + '。';
+      return recordEmploymentOutcome(state, sourceId, result);
+    }
+
+    current.status = 'employed';
+    current.role = profile.role;
+    current.terms = '当场试做已经完成，现按月结算工钱';
+    current.startedYear = current.startedYear || state.year;
+    current.yearsWorked += 1;
+    current.nextStep = '明年继续履行职责并核对工钱；生活条件改变时再明确决定是否转工。';
+    result = '你通过面谈和试做，被' + current.workplace + '留用为' + current.role + '。职责是' + current.duties + '；' + current.terms + '。';
+    return recordEmploymentOutcome(state, sourceId, result);
+  }
+
+  function resolveLaterLifeEmployment(state, optionId) {
+    if (!state.post1949Choice) return null;
+    var current = ensureEmployment(state);
+    if (!current.role) return resolveEmployment(state, 'later-life-livelihood:' + optionId, 'trial');
+    var formerRole = current.role;
+    var result;
+    if (optionId === 'change-work') {
+      var lighterRoles = {
+        manual: '货物清点与工段看守',
+        skilled: '检修记录与带徒工',
+        literate: '兼职文书与带教员',
+        care: '诊所登记与复诊联络员',
+      };
+      current.status = 'employed';
+      current.role = lighterRoles[current.track] || '较轻的受薪工作';
+      current.duties = current.track === 'care' ? '整理复诊名册、交代用药记录并联络病家'
+        : current.track === 'literate' ? '整理文书、核对旧账并带新人熟悉格式'
+          : current.track === 'skilled' ? '记录故障、验收修理并把旧经验教给年轻工人'
+            : '清点到货、登记工段并承担较少的重体力搬运';
+      current.terms = '按较轻职责重新核定工钱和工时';
+      current.nextStep = '按新的职责继续工作，并观察收入与身体是否能够长期接住。';
+      result = '五十岁时，你离开原来的“' + formerRole + '”职责，在' + current.workplace + '改做' + current.role + '。新职责是' + current.duties + '；' + current.terms + '。';
+    } else if (optionId === 'reduce-for-household') {
+      current.status = 'reduced-hours';
+      current.terms = '减少固定班次，按实际工时结算';
+      current.nextStep = '继续核对减少后的收入、身体恢复和同住者各自承担的照料。';
+      result = '五十岁时，你与' + current.workplace + '谈定减少' + formerRole + '的固定班次，仍承担' + current.duties + '；' + current.terms + '。';
+    } else {
+      current.status = 'employed';
+      current.nextStep = '继续当前工作，但每年按身体状态重新判断还能承担哪些职责。';
+      result = '五十岁时，你核对身体与当地条件后，继续在' + current.workplace + '担任' + formerRole + '，没有把旧职业假定为永远不变。';
+    }
+    return recordEmploymentOutcome(state, 'later-life-livelihood:' + optionId, result);
+  }
+
   function checkSubjectDeaths(state) {
     Object.keys(state.subjects).forEach(function (key) {
       var subject = state.subjects[key];
@@ -301,6 +543,11 @@
         correspondence: null,
         care: null,
         legacy: null,
+        employment: {
+          status: 'not-started', track: null, role: null, workplace: null, duties: null, terms: null,
+          startedYear: null, attempts: 0, yearsWorked: 0, lastResult: null, lastResultYear: null,
+          nextStep: null, history: [],
+        },
       },
       life: {
         status: 'alive',
@@ -350,7 +597,7 @@
     options = options || {};
     return C.actions.map(function (action) {
       var availability = actionAvailability(state, action);
-      var result = clone(action);
+      var result = employmentActionForState(state, clone(action));
       result.enabled = availability.ok;
       result.disabledReason = availability.reason;
       result.hidden = Boolean(availability.hidden);
@@ -368,6 +615,7 @@
     var spent = 0;
     var performed = [];
     var effects = { gains: [], risks: [], affectedPeople: [], channels: [] };
+    var outcomes = [];
 
     chosen.forEach(function (actionId) {
       var action = C.actions.find(function (item) { return item.id === actionId; });
@@ -379,6 +627,7 @@
       spent = nextSpent;
       var times = counts[actionId] || 0;
       var scale = 1 / (1 + times * 0.35);
+      var presentedAction = employmentActionForState(state, clone(action));
       applyDelta(state, action.delta, scale);
       applySubjectEffects(state, action.subjectDelta);
       applyContactEffects(state, action.contactEffects);
@@ -389,7 +638,11 @@
       preview.affectedPeople.forEach(function (label) { addUnique(effects.affectedPeople, label); });
       preview.channels.forEach(function (label) { addUnique(effects.channels, label); });
       counts[actionId] = times + 1;
-      performed.push(action.name);
+      performed.push(presentedAction.name);
+      if (action.livelihoodAction && times === 0) {
+        var outcome = resolveEmployment(state, action.id, 'action');
+        if (outcome) outcomes.push(outcome);
+      }
     });
 
     state.spirit = clamp(state.spirit - spent, 0, state.spiritMax);
@@ -408,6 +661,7 @@
       affectedPeople: effects.affectedPeople,
       channels: effects.channels,
       spirit: spent,
+      outcomes: outcomes,
     };
     checkSubjectDeaths(state);
   }
@@ -422,6 +676,7 @@
     if (item.families && !has(item.families, state.familyKey)) return false;
     if (item.routes && !has(item.routes, state.routeKey)) return false;
     if (item.post1949Choices && !has(item.post1949Choices, state.post1949Choice)) return false;
+    if (item.employmentStatuses && !has(item.employmentStatuses, ensureEmployment(state).status)) return false;
     if (item.genders && !has(item.genders, state.identity.gender)) return false;
     if (item.requiresEchoes && !item.requiresEchoes.every(function (echo) {
       return has(state.echoes, echo);
@@ -712,6 +967,10 @@
   function buildLifeChapters(state) {
     var route = C.routes[state.routeKey];
     var postPath = C.post1949Paths && C.post1949Paths[state.post1949Choice];
+    var employment = state.post1949 && state.post1949.employment;
+    var employmentText = employment && employment.role
+      ? '明确谋生记录为「' + employment.role + '」，地点是' + employment.workplace + '，最后状态为「' + employmentStatusLabel(employment.status) + '」。'
+      : '具体职业没有留下可确认记录。';
     var death = state.life || {};
     var warDecision = state.familyKey === 'subeipoor' ? 'subei-war' : (state.familyKey === 'jiangnanshen' ? 'shen-war' : 'shanghai-war');
     return [
@@ -719,7 +978,7 @@
       { key: 'livelihood', title: '成年谋生', text: route ? '成年后主要走入「' + route.name + '」：' + route.summary : '成年谋生路径没有留下完整记录。' },
       { key: 'war', title: '战争转折', text: choiceLabel(state, warDecision) ? choiceLabel(state, warDecision) + '。' : '战争时期的具体去留没有留下完整记录。' },
       { key: 'postwar', title: '战后重接', text: choiceLabel(state, 'postwar-settlement') ? choiceLabel(state, 'postwar-settlement') + '。' : '战后的住处、工作与关系如何接回，记录仍不完整。' },
-      { key: 'post1949', title: '1949 与后半生', text: postPath ? '1949 年选择「' + postPath.name + '」。' + (state.post1949.arrival || '后来的抵达过程没有完整记录。') + '；' + (state.post1949.livelihood || '谋生方式仍有未确认之处') + '。' : '1949 年后的去向没有留下完整记录。' },
+      { key: 'post1949', title: '1949 与后半生', text: postPath ? '1949 年选择「' + postPath.name + '」。' + (state.post1949.arrival || '后来的抵达过程没有完整记录。') + '；' + employmentText : '1949 年后的去向没有留下完整记录。' },
       { key: 'late-life', title: '中晚年', text: ([state.post1949.livelihoodLater, state.post1949.correspondence, state.post1949.care, state.post1949.legacy].filter(Boolean).join('；') || '中晚年具体生活安排没有留下完整记录').replace(/[。！？]?$/, '。') },
       { key: 'death', title: '死亡与确认', text: death.deathOccurredYear ? death.deathOccurredYear + ' 年，' + state.identity.name + '在' + death.deathPlace + '因' + death.cause + '去世，享年 ' + (death.deathOccurredYear - state.identity.born) + ' 岁。' + (death.deathConfirmedYear === death.deathOccurredYear ? '死亡在当年由身边人确认。' : '到 ' + death.deathConfirmedYear + ' 年，消息才完成确认。') : '主人公仍然在世，尚不能生成一生结局。' },
     ];
@@ -747,6 +1006,8 @@
     if (postPath) facts.push('1949 年以「' + postPath.name + '」开始后半生，后来主要生活在' + (state.post1949.place || postPath.place) + '。');
     if (state.post1949.arrival) facts.push('抵达与落脚：' + state.post1949.arrival + '。');
     if (state.post1949.livelihood) facts.push('1949 年后谋生：' + state.post1949.livelihood + '。');
+    var employment = state.post1949 && state.post1949.employment;
+    if (employment && employment.role) facts.push('明确职业记录：在' + employment.workplace + '担任' + employment.role + '，最后状态为「' + employmentStatusLabel(employment.status) + '」，累计记录 ' + employment.yearsWorked + ' 个续工年份。');
     if (state.post1949.livelihoodLater) facts.push('中年以后：' + state.post1949.livelihoodLater + '。');
     if (state.post1949.companions) facts.push('共同生活与同行关系：' + state.post1949.companions + '。');
     if (state.post1949.leftBehind) facts.push('留在别处的人与未完成团聚：' + state.post1949.leftBehind + '。');
@@ -882,6 +1143,8 @@
     if (option.postProfile) {
       Object.keys(option.postProfile).forEach(function (key) { state.post1949[key] = option.postProfile[key]; });
     }
+    if (option.employmentEntry) resolveEmployment(state, decision.id + ':' + option.id, option.employmentEntry);
+    if (decision.id === 'later-life-livelihood') resolveLaterLifeEmployment(state, option.id);
     if (option.spouseStatus) {
       state.subjects.spouse.status = option.spouseStatus;
       addFact(state, {
@@ -948,6 +1211,7 @@
     if (!source || !source.identity || !source.familyKey || !C.families[source.familyKey]) {
       throw new Error('存档缺少有效的身份与出生家庭');
     }
+    var sourceHadEmployment = Boolean(source.post1949 && source.post1949.employment);
     var base = createGame({
       familyKey: source.familyKey,
       gender: source.identity.gender,
@@ -961,6 +1225,8 @@
     state.subjects = Object.assign(clone(base.subjects), state.subjects || {});
     state.contacts = Object.assign(clone(base.contacts), state.contacts || {});
     state.post1949 = Object.assign(clone(base.post1949), state.post1949 || {});
+    state.post1949.employment = Object.assign(clone(base.post1949.employment), state.post1949.employment || {});
+    if (!Array.isArray(state.post1949.employment.history)) state.post1949.employment.history = [];
     state.life = Object.assign(clone(base.life), state.life || {});
     ['routeHistory', 'knownEvents', 'unknownImpacts', 'echoes', 'facts', 'log', 'curve', 'actionHistory', 'annualNarratives', 'firedOrdinaryEvents', 'eraHistory', 'currentEraUpdates', 'contactHistory', 'firedEvents', 'firedDecisions', 'decisionHistory', 'pendingDecisionQueue', 'endingFacts'].forEach(function (key) {
       if (!Array.isArray(state[key])) state[key] = [];
@@ -988,6 +1254,12 @@
       state.pendingDecisionQueue = [];
       addUnique(state.firedDecisions, 'final-1949');
       state.milestones.push({ year: C.milestoneYear || 1949, id: 'v04-save-continued', text: '旧版存档已从 1949 年阶段结算继续进入后半生。' });
+    }
+    if (state.year >= 1950 && state.post1949Choice && !sourceHadEmployment && state.post1949.employment.status === 'not-started') {
+      state.post1949.employment.status = 'seeking';
+      state.post1949.employment.lastResultYear = state.year;
+      state.post1949.employment.lastResult = '旧存档只留下了宽泛的谋生方向，没有记录具体岗位或录用结果。';
+      state.post1949.employment.nextStep = '下一次安排谋生行动时，应聘一份具体工作并在当年取得明确答复。';
     }
     migrateLegacyPostwarRhythms(state);
     return state;
@@ -1074,6 +1346,10 @@
       post1949EraEvidenceCount: states.filter(function (state) {
         return (state.eraHistory || []).some(function (entry) { return entry.year >= 1950; });
       }).length,
+      post1949EmploymentEvidenceCount: states.filter(function (state) {
+        var employment = state.post1949 && state.post1949.employment;
+        return employment && employment.role && employment.lastResult && employment.nextStep && employment.history.length > 0;
+      }).length,
       authoredEraEventCount: (C.events || []).filter(function (event) { return event.eraBrief; }).length,
       deathEndingCount: states.filter(function (state) {
         return state.over && state.life && state.life.status === 'dead'
@@ -1132,7 +1408,7 @@
       && coverage.keyDecisionCount >= 42
       && coverage.authoredOrdinaryEventCount >= 171;
     return {
-      wholeGameStageLabel: coverage.familyCount === 3 && coverage.routeCount === 11 && coverage.post1949PathCount === 6 && coverage.deathEndingCount === coverage.scenarioCount && coverage.post1949EraEvidenceCount === coverage.scenarioCount && coverage.annualNarrativeRate === 1 && lifeDensityReady
+      wholeGameStageLabel: coverage.familyCount === 3 && coverage.routeCount === 11 && coverage.post1949PathCount === 6 && coverage.deathEndingCount === coverage.scenarioCount && coverage.post1949EraEvidenceCount === coverage.scenarioCount && coverage.post1949EmploymentEvidenceCount === coverage.scenarioCount && coverage.annualNarrativeRate === 1 && lifeDensityReady
         ? '出生到死亡的完整人生文字版已闭环'
         : '仍在补代表态',
       version: C.version,
@@ -1143,6 +1419,7 @@
         milestone1949Continues: coverage.post1949ContinuationCount === coverage.scenarioCount,
         sixPost1949Paths: coverage.post1949PathCount === 6,
         post1949EraLayer: coverage.post1949EraEvidenceCount === coverage.scenarioCount,
+        post1949Livelihood: coverage.post1949EmploymentEvidenceCount === coverage.scenarioCount,
         deterministicSeed: true,
         subjectSchema: true,
         informationChannels: true,

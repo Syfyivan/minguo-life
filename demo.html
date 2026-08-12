@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>民国人生 · 完整人生文字版 Demo v0.5.1</title>
+<title>民国人生 · 完整人生文字版 Demo v0.5.2</title>
 <style>
 @font-face{font-family:Lora;src:url('./_shared/fonts/Lora-Regular.ttf') format('truetype');font-display:swap}
 @font-face{font-family:Lora;src:url('./_shared/fonts/Lora-Bold.ttf') format('truetype');font-weight:700;font-display:swap}
@@ -46,6 +46,7 @@ h1{margin:.25em 0 .05em;font-size:32px}
 .today{margin:12px 0;padding:13px 15px;background:rgba(255,255,255,.34);border:1px solid var(--rule);border-left:4px solid var(--gold);border-radius:7px}.today b{color:var(--red)}
 .era-update{margin:10px 0;padding:13px 15px;background:rgba(75,112,145,.1);border:1px solid rgba(75,112,145,.42);border-left:4px solid var(--blue);border-radius:7px}.era-update h3{margin:0 0 7px;color:var(--blue);font:14px Pixel,monospace}.era-item{padding:7px 0;border-top:1px dashed rgba(75,112,145,.32)}.era-item:first-of-type{border-top:0}.era-item b{display:block}.era-item.unknown b{color:var(--red)}.era-meta{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:6px;color:var(--muted);font-size:11px}.era-meta a{color:var(--blue)}.era-status{padding:2px 7px;border-radius:10px;background:rgba(255,255,255,.5)}
 .turn-feedback{margin:8px 0;padding:10px 13px;background:rgba(53,107,100,.08);border-left:4px solid var(--green);border-radius:6px;font-size:13px}.turn-feedback:empty{display:none}.milestone{margin:10px 0;padding:10px 13px;color:#fff;background:var(--blue);border-radius:7px;font-family:Pixel,monospace}.milestone:empty{display:none}
+.employment-state{margin-top:9px;padding:9px 11px;background:rgba(53,107,100,.09);border-left:3px solid var(--green);border-radius:5px}.employment-state b{color:var(--green)}.employment-state div{margin-top:3px}.employment-state .next{color:var(--blue)}.action-outcome{margin-top:7px;padding:8px 10px;background:rgba(255,255,255,.45);border:1px solid rgba(53,107,100,.28);border-radius:5px}.action-outcome b{color:var(--green)}
 .year-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:18px 0 7px}.year-head h2{margin:0;color:var(--red);font-size:20px}.spirit{padding:3px 9px;border:1px solid var(--rule);border-radius:12px;color:var(--green);font:12px Pixel,monospace}
 .slots{display:grid;gap:8px}.slot{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;background:var(--paper2);border:1px solid var(--rule);border-radius:8px}.slot-no{padding:2px 7px;color:#fff;background:var(--green);border-radius:3px;font:10px Pixel,monospace}.picked{flex:1;min-width:180px}.picked.empty{color:var(--muted);font-style:italic}
 .actions{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:18px 0}
@@ -63,7 +64,7 @@ h1{margin:.25em 0 .05em;font-size:32px}
 </head>
 <body>
 <header class="cover">
-  <div class="seal">DEMO<br>v0.5.1</div>
+  <div class="seal">DEMO<br>v0.5.2</div>
   <h1>民国人生 · 纯文字 Demo</h1>
   <div class="sub">从出生家庭出发，让行动、关系与时代共同写出一条人生路径</div>
   <nav class="nav">
@@ -156,7 +157,13 @@ h1{margin:.25em 0 .05em;font-size:32px}
   function el(id) { return document.getElementById(id); }
   function esc(value) { return String(value == null ? '' : value).replace(/[&<>'"]/g, function (char) { return ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'})[char]; }); }
   function showScreen(name) { ['pick','play','end'].forEach(function (key) { el('screen-' + key).classList.toggle('on', key === name); }); window.scrollTo({ top: 0, behavior: 'smooth' }); }
-  function actionById(id) { return Content.actions.find(function (action) { return action.id === id; }); }
+  function actionById(id) {
+    if (G) {
+      var presented = Game.availableActions(G, { includeDisabled: true, includeHidden: true }).find(function (action) { return action.id === id; });
+      if (presented) return presented;
+    }
+    return Content.actions.find(function (action) { return action.id === id; });
+  }
   function randomSeed() {
     if (window.crypto && window.crypto.getRandomValues) {
       var values = new Uint32Array(1); window.crypto.getRandomValues(values); return values[0] || 1;
@@ -236,7 +243,14 @@ h1{margin:.25em 0 .05em;font-size:32px}
   function renderStatus() {
     var route = G.routeKey ? Content.routes[G.routeKey] : null;
     var postPath = G.post1949Choice && Content.post1949Paths[G.post1949Choice];
-    el('routeStatus').innerHTML = '<b>' + (route ? esc(route.name) : '路径尚未确定') + '</b>' + (route ? '<div>' + esc(route.summary) + '</div>' : '<div>童年行动正在形成后续门槛。</div>') + (postPath ? '<div style="margin-top:6px"><b>1949 年后：</b>' + esc(postPath.name) + (G.post1949.place ? ' · ' + esc(G.post1949.place) : '') + '</div>' : '');
+    var employment = G.post1949 && G.post1949.employment;
+    var employmentHtml = employment && employment.status !== 'not-started'
+      ? '<div class="employment-state"><b>当前谋生：' + esc((Content.employmentStatusLabels && Content.employmentStatusLabels[employment.status]) || employment.status) + '</b>' +
+        '<div>' + esc(employment.role || '还没有接下具体工作') + (employment.workplace ? ' · ' + esc(employment.workplace) : '') + '</div>' +
+        (employment.lastResult ? '<div>最近结果（' + employment.lastResultYear + '）：' + esc(employment.lastResult) + '</div>' : '') +
+        (employment.nextStep ? '<div class="next">下一步：' + esc(employment.nextStep) + '</div>' : '') + '</div>'
+      : '';
+    el('routeStatus').innerHTML = '<b>' + (route ? esc(route.name) : '路径尚未确定') + '</b>' + (route ? '<div>' + esc(route.summary) + '</div>' : '<div>童年行动正在形成后续门槛。</div>') + (postPath ? '<div style="margin-top:6px"><b>1949 年后：</b>' + esc(postPath.name) + (G.post1949.place ? ' · ' + esc(G.post1949.place) : '') + '</div>' : '') + employmentHtml;
     var channels = G.information.channels.length ? G.information.channels.map(function (key) { return Content.channelLabels[key] || key; }).join(' / ') : '暂无稳定信息渠道';
     var lifeStatus = G.life.dangerSince ? '身体从 ' + G.life.dangerSince + ' 年起进入明显风险期' : '主人公仍在生活中';
     el('infoStatus').innerHTML = '<div style="margin-top:6px;color:var(--muted)">知情渠道：' + esc(channels) + '</div><div style="color:var(--muted)">生命状态：' + esc(lifeStatus) + '</div>';
@@ -274,7 +288,13 @@ h1{margin:.25em 0 .05em;font-size:32px}
       }).join('');
     }
     var feedback = G.lastActionFeedback;
-    el('turnFeedback').innerHTML = feedback ? '<b>' + feedback.year + ' 年行动回响</b><div>' + (feedback.actions.length ? '你亲自做了：' + esc(feedback.actions.join('、')) + '。' : '你没有额外安排，把时间留给日常。') + '</div>' + qualitativeChips(feedback, false) : '';
+    var feedbackOutcomes = feedback ? (feedback.outcomes || []).slice() : [];
+    var employment = G.post1949 && G.post1949.employment;
+    if (feedback && employment && employment.lastResult && employment.lastResultYear === feedback.year && feedbackOutcomes.indexOf(employment.lastResult) < 0) {
+      feedbackOutcomes.push(employment.lastResult);
+    }
+    var outcomeHtml = feedbackOutcomes.map(function (outcome) { return '<div class="action-outcome"><b>本年明确结果</b><div>' + esc(outcome) + '</div></div>'; }).join('');
+    el('turnFeedback').innerHTML = feedback ? '<b>' + feedback.year + ' 年行动回响</b><div>' + (feedback.actions.length ? '你亲自做了：' + esc(feedback.actions.join('、')) + '。' : '你没有额外安排，把时间留给日常。') + '</div>' + qualitativeChips(feedback, false) + outcomeHtml : '';
     el('milestoneBanner').textContent = G.year >= 1950 && G.facts.some(function (fact) { return fact.id === 'final-1949'; }) ? '1949 年的民国阶段已经结束，但这个人的人生仍在继续。' : '';
   }
 
@@ -326,7 +346,12 @@ h1{margin:.25em 0 .05em;font-size:32px}
     decision.options.forEach(function (option) {
       if (option.hidden) return;
       var button = document.createElement('button'); button.className = 'choice'; button.disabled = !option.enabled;
-      button.innerHTML = '<b>' + esc(option.label) + '</b>' + qualitativeChips(option.effects, false) + '<small>' + (option.enabled ? '这是可立即执行的选择；长期结果会在以后确认。' : '暂不可选：' + esc(option.disabledReason)) + '</small>';
+      var enabledHint = option.employmentEntry === 'seeking'
+        ? '这项选择会明确记录本年先处理什么、目前尚未就业，以及下一步怎样开始求职。'
+        : option.employmentEntry
+          ? '这项选择会在当年写明具体工作、面谈／试工结果、结算办法和下一步。'
+        : '这是可立即执行的选择；长期结果会在以后确认。';
+      button.innerHTML = '<b>' + esc(option.label) + '</b>' + qualitativeChips(option.effects, false) + '<small>' + (option.enabled ? enabledHint : '暂不可选：' + esc(option.disabledReason)) + '</small>';
       button.onclick = function () { Game.choose(G, option.id); planYear = null; render(); };
       card.appendChild(button);
     });

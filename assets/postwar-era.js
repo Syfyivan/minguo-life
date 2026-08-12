@@ -1,4 +1,4 @@
-// 民国人生 · 1949 后时代层 v0.5.1
+// 民国人生 · 1949 后时代层 v0.5.2
 // 把个人年度日常与所在地的时代变化分开；史实事件只写到可核实范围。
 (function (root) {
   'use strict';
@@ -6,7 +6,7 @@
   var C = root.MINGUO_GAME_CONTENT;
   if (!C) throw new Error('MINGUO_GAME_CONTENT is required before postwar-era.js');
 
-  C.version = '0.5.1';
+  C.version = '0.5.2';
 
   // 旧内容包中的普通场景为民国阶段所写。除明确按晚年年龄触发的回响外，
   // 不得在 1950 年以后继续抽取，避免士兵点名、流亡屋檐等战时画面串入新落点。
