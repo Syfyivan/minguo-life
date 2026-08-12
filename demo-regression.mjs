@@ -15,6 +15,7 @@ await import('./assets/family-expansion-f10.js');
 await import('./assets/family-expansion-f13.js');
 await import('./assets/family-expansion-f14.js');
 await import('./assets/family-expansion-f11.js');
+await import('./assets/family-expansion-f08.js');
 await import('./assets/demo-engine.js');
 
 const Game = globalThis.MINGUO_GAME;
@@ -47,6 +48,10 @@ const baseDecisions = {
   'hankou-port-path': 'dock-cargo-trial',
   'hankou-flood-1931': 'flood-move-people-tools-first',
   'hankou-port-war': 'hankou-split-addresses-reserves',
+  'tianjin-clerk-path': 'commercial-clerk-trial',
+  'tianjin-rent-school-1921': 'tianjin-protect-rent-pause-school',
+  'tianjin-clerk-war': 'tianjin-split-records-addresses',
+  'tianjin-postwar-reorganization-1948': 'tianjin-keep-current-records',
   'postwar-settlement': 'rebuild-local',
   'final-1949': 'stay-mainland',
   'later-life-livelihood': 'change-work',
@@ -162,12 +167,15 @@ const definitions = [
   { id: 'hankou-dock-cargo-worker', familyKey: 'hankouport', gender: '男', name: '周江生', expectedRoute: 'hankou-dock-cargo-worker', expectedPost1949: 'mainland', decisions: { 'hankou-port-path': 'dock-cargo-trial', 'route-hankou-dock-cargo-worker-1946': 'dock-limited-cart-team' } },
   { id: 'hankou-rickshaw-worker', familyKey: 'hankouport', gender: '男', name: '周江生', expectedRoute: 'hankou-rickshaw-worker', expectedPost1949: 'mainland', decisions: { 'hankou-port-path': 'rickshaw-trial', 'route-hankou-rickshaw-worker-1946': 'rickshaw-buy-one-used-cart', 'hankou-flood-1931': 'flood-close-work-preserve-health' } },
   { id: 'hankou-river-street-food-stall', familyKey: 'hankouport', gender: '女', name: '周江梅', expectedRoute: 'hankou-river-street-food-stall', expectedPost1949: 'mainland', decisions: { 'hankou-port-path': 'river-food-trial', 'route-hankou-river-street-food-stall-1946': 'food-limited-family-partnership', 'hankou-flood-1931': 'flood-split-work-and-shelter', 'hankou-port-war': 'hankou-verified-work-move' } },
+  { id: 'tianjin-commercial-clerk', familyKey: 'tianjinclerks', gender: '男', name: '许文清', expectedRoute: 'tianjin-commercial-clerk', expectedPost1949: 'mainland', decisions: { 'tianjin-clerk-path': 'commercial-clerk-trial', 'route-tianjin-commercial-clerk-1946': 'clerk-limited-stationery-partnership' } },
+  { id: 'tianjin-tailoring-garment-worker', familyKey: 'tianjinclerks', gender: '女', name: '许文澜', expectedRoute: 'tianjin-tailoring-garment-worker', expectedPost1949: 'mainland', decisions: { 'tianjin-clerk-path': 'tailoring-trial', 'route-tianjin-tailoring-garment-worker-1946': 'tailor-limited-garment-workshop', 'tianjin-clerk-war': 'tianjin-local-bounded-work' } },
+  { id: 'tianjin-postal-school-clerk', familyKey: 'tianjinclerks', gender: '女', name: '许文澜', expectedRoute: 'tianjin-postal-school-clerk', expectedPost1949: 'mainland', decisions: { 'tianjin-clerk-path': 'postal-school-trial', 'route-tianjin-postal-school-clerk-1946': 'postal-community-copy-desk', 'tianjin-clerk-war': 'tianjin-verified-unit-move' } },
 ];
 
 const states = definitions.map(runScenario);
 const report = Game.inspectCoverage(states);
-assert.equal(report.familyCount, 11);
-assert.equal(report.routeCount, 35);
+assert.equal(report.familyCount, 12);
+assert.equal(report.routeCount, 38);
 assert.equal(report.post1949PathCount, 8);
 assert.equal(report.factEndingCount, states.length);
 assert.equal(report.deathEndingCount, states.length);
@@ -179,13 +187,13 @@ assert.equal(report.informationEvidenceCount, states.length);
 assert.equal(report.contactEvidenceCount, states.length);
 assert.equal(report.familyLifecycleCount, states.length);
 assert.equal(report.annualNarrativeRate, 1);
-assert.equal(report.authoredActionCount, 152);
-assert.equal(report.keyDecisionCount, 119);
-assert.equal(report.decisionOptionCount, 384);
-assert.equal(report.authoredOrdinaryEventCount, 566);
-assert.equal(report.choiceEchoEventCount, 330);
+assert.equal(report.authoredActionCount, 161);
+assert.equal(report.keyDecisionCount, 129);
+assert.equal(report.decisionOptionCount, 414);
+assert.equal(report.authoredOrdinaryEventCount, 620);
+assert.equal(report.choiceEchoEventCount, 360);
 assert.equal(report.denseLifeCount, states.length);
-assert.equal(report.persistentContactCount, 162);
+assert.equal(report.persistentContactCount, 177);
 assert.equal(report.concreteCareerCount, states.length);
 assert.equal(report.parentLifecycleDetailCount, states.length);
 assert.equal(report.relationshipDetailCount, states.length);
@@ -199,7 +207,7 @@ assert.equal(report.publicActionCount, 6);
 assert.equal(report.publicDecisionCount, 7);
 assert.equal(report.publicOrdinarySceneCount, 21);
 assert.equal(report.publicEraEventCount, 11);
-assert.equal(report.publicContactProfileCount, 35);
+assert.equal(report.publicContactProfileCount, 38);
 
 const bundle = Game.inspectWholeGameProgressBundle(states);
 assert.equal(bundle.wholeGameStageLabel, '当前已实装内容通过出生到死亡验证；完整设计仍在扩建');
@@ -207,8 +215,8 @@ assert.equal(bundle.hardGates.publicLife, true);
 
 console.log(`[minguo-life] engine ${Game.VERSION}`);
 console.log(`[scenarios] ${states.length}/${definitions.length} complete`);
-console.log(`[families] ${report.familyCount}/11`);
-console.log(`[routes] ${report.routeCount}/35 ${report.routeKeys.join(', ')}`);
+console.log(`[families] ${report.familyCount}/12`);
+console.log(`[routes] ${report.routeCount}/38 ${report.routeKeys.join(', ')}`);
 console.log(`[post-1949] ${report.post1949PathCount}/8 ${report.post1949PathKeys.join(', ')}`);
 console.log(`[post-1949-era] ${report.post1949EraEvidenceCount}/${states.length} lives, ${report.authoredEraEventCount} authored era events`);
 console.log(`[post-1949-employment] ${report.post1949EmploymentEvidenceCount}/${states.length} lives with role, result and next step`);
