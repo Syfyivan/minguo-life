@@ -6,6 +6,7 @@ await import('./assets/life-expansion.js');
 await import('./assets/complete-life.js');
 await import('./assets/postwar-era.js');
 await import('./assets/lived-life.js');
+await import('./assets/public-life.js');
 await import('./assets/demo-engine.js');
 
 const Game = globalThis.MINGUO_GAME;
@@ -27,6 +28,12 @@ const baseDecisions = {
   'later-life-relationships': 'build-local-network',
   'late-life-care': 'community-care',
   'late-life-record': 'sort-records',
+  'public-life-contact': 'join-open-public-work',
+  'political-organization-application': 'apply-ccp',
+  'political-organization-answer': 'accept-membership',
+  'wartime-public-role': 'wartime-open-service',
+  'public-family-boundary': 'tell-family-risk-range',
+  'public-past-after-1949': 'state-confirmed-public-past',
 };
 
 function runScenario(definition) {
@@ -122,11 +129,11 @@ assert.equal(report.informationEvidenceCount, states.length);
 assert.equal(report.contactEvidenceCount, states.length);
 assert.equal(report.familyLifecycleCount, states.length);
 assert.equal(report.annualNarrativeRate, 1);
-assert.equal(report.authoredActionCount, 70);
-assert.equal(report.keyDecisionCount, 46);
-assert.equal(report.decisionOptionCount, 155);
-assert.equal(report.authoredOrdinaryEventCount, 171);
-assert.equal(report.choiceEchoEventCount, 105);
+assert.equal(report.authoredActionCount, 76);
+assert.equal(report.keyDecisionCount, 53);
+assert.equal(report.decisionOptionCount, 178);
+assert.equal(report.authoredOrdinaryEventCount, 192);
+assert.equal(report.choiceEchoEventCount, 126);
 assert.equal(report.denseLifeCount, states.length);
 assert.equal(report.persistentContactCount, 42);
 assert.equal(report.concreteCareerCount, states.length);
@@ -136,9 +143,17 @@ assert.equal(report.healthHistoryCount, states.length);
 assert.equal(report.socialWorldCount, states.length);
 assert.equal(report.innerLifeCount, states.length);
 assert.equal(report.concreteYearCount, report.expectedNarrativeYears);
+assert.equal(report.publicLifeEvidenceCount, states.length);
+assert.equal(report.politicalMembershipCount, states.length);
+assert.equal(report.publicActionCount, 6);
+assert.equal(report.publicDecisionCount, 7);
+assert.equal(report.publicOrdinarySceneCount, 21);
+assert.equal(report.publicEraEventCount, 11);
+assert.equal(report.publicContactProfileCount, 11);
 
 const bundle = Game.inspectWholeGameProgressBundle(states);
-assert.equal(bundle.wholeGameStageLabel, '出生到死亡的具体生活文字版已闭环');
+assert.equal(bundle.wholeGameStageLabel, '出生到死亡的具体生活与政治参与文字版已闭环');
+assert.equal(bundle.hardGates.publicLife, true);
 
 console.log(`[minguo-life] engine ${Game.VERSION}`);
 console.log(`[scenarios] ${states.length}/${definitions.length} complete`);
@@ -153,6 +168,7 @@ console.log(`[relationships] ${report.relationshipDetailCount}/${states.length} 
 console.log(`[illness-history] ${report.healthHistoryCount}/${states.length} lives with recurring conditions`);
 console.log(`[social-world] ${report.socialWorldCount}/${states.length} lives with six or more named people`);
 console.log(`[inner-life] ${report.innerLifeCount}/${states.length} lives with yearly thoughts`);
+console.log(`[public-life] ${report.publicLifeEvidenceCount}/${states.length} lives, ${report.publicDecisionCount} decisions, ${report.publicOrdinarySceneCount} consequence scenes`);
 console.log(`[fact-endings] ${report.factEndingCount}/${states.length}`);
 console.log(`[death-endings] ${report.deathEndingCount}/${states.length}`);
 console.log(`[subject-evidence] ${report.subjectEvidenceCount}/${states.length}`);

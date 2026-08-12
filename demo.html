@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>民国人生 · 具体生活文字版 Demo v0.6.0</title>
+<title>民国人生 · 具体生活文字版 Demo v0.7.0</title>
 <style>
 @font-face{font-family:Lora;src:url('./_shared/fonts/Lora-Regular.ttf') format('truetype');font-display:swap}
 @font-face{font-family:Lora;src:url('./_shared/fonts/Lora-Bold.ttf') format('truetype');font-weight:700;font-display:swap}
@@ -43,7 +43,7 @@ h1{margin:.25em 0 .05em;font-size:32px}
 .status-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:12px;margin:12px 0}.status-card{padding:12px 14px;background:var(--paper2);border:1px solid var(--rule);border-radius:8px}.status-card h3{margin:0 0 6px;font:14px Pixel,monospace;color:var(--green)}
 .subjects{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.subject{padding:7px;background:rgba(255,255,255,.28);border-radius:5px;font-size:11px}.subject b{display:block;font-size:12px}.subject span{color:var(--muted)}
 .contacts{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.contact{padding:9px;background:rgba(255,255,255,.28);border-radius:5px;font-size:11px}.contact b{display:block;font-size:12px}.contact span{display:block;color:var(--muted)}.contact .bond{margin-top:4px;color:var(--green);font-family:Pixel,monospace}
-.life-detail-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:12px 0}.life-detail{padding:13px 15px;background:rgba(255,255,255,.34);border:1px solid var(--rule);border-radius:8px}.life-detail h3{margin:0 0 7px;color:var(--green);font:14px Pixel,monospace}.detail-lead{font-weight:700;color:var(--red)}.detail-row{margin-top:6px;padding-top:6px;border-top:1px dashed var(--rule);font-size:12px}.detail-row b{color:var(--green)}.detail-quote{margin-top:5px;color:var(--blue)}.mind-card{border-left:4px solid var(--blue)}.health-card{border-left:4px solid var(--red)}
+.life-detail-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:12px 0}.life-detail{padding:13px 15px;background:rgba(255,255,255,.34);border:1px solid var(--rule);border-radius:8px}.life-detail h3{margin:0 0 7px;color:var(--green);font:14px Pixel,monospace}.detail-lead{font-weight:700;color:var(--red)}.detail-row{margin-top:6px;padding-top:6px;border-top:1px dashed var(--rule);font-size:12px}.detail-row b{color:var(--green)}.detail-quote{margin-top:5px;color:var(--blue)}.mind-card{border-left:4px solid var(--blue)}.health-card{border-left:4px solid var(--red)}.public-card{grid-column:1/-1;border-left:4px solid var(--gold)}
 .today{margin:12px 0;padding:13px 15px;background:rgba(255,255,255,.34);border:1px solid var(--rule);border-left:4px solid var(--gold);border-radius:7px}.today b{color:var(--red)}
 .era-update{margin:10px 0;padding:13px 15px;background:rgba(75,112,145,.1);border:1px solid rgba(75,112,145,.42);border-left:4px solid var(--blue);border-radius:7px}.era-update h3{margin:0 0 7px;color:var(--blue);font:14px Pixel,monospace}.era-item{padding:7px 0;border-top:1px dashed rgba(75,112,145,.32)}.era-item:first-of-type{border-top:0}.era-item b{display:block}.era-item.unknown b{color:var(--red)}.era-meta{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:6px;color:var(--muted);font-size:11px}.era-meta a{color:var(--blue)}.era-status{padding:2px 7px;border-radius:10px;background:rgba(255,255,255,.5)}
 .turn-feedback{margin:8px 0;padding:10px 13px;background:rgba(53,107,100,.08);border-left:4px solid var(--green);border-radius:6px;font-size:13px}.turn-feedback:empty{display:none}.milestone{margin:10px 0;padding:10px 13px;color:#fff;background:var(--blue);border-radius:7px;font-family:Pixel,monospace}.milestone:empty{display:none}
@@ -65,7 +65,7 @@ h1{margin:.25em 0 .05em;font-size:32px}
 </head>
 <body>
 <header class="cover">
-  <div class="seal">DEMO<br>v0.6.0</div>
+  <div class="seal">DEMO<br>v0.7.0</div>
   <h1>民国人生 · 纯文字 Demo</h1>
   <div class="sub">从出生家庭出发，让行动、关系与时代共同写出一条人生路径</div>
   <nav class="nav">
@@ -77,7 +77,7 @@ h1{margin:.25em 0 .05em;font-size:32px}
 
 <main class="wrap">
   <section class="screen on" id="screen-pick">
-    <div class="note warn"><span class="tag">当前定位</span>这是从出生持续玩到主人公真实死亡的具体生活文字验证版。1949 年只是中段分水岭；其后可进入大陆、香港、台湾、其他海外、继续流动或落点未定六种后半生。当前共有三棵出生家庭树、十一条主要谋生路径、70 个年度行动、155 个关键选项与 171 个作者场景；每年另生成工作现场、家人近况、疾病和心理记录。</div>
+    <div class="note warn"><span class="tag">当前定位</span>这是从出生持续玩到主人公真实死亡的具体生活文字验证版。1949 年只是中段分水岭；其后可进入大陆、香港、台湾、其他海外、继续流动或落点未定六种后半生。当前共有三棵出生家庭树、十一条主要谋生路径、76 个年度行动、178 个关键选项与 192 个作者场景；每年另生成工作现场、家人近况、疾病、心理和公共生活记录。</div>
     <div class="note"><span class="tag">玩法节奏</span>一回合是一年。你安排少量关键行动，随后会看到这一年具体在哪儿做什么工作、和谁发生了什么、身体怎样、心里在担心什么，再进入时代变化与关键抉择。想快速看设计可以使用“自动到下个抉择”，想仔细玩则可每年自行安排。</div>
     <div class="note"><span class="tag">随机编号说明</span>“随机编号（世界种子）”只决定同等条件下抽到哪段日常、人物如何独立回应，不代表难度。可以填写任意正整数，也可以点“随机”；同一家庭、同一编号、相同行动与选择会复现同一段人生。</div>
     <div id="savedStart"></div>
@@ -100,6 +100,7 @@ h1{margin:.25em 0 .05em;font-size:32px}
       <section class="life-detail" id="familyDetail" aria-live="polite"></section>
       <section class="life-detail health-card" id="healthDetail" aria-live="polite"></section>
       <section class="life-detail mind-card" id="mindDetail" aria-live="polite"></section>
+      <section class="life-detail public-card" id="publicDetail" aria-live="polite"></section>
     </div>
     <section class="status-card"><h3>朋友、同事、雇主与往来的人</h3><div class="contacts" id="contactGrid"></div></section>
     <div class="today" id="todayEvent" aria-live="polite"></div>
@@ -136,7 +137,7 @@ h1{margin:.25em 0 .05em;font-size:32px}
     <div class="actions"><button class="btn primary" id="againBtn">再活一次</button><button class="btn" id="copyEndingBtn">复制人生摘要</button><button class="btn" id="exportEndingBtn">导出完整存档</button></div>
   </section>
 
-  <p class="disc">人物均为虚构角色；玩法数值为设计示意值。终局只陈述已经发生、已经确认以及仍然未知的事实。</p>
+  <p class="disc">人物与个人政治经历均为合成虚构；真实组织和时代事件附史实来源。玩法数值为设计示意值，终局只陈述已经发生、已经确认以及仍然未知的事实。</p>
 </main>
 
 <div class="mask" id="actionMask" role="dialog" aria-modal="true" aria-labelledby="actionTitle">
@@ -148,6 +149,7 @@ h1{margin:.25em 0 .05em;font-size:32px}
 <script src="./assets/complete-life.js"></script>
 <script src="./assets/postwar-era.js"></script>
 <script src="./assets/lived-life.js"></script>
+<script src="./assets/public-life.js"></script>
 <script src="./assets/demo-engine.js"></script>
 <script>
 (function () {
@@ -317,6 +319,18 @@ h1{margin:.25em 0 .05em;font-size:32px}
     el('mindDetail').innerHTML = '<h3>这一年我心里怎么想</h3><div class="detail-lead">' + esc((lived.inner && lived.inner.current) || '还没有形成这一年的心理记录。') + '</div>' +
       (year && year.social ? '<div class="detail-row"><b>这一年的关系背景：</b>' + esc(year.social) + '</div>' : '') +
       (year && year.decision ? '<div class="detail-row"><b>刚作出的决定：</b>' + esc(year.decision) + '</div>' : '');
+
+    var publicLife = G.publicLife || {};
+    var statusLabel = (Content.publicStatusLabels && Content.publicStatusLabels[publicLife.status]) || publicLife.status || '没有参加政治组织';
+    var organizationLabel = publicLife.pendingOrganizationKey && Content.publicOrganizations[publicLife.pendingOrganizationKey]
+      ? '申请' + Content.publicOrganizations[publicLife.pendingOrganizationKey].name + '，等待答复'
+      : (publicLife.organizationName || '没有加入政治组织');
+    var exposureLabel = Number(publicLife.exposure || 0) < 20 ? '目前较少被注意' : (Number(publicLife.exposure || 0) < 50 ? '已经被一些人注意，需要重新核对生活边界' : '公开身份已经承受很高暴露风险');
+    el('publicDetail').innerHTML = '<h3>公共生活与政治经历</h3><div class="detail-lead">' + esc(statusLabel) + ' · ' + esc(organizationLabel) + '</div>' +
+      '<div class="detail-row"><b>实际承担：</b>' + esc(publicLife.publicRole || '尚未承担公共事务') + '</div>' +
+      '<div class="detail-row"><b>身份边界：</b>' + esc((Content.publicSecrecyLabels && Content.publicSecrecyLabels[publicLife.secrecy]) || publicLife.secrecy || '公开') + '；' + esc((Content.familyKnowledgeLabels && Content.familyKnowledgeLabels[publicLife.familyKnowledge]) || '家人不知道') + '</div>' +
+      '<div class="detail-row"><b>当前风险：</b>' + esc(exposureLabel) + '。这里不显示“忠诚值”，也不会用身份标签代替实际行为。</div>' +
+      '<div class="detail-row"><b>最近一次变化：</b>' + esc(publicLife.lastUpdate || '尚未发生') + '</div>';
   }
 
   function renderToday() {
@@ -395,7 +409,9 @@ h1{margin:.25em 0 .05em;font-size:32px}
     decision.options.forEach(function (option) {
       if (option.hidden) return;
       var button = document.createElement('button'); button.className = 'choice'; button.disabled = !option.enabled;
-      var enabledHint = option.employmentEntry === 'seeking'
+      var enabledHint = option.publicEffect
+        ? '这项选择会写明接触、申请或实际身份，记录具体事务、家人知情和暴露风险；申请不会被直接写成已经加入。'
+        : option.employmentEntry === 'seeking'
         ? '这项选择会明确记录本年先处理什么、目前尚未就业，以及下一步怎样开始求职。'
         : option.employmentEntry
           ? '这项选择会在当年写明具体工作、面谈／试工结果、结算办法和下一步。'
@@ -437,7 +453,7 @@ h1{margin:.25em 0 .05em;font-size:32px}
       ['做过的具体工作', portrait.career], ['父母各自的一生', portrait.parents],
       ['婚姻与亲密关系', portrait.relationship], ['孩子与下一代', portrait.children],
       ['朋友、同事、雇主和客户', portrait.friends], ['疾病与身体', portrait.health],
-      ['最后留下的心事', portrait.inner],
+      ['公共生活与政治经历', portrait.publicLife], ['最后留下的心事', portrait.inner],
     ];
     el('endingBox').innerHTML = '<h2>' + esc(G.identity.name) + '的一生 · ' + G.identity.born + '—' + G.endYear + '</h2><div class="death-summary">' + esc(G.life.deathOccurredYear + ' 年，享年 ' + (G.life.deathOccurredYear - G.identity.born) + ' 岁；在' + G.life.deathPlace + '因' + G.life.cause + '去世。死亡于 ' + G.life.deathConfirmedYear + ' 年完成确认。') + '</div><div class="life-chapters">' + chapters.map(function (chapter) { return '<section class="life-chapter"><h3>' + esc(chapter.title) + '</h3><p>' + esc(chapter.text) + '</p></section>'; }).join('') + '</div><h3>这个人具体怎样生活</h3><div class="portrait-grid">' + portraitItems.map(function (item) { return '<section class="portrait-card"><h3>' + esc(item[0]) + '</h3><p>' + esc(item[1]) + '</p></section>'; }).join('') + '</div><h3>一生事实回收</h3><ul>' + G.endingFacts.map(function (fact) { return '<li>' + esc(fact) + '</li>'; }).join('') + '</ul><div class="facts"><b>路径记录</b><div>' + esc(routeHistory || (route ? route.name : '没有形成独立路径记录')) + '</div><b>事实账本</b><div>' + G.facts.map(factLine).join('<br>') + '</div></div>';
     writeAutoSave();

@@ -301,6 +301,82 @@
     return state.contacts[contact.id];
   }
 
+  function ensurePublicLife(state) {
+    var defaults = {
+      status: 'unaffiliated', organizationKey: null, organizationName: '没有加入政治组织',
+      pendingOrganizationKey: null, publicRole: '尚未形成公共事务角色', secrecy: 'open',
+      trust: 0, exposure: 0, coercion: 0, familyKnowledge: 'none', coverRole: null,
+      contactKey: null, lastUpdate: '尚未参加政治组织或公共活动；保持距离也是有效人生。',
+      history: [],
+    };
+    state.publicLife = Object.assign(defaults, state.publicLife || {});
+    if (!Array.isArray(state.publicLife.history)) state.publicLife.history = [];
+    return state.publicLife;
+  }
+
+  function publicOrganizationName(key) {
+    return key && C.publicOrganizations && C.publicOrganizations[key]
+      ? C.publicOrganizations[key].name
+      : '没有加入政治组织';
+  }
+
+  function applyPublicEffect(state, effect, sourceId) {
+    if (!effect) return null;
+    var publicLife = ensurePublicLife(state);
+    var routeProfile = (C.publicRouteProfiles && C.publicRouteProfiles[state.routeKey]) || {};
+    var pendingOrganization = publicLife.pendingOrganizationKey;
+    if (Object.prototype.hasOwnProperty.call(effect, 'status')) publicLife.status = effect.status;
+    if (Object.prototype.hasOwnProperty.call(effect, 'organizationKey')) publicLife.organizationKey = effect.organizationKey;
+    if (effect.organizationFromPending) publicLife.organizationKey = pendingOrganization;
+    if (Object.prototype.hasOwnProperty.call(effect, 'pendingOrganizationKey')) publicLife.pendingOrganizationKey = effect.pendingOrganizationKey;
+    if (Object.prototype.hasOwnProperty.call(effect, 'secrecy')) publicLife.secrecy = effect.secrecy;
+    if (Object.prototype.hasOwnProperty.call(effect, 'familyKnowledge')) publicLife.familyKnowledge = effect.familyKnowledge;
+    if (effect.roleFromRoute && routeProfile[effect.roleFromRoute]) publicLife.publicRole = routeProfile[effect.roleFromRoute];
+    if (effect.coverFromCareer) {
+      var career = ensureLivedLife(state).career;
+      publicLife.coverRole = career.role && career.workplace ? career.role + ' · ' + career.workplace : '原有公开职业';
+    }
+    publicLife.trust = clamp(Number(publicLife.trust || 0) + Number(effect.trustDelta || 0), 0, 100);
+    publicLife.exposure = clamp(Number(publicLife.exposure || 0) + Number(effect.exposureDelta || 0), 0, 100);
+    publicLife.coercion = clamp(Number(publicLife.coercion || 0) + Number(effect.coercionDelta || 0), 0, 100);
+    if (effect.addRouteContact && routeProfile.contact) {
+      var contact = addDetailedContact(state, routeProfile.contact);
+      publicLife.contactKey = routeProfile.contact.id;
+      if (contact) {
+        contact.relation = clamp(Number(contact.relation || 0) + 3, 0, 100);
+        contact.lastUpdateYear = state.year;
+      }
+    }
+    publicLife.organizationName = publicOrganizationName(publicLife.organizationKey);
+    publicLife.lastUpdate = effect.historyText || '公共生活状态发生变化。';
+    if (String(sourceId || '').indexOf('action:') === 0 && publicLife.publicRole && publicLife.publicRole !== '尚未形成公共事务角色') {
+      publicLife.lastUpdate += ' 本次实际事务：' + publicLife.publicRole + '。';
+    }
+    var record = {
+      year: state.year, source: sourceId || 'public-life', status: publicLife.status,
+      organizationKey: publicLife.organizationKey, organizationName: publicLife.organizationName,
+      pendingOrganizationKey: publicLife.pendingOrganizationKey,
+      role: publicLife.publicRole, secrecy: publicLife.secrecy, familyKnowledge: publicLife.familyKnowledge,
+      exposure: publicLife.exposure, coercion: publicLife.coercion, text: publicLife.lastUpdate,
+    };
+    publicLife.history.push(record);
+    addLog(state, '【公共生活】' + publicLife.lastUpdate, publicLife.secrecy === 'secret' ? 'turn' : '', 'public-life');
+    return publicLife.lastUpdate;
+  }
+
+  function publicConditionResult(state, item) {
+    var publicLife = ensurePublicLife(state);
+    if (item.publicStatuses && !has(item.publicStatuses, publicLife.status)) {
+      return { ok: false, reason: '当前公共生活状态为「' + ((C.publicStatusLabels && C.publicStatusLabels[publicLife.status]) || publicLife.status) + '」。' };
+    }
+    if (item.publicSecrecy && !has(item.publicSecrecy, publicLife.secrecy)) return { ok: false, reason: '当前身份公开程度不满足这项行动。' };
+    if (item.publicOrganizations && !has(item.publicOrganizations, publicLife.organizationKey)) return { ok: false, reason: '当前没有相符的组织关系。' };
+    if (item.minPublicTrust != null && publicLife.trust < item.minPublicTrust) return { ok: false, reason: '需要先通过具体事务建立更多组织信任。' };
+    if (item.minPublicExposure != null && publicLife.exposure < item.minPublicExposure) return { ok: false, reason: '当前公开暴露程度尚未触发这一处境。' };
+    if (item.maxPublicExposure != null && publicLife.exposure > item.maxPublicExposure) return { ok: false, reason: '当前公开暴露程度已经超过这项安排能够承受的范围。' };
+    return { ok: true, reason: '' };
+  }
+
   function installRouteContacts(state, routeKey) {
     ((C.routeContactProfiles && C.routeContactProfiles[routeKey]) || []).forEach(function (contact) {
       addDetailedContact(state, contact);
@@ -995,6 +1071,7 @@
 
   function buildLifePortrait(state) {
     var lived = ensureLivedLife(state);
+    var publicLife = ensurePublicLife(state);
     var parentText = Object.keys(lived.parents).map(function (key) {
       var parent = lived.parents[key];
       return parent.name + '（' + parent.occupation + '）' + (parent.deathYear ? '于 ' + parent.deathYear + ' 年去世，' + (parent.status === 'dead-confirmed' ? '死亡已确认' : '确认仍不完整') : '最后记录仍在世') + '；最后留下的话是' + parent.lastWords;
@@ -1019,6 +1096,14 @@
       ? '明确记录过 ' + illnessEntries.length + ' 次身体发作，包括' + illnessEntries.slice(-6).map(function (item) { return item.condition + '（' + item.year + '）'; }).join('、') + '；另有 ' + lived.health.treatedCount + ' 次主动求医或检查。'
       : '没有留下具体疾病记录。';
     var thoughtText = lived.inner.history.length ? lived.inner.history[lived.inner.history.length - 1].text : lived.inner.current;
+    var publicStatus = (C.publicStatusLabels && C.publicStatusLabels[publicLife.status]) || publicLife.status;
+    var organizationText = publicLife.organizationKey
+      ? publicOrganizationName(publicLife.organizationKey)
+      : (publicLife.pendingOrganizationKey ? '曾申请' + publicOrganizationName(publicLife.pendingOrganizationKey) + '，但没有把申请写成正式身份' : '没有加入政治组织');
+    var publicText = publicLife.history.length
+      ? publicStatus + '；组织关系为“' + organizationText + '”；实际承担的事务是“' + publicLife.publicRole + '”；身份公开程度为“' + ((C.publicSecrecyLabels && C.publicSecrecyLabels[publicLife.secrecy]) || publicLife.secrecy) + '”；' + ((C.familyKnowledgeLabels && C.familyKnowledgeLabels[publicLife.familyKnowledge]) || publicLife.familyKnowledge) + '。一生留下 ' + publicLife.history.length + ' 条公共生活事实记录。'
+      : '没有参加政治组织或被记录的公共活动；保持距离没有被写成失败。';
+    if (publicLife.coercion > 0) publicText += '曾经历拘留或问话压力；结局只回收当时实际说过什么及后来能够确认的后果。';
     return {
       career: careerText,
       parents: parentText,
@@ -1027,6 +1112,7 @@
       friends: friendText || '没有留下能够确认姓名的朋友记录。',
       health: healthText,
       inner: thoughtText,
+      publicLife: publicText,
     };
   }
 
@@ -1342,6 +1428,12 @@
       livelihoodKey: null,
       warTurnKey: null,
       postwarSettlementKey: null,
+      publicLife: {
+        status: 'unaffiliated', organizationKey: null, organizationName: '没有加入政治组织',
+        pendingOrganizationKey: null, publicRole: '尚未形成公共事务角色', secrecy: 'open',
+        trust: 0, exposure: 0, coercion: 0, familyKnowledge: 'none', coverRole: null,
+        contactKey: null, lastUpdate: '尚未参加政治组织或公共活动；保持距离也是有效人生。', history: [],
+      },
       post1949Choice: null,
       post1949: {
         choice: null,
@@ -1409,6 +1501,8 @@
       var relationship = ensureLivedLife(state).relationship;
       if (!relationship.spouse || relationship.spouse.status === 'dead') return { ok: false, reason: '当前没有能够进行这次谈话的配偶。' };
     }
+    var publicResult = publicConditionResult(state, action);
+    if (!publicResult.ok) return publicResult;
     return gateResult(state, action.gate);
   }
 
@@ -1465,6 +1559,8 @@
       if (times === 0) {
         var lifeOutcome = resolveLifeAction(state, action, presentedAction);
         if (lifeOutcome) outcomes.push(lifeOutcome);
+        var publicOutcome = applyPublicEffect(state, action.publicEffect, 'action:' + action.id);
+        if (publicOutcome) outcomes.push(publicOutcome);
       }
     });
 
@@ -1501,6 +1597,7 @@
     if (item.post1949Choices && !has(item.post1949Choices, state.post1949Choice)) return false;
     if (item.employmentStatuses && !has(item.employmentStatuses, ensureEmployment(state).status)) return false;
     if (item.genders && !has(item.genders, state.identity.gender)) return false;
+    if (!publicConditionResult(state, item).ok) return false;
     if (item.requiresEchoes && !item.requiresEchoes.every(function (echo) {
       return has(state.echoes, echo);
     })) return false;
@@ -1705,6 +1802,8 @@
     if (option.genders && !has(option.genders, state.identity.gender)) return { ok: false, hidden: true, reason: '这个选项只在另一种人物设定中出现。' };
     if (option.minAge != null && state.age < option.minAge) return { ok: false, reason: '需要年满 ' + option.minAge + ' 岁；当前 ' + state.age + ' 岁。' };
     if (option.maxAge != null && state.age > option.maxAge) return { ok: false, reason: '只在 ' + option.maxAge + ' 岁以前适用；当前 ' + state.age + ' 岁。' };
+    var publicResult = publicConditionResult(state, option);
+    if (!publicResult.ok) return publicResult;
     if (option.requiresSubjectStatus) {
       var exactKeys = Object.keys(option.requiresSubjectStatus);
       var failedExact = exactKeys.find(function (key) {
@@ -1799,7 +1898,7 @@
     var warDecision = state.familyKey === 'subeipoor' ? 'subei-war' : (state.familyKey === 'jiangnanshen' ? 'shen-war' : 'shanghai-war');
     return [
       { key: 'birth-family', title: '出生与成长', text: state.identity.name + '于 ' + state.identity.born + ' 年出生在' + state.identity.place + '，成长于' + state.identity.familyName + '。' + portrait.parents + (choiceLabel(state, 'education') ? '六岁时，选择了“' + choiceLabel(state, 'education') + '”。' : '') },
-      { key: 'livelihood', title: '成年谋生', text: (route ? '成年道路主要经过「' + route.name + '」。' : '') + portrait.career },
+      { key: 'livelihood', title: '成年谋生', text: (route ? '成年道路主要经过「' + route.name + '」。' : '') + portrait.career + '公共生活与政治经历：' + portrait.publicLife },
       { key: 'war', title: '战争转折', text: choiceLabel(state, warDecision) ? choiceLabel(state, warDecision) + '。' : '战争时期的具体去留没有留下完整记录。' },
       { key: 'postwar', title: '战后重接', text: choiceLabel(state, 'postwar-settlement') ? choiceLabel(state, 'postwar-settlement') + '。' : '战后的住处、工作与关系如何接回，记录仍不完整。' },
       { key: 'post1949', title: '1949 与后半生', text: postPath ? '1949 年选择「' + postPath.name + '」。' + (state.post1949.arrival || '后来的抵达过程没有完整记录。') + '；' + employmentText + '家人与旧识并没有因此自动同行：' + portrait.relationship : '1949 年后的去向没有留下完整记录。' },
@@ -1847,6 +1946,7 @@
     if (state.post1949.care) facts.push('晚年照料：' + state.post1949.care + '。');
     if (state.post1949.legacy) facts.push('留下的记录：' + state.post1949.legacy + '。');
     if (state.annualNarratives.length) facts.push('人生账本记录了 ' + state.annualNarratives.length + ' 个生活年份。');
+    facts.push('公共生活与政治经历：' + buildLifePortrait(state).publicLife);
     if (state.knownEvents.length) facts.push('明确获知的时代事件有 ' + state.knownEvents.length + ' 项。');
     if (state.unknownImpacts.length) facts.push('另有 ' + state.unknownImpacts.length + ' 项时代冲击先进入生活，其完整来由在当时未知。');
     var routeChoiceFacts = state.facts.filter(function (fact) { return String(fact.source || '').indexOf('route-') === 0; });
@@ -1949,6 +2049,7 @@
     applySubjectEffects(state, option.subjectEffects);
     applyContactEffects(state, option.contactEffects);
     addChannels(state, option.channels);
+    applyPublicEffect(state, option.publicEffect, 'decision:' + decision.id + ':' + option.id);
     if (option.echo) addUnique(state.echoes, option.echo);
     if (option.route) setRoute(state, option.route, decision.id + ':' + option.id);
     if (has(['subei-livelihood', 'shen-path', 'shanghai-path'], decision.id)) state.livelihoodKey = option.route || state.routeKey;
@@ -2014,7 +2115,7 @@
     if (!state || !state.identity || !state.familyKey) throw new Error('A valid game state is required');
     return JSON.stringify({
       format: 'minguo-life-save',
-      schemaVersion: 3,
+      schemaVersion: 4,
       gameVersion: C.version,
       state: state,
     }, null, 2);
@@ -2067,6 +2168,8 @@
     state.post1949.employment = Object.assign(clone(base.post1949.employment), state.post1949.employment || {});
     if (!Array.isArray(state.post1949.employment.history)) state.post1949.employment.history = [];
     state.life = Object.assign(clone(base.life), state.life || {});
+    state.publicLife = Object.assign(clone(base.publicLife), state.publicLife || {});
+    if (!Array.isArray(state.publicLife.history)) state.publicLife.history = [];
     state.lived = Object.assign(clone(base.lived), state.lived || {});
     state.lived.parents = Object.assign(clone(base.lived.parents), state.lived.parents || {});
     state.lived.relationship = Object.assign(clone(base.lived.relationship), state.lived.relationship || {});
@@ -2083,6 +2186,7 @@
     state.spirit = clamp(Number(state.spirit) || 0, 0, state.spiritMax || C.spiritMax);
     state.randomState = Number(state.randomState) >>> 0;
     ensureLivedLife(state);
+    ensurePublicLife(state);
     if (state.routeKey && !state.lived.career.role) enterRouteCareer(state, state.routeKey);
     if (state.post1949Choice && state.post1949 && state.post1949.employment && state.post1949.employment.role) syncCareerFromEmployment(state);
     if (!state.life.deathOccurredYear && state.over && state.year <= (C.milestoneYear || 1949)) {
@@ -2124,6 +2228,7 @@
       routeName: state.routeKey && C.routes[state.routeKey] ? C.routes[state.routeKey].name : '路径尚未确定',
       chapter: state.chapter,
       post1949Name: state.post1949Choice && C.post1949Paths[state.post1949Choice] ? C.post1949Paths[state.post1949Choice].name : null,
+      publicStatus: (C.publicStatusLabels && C.publicStatusLabels[ensurePublicLife(state).status]) || ensurePublicLife(state).status,
       over: Boolean(state.over),
       seed: state.seed,
     };
@@ -2243,6 +2348,22 @@
       innerLifeCount: states.filter(function (state) {
         return state.lived && state.lived.inner && state.lived.inner.history.length === state.annualNarratives.length;
       }).length,
+      publicLifeEvidenceCount: states.filter(function (state) {
+        return state.publicLife && state.publicLife.history && state.publicLife.history.length >= 5;
+      }).length,
+      politicalMembershipCount: states.filter(function (state) {
+        return state.publicLife && state.publicLife.history && state.publicLife.history.some(function (entry) {
+          return entry.status === 'member' && (entry.organizationKey === 'ccp' || entry.organizationKey === 'kmt');
+        });
+      }).length,
+      secretPublicLifeCount: states.filter(function (state) {
+        return state.publicLife && state.publicLife.history && state.publicLife.history.some(function (entry) {
+          return entry.status === 'secret-worker' || entry.status === 'infiltration';
+        });
+      }).length,
+      factualPressureCount: states.filter(function (state) {
+        return state.publicLife && Number(state.publicLife.coercion || 0) > 0;
+      }).length,
       concreteYearCount: states.reduce(function (sum, state) {
         return sum + ((state.lived && state.lived.yearHistory) || []).length;
       }, 0),
@@ -2251,13 +2372,21 @@
       annualNarrativeRate: expectedNarrativeYears ? recordedNarrativeYears / expectedNarrativeYears : 0,
       authoredOrdinaryEventCount: (C.ordinaryEvents || []).length,
       authoredActionCount: (C.actions || []).length,
+      publicActionCount: (C.actions || []).filter(function (action) { return Boolean(action.publicEffect); }).length,
       keyDecisionCount: (C.decisions || []).length,
+      publicDecisionCount: (C.decisions || []).filter(function (decision) {
+        return (decision.options || []).some(function (option) { return Boolean(option.publicEffect); });
+      }).length,
       decisionOptionCount: (C.decisions || []).reduce(function (sum, decision) {
         return sum + (decision.options || []).length;
       }, 0),
       choiceEchoEventCount: (C.ordinaryEvents || []).filter(function (event) {
         return event.requiresEchoes || event.requiresAnyEchoes;
       }).length,
+      publicOrdinarySceneCount: (C.ordinaryEvents || []).filter(function (event) {
+        return String(event.id || '').indexOf('public-') === 0;
+      }).length,
+      publicEraEventCount: (C.events || []).filter(function (event) { return event.publicLifeEra; }).length,
       concreteStoryCount: states.reduce(function (sum, state) {
         return sum + (state.annualNarratives || []).filter(function (entry) { return String(entry.text || '').length >= 80; }).length;
       }, 0),
@@ -2276,6 +2405,9 @@
       }, 0) + Object.keys(C.routeContactProfiles || {}).reduce(function (sum, routeKey) {
         return sum + (C.routeContactProfiles[routeKey] || []).length;
       }, 0),
+      publicContactProfileCount: Object.keys(C.publicRouteProfiles || {}).filter(function (routeKey) {
+        return C.publicRouteProfiles[routeKey] && C.publicRouteProfiles[routeKey].contact;
+      }).length,
     };
   }
 
@@ -2294,9 +2426,16 @@
       && coverage.socialWorldCount === coverage.scenarioCount
       && coverage.innerLifeCount === coverage.scenarioCount
       && coverage.concreteYearCount === coverage.expectedNarrativeYears;
+    var publicLifeReady = coverage.scenarioCount > 0
+      && coverage.publicLifeEvidenceCount === coverage.scenarioCount
+      && coverage.publicActionCount >= 6
+      && coverage.publicDecisionCount >= 7
+      && coverage.publicOrdinarySceneCount >= 21
+      && coverage.publicEraEventCount >= 11
+      && coverage.publicContactProfileCount === 11;
     return {
-      wholeGameStageLabel: coverage.familyCount === 3 && coverage.routeCount === 11 && coverage.post1949PathCount === 6 && coverage.deathEndingCount === coverage.scenarioCount && coverage.post1949EraEvidenceCount === coverage.scenarioCount && coverage.post1949EmploymentEvidenceCount === coverage.scenarioCount && coverage.annualNarrativeRate === 1 && lifeDensityReady && livedLifeReady
-        ? '出生到死亡的具体生活文字版已闭环'
+      wholeGameStageLabel: coverage.familyCount === 3 && coverage.routeCount === 11 && coverage.post1949PathCount === 6 && coverage.deathEndingCount === coverage.scenarioCount && coverage.post1949EraEvidenceCount === coverage.scenarioCount && coverage.post1949EmploymentEvidenceCount === coverage.scenarioCount && coverage.annualNarrativeRate === 1 && lifeDensityReady && livedLifeReady && publicLifeReady
+        ? '出生到死亡的具体生活与政治参与文字版已闭环'
         : '仍在补代表态',
       version: C.version,
       coverage: coverage,
@@ -2321,6 +2460,7 @@
         socialWorld: coverage.socialWorldCount === coverage.scenarioCount,
         innerLife: coverage.innerLifeCount === coverage.scenarioCount,
         concreteYearRecord: coverage.concreteYearCount === coverage.expectedNarrativeYears,
+        publicLife: publicLifeReady,
         portableSave: true,
       },
     };

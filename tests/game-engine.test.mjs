@@ -7,6 +7,7 @@ await import('../assets/life-expansion.js');
 await import('../assets/complete-life.js');
 await import('../assets/postwar-era.js');
 await import('../assets/lived-life.js');
+await import('../assets/public-life.js');
 await import('../assets/demo-engine.js');
 
 const Game = globalThis.MINGUO_GAME;
@@ -28,6 +29,12 @@ const DEFAULT_DECISIONS = {
   'later-life-relationships': 'build-local-network',
   'late-life-care': 'community-care',
   'late-life-record': 'sort-records',
+  'public-life-contact': 'join-open-public-work',
+  'political-organization-application': 'apply-ccp',
+  'political-organization-answer': 'accept-membership',
+  'wartime-public-role': 'wartime-open-service',
+  'public-family-boundary': 'tell-family-risk-range',
+  'public-past-after-1949': 'state-confirmed-public-past',
 };
 
 const ROUTE_SETUPS = {
@@ -351,11 +358,12 @@ test('family lifecycle allows care without forcing marriage or children', () => 
   assert.ok(unmarried.facts.some((fact) => fact.source === 'family-future'));
 });
 
-test('portable v0.6 saves round-trip without changing the life ledger', () => {
+test('portable v0.7 saves round-trip without changing the life ledger', () => {
   const state = playScenario({ familyKey: 'subeipoor', decisions: { 'subei-war': 'join-army' } });
   const restored = Game.importGame(Game.exportGame(state));
 
-  assert.equal(restored.version, '0.6.0');
+  assert.equal(restored.version, '0.7.0');
+  assert.equal(JSON.parse(Game.exportGame(restored)).schemaVersion, 4);
   assert.deepEqual(restored.identity, state.identity);
   assert.deepEqual(restored.facts, state.facts);
   assert.deepEqual(restored.annualNarratives, state.annualNarratives);
@@ -380,7 +388,7 @@ test('abilities and resources stay inside the published 0 to 100 domain', () => 
   }
 });
 
-test('v0.2 states receive v0.6 complete-life defaults on import', () => {
+test('v0.2 states receive v0.7 complete-life and public-life defaults on import', () => {
   const legacy = Game.createGame({ familyKey: 'subeipoor', gender: '男', name: '旧存档', seed: 19 });
   legacy.version = '0.2.0';
   delete legacy.contacts;
@@ -389,7 +397,8 @@ test('v0.2 states receive v0.6 complete-life defaults on import', () => {
   delete legacy.contactHistory;
 
   const restored = Game.importGame(legacy);
-  assert.equal(restored.version, '0.6.0');
+  assert.equal(restored.version, '0.7.0');
+  assert.equal(restored.publicLife.status, 'unaffiliated');
   assert.equal(Object.keys(restored.contacts).length, 3);
   assert.deepEqual(restored.annualNarratives, []);
   assert.deepEqual(restored.contactHistory, []);
@@ -411,7 +420,7 @@ test('v0.4 endings at 1949 resume as an unfinished life in 1950', () => {
   delete legacy.life;
 
   const restored = Game.importGame(legacy);
-  assert.equal(restored.version, '0.6.0');
+  assert.equal(restored.version, '0.7.0');
   assert.equal(restored.over, false);
   assert.equal(restored.year, 1950);
   assert.equal(restored.chapter, 'post1949');
@@ -649,13 +658,61 @@ test('each route owns at least nine authored ordinary-life scenes', () => {
   }
 });
 
+test('the 1921 founding appears as history, not a fictional chance for the child protagonist to found the party', () => {
+  const state = playScenario({ familyKey: 'subeipoor', name: '李禾生' });
+  const founding = state.facts.find((fact) => fact.id === 'ccp-founding-1921');
+  assert.ok(founding);
+  assert.match(founding.text, /只有十一至十三岁|没有参与建党/);
+  assert.ok(state.publicLife.history.every((entry) => entry.year >= 1925));
+});
+
+test('a political application remains pending until a later explicit acceptance', () => {
+  const state = playScenario({ familyKey: 'jiangnanshen', decisions: {
+    'political-organization-application': 'apply-ccp',
+    'political-organization-answer': 'accept-membership',
+  } });
+  const application = state.publicLife.history.find((entry) => entry.source === 'decision:political-organization-application:apply-ccp');
+  const acceptance = state.publicLife.history.find((entry) => entry.source === 'decision:political-organization-answer:accept-membership');
+  assert.equal(application.status, 'applicant');
+  assert.equal(application.organizationKey, null);
+  assert.equal(application.pendingOrganizationKey, 'ccp');
+  assert.equal(acceptance.status, 'member');
+  assert.equal(acceptance.organizationKey, 'ccp');
+});
+
+test('secret work, family boundaries and detention pressure leave factual consequences without traitor labels', () => {
+  const state = playScenario({ familyKey: 'shanghaigongshang', decisions: {
+    'wartime-public-role': 'wartime-infiltration',
+    'public-family-boundary': 'tell-family-emergency-only',
+    'public-detention-pressure': 'provide-address-under-pressure',
+    'public-past-after-1949': 'verify-before-stating-past',
+  } });
+  assert.ok(state.publicLife.history.some((entry) => entry.status === 'infiltration'));
+  assert.equal(state.publicLife.status, 'coerced-cooperation');
+  assert.ok(state.publicLife.coercion > 0);
+  assert.ok(state.facts.some((fact) => /提供了一个曾使用的地址/.test(fact.text)));
+  assert.doesNotMatch(Game.buildEndingNarrative(state), /叛徒|忠诚值/);
+  assert.match(Game.buildLifePortrait(state).publicLife, /拘留或问话压力/);
+});
+
+test('keeping distance or staying nonparty remains a complete playable public-life path', () => {
+  const distance = playScenario({ familyKey: 'subeipoor', decisions: { 'public-life-contact': 'keep-public-distance' } });
+  assert.equal(distance.publicLife.status, 'unaffiliated');
+  assert.equal(distance.publicLife.history.length, 1);
+  assert.match(Game.buildLifePortrait(distance).publicLife, /没有参加政治组织/);
+
+  const nonparty = playScenario({ familyKey: 'jiangnanshen', decisions: { 'political-organization-application': 'remain-nonparty-helper' } });
+  assert.ok(nonparty.publicLife.history.some((entry) => entry.status === 'nonparty-helper'));
+  assert.ok(nonparty.facts.some((fact) => /保持无党派身份/.test(fact.text)));
+});
+
 test('the birth-to-death pack reaches the published content-density baseline', () => {
   const content = Game.content;
-  assert.equal(content.actions.length, 70);
-  assert.equal(content.decisions.length, 46);
-  assert.equal(content.decisions.reduce((sum, decision) => sum + decision.options.length, 0), 155);
-  assert.equal(content.ordinaryEvents.length, 171);
-  assert.equal(content.ordinaryEvents.filter((event) => event.requiresEchoes).length, 105);
+  assert.equal(content.actions.length, 76);
+  assert.equal(content.decisions.length, 53);
+  assert.equal(content.decisions.reduce((sum, decision) => sum + decision.options.length, 0), 178);
+  assert.equal(content.ordinaryEvents.length, 192);
+  assert.equal(content.ordinaryEvents.filter((event) => event.requiresEchoes).length, 125);
   assert.equal(new Set(content.actions.map((action) => action.id)).size, content.actions.length);
   assert.equal(new Set(content.decisions.map((decision) => decision.id)).size, content.decisions.length);
   assert.equal(new Set(content.ordinaryEvents.map((event) => event.id)).size, content.ordinaryEvents.length);
@@ -692,7 +749,7 @@ test('route choices produce guaranteed next-year echoes and ending facts', () =>
   assert.match(Game.buildEndingNarrative(state), /1942 年/);
 });
 
-test('all 155 key-decision options are reachable in a compatible life', () => {
+test('all 178 key-decision options are reachable in a compatible life', () => {
   for (const decision of Game.content.decisions) {
     for (const target of decision.options) {
       const routeKey = decision.routes?.[0] || target.routes?.[0];
@@ -701,6 +758,14 @@ test('all 155 key-decision options are reachable in a compatible life', () => {
         : setupForFamily(decision.families?.[0] || 'shanghaigongshang');
       if (target.genders?.includes('女')) setup.gender = '女';
       if (decision.id === 'adult-partnership') setup.decisions.marriage = 'delay-marriage';
+      if (decision.id === 'political-organization-application') setup.decisions['public-life-contact'] = 'join-open-public-work';
+      if (decision.id === 'political-organization-answer') setup.decisions['political-organization-application'] = 'apply-ccp';
+      if (['wartime-public-role', 'public-family-boundary', 'public-detention-pressure'].includes(decision.id)) {
+        setup.decisions['public-life-contact'] = 'join-open-public-work';
+        setup.decisions['political-organization-application'] = 'apply-ccp';
+        setup.decisions['political-organization-answer'] = 'accept-membership';
+      }
+      if (decision.id === 'public-detention-pressure' || target.id === 'end-secret-work-for-family') setup.decisions['wartime-public-role'] = 'wartime-secret-liaison';
       setup.decisions[decision.id] = target.id;
       const postPath = target.post1949Choices?.[0] || decision.post1949Choices?.[0];
       if (postPath) setup.decisions['final-1949'] = POST1949_OPTIONS[postPath];
@@ -725,13 +790,14 @@ test('all 155 key-decision options are reachable in a compatible life', () => {
   }
 });
 
-test('all 70 annual actions can be performed in a compatible life', () => {
+test('all 76 annual actions can be performed in a compatible life', () => {
   for (const target of Game.content.actions) {
     const routeKey = target.routes?.[0];
     const setup = routeKey
       ? cloneSetup(ROUTE_SETUPS[routeKey])
       : setupForFamily(target.families?.[0] || 'shanghaigongshang');
     if (target.post1949Choices?.[0]) setup.decisions['final-1949'] = POST1949_OPTIONS[target.post1949Choices[0]];
+    if (target.id === 'covert-liaison') setup.decisions['wartime-public-role'] = 'wartime-secret-liaison';
 
     const state = playScenario({
       ...setup,
