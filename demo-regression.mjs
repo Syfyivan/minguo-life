@@ -7,6 +7,7 @@ await import('./assets/complete-life.js');
 await import('./assets/postwar-era.js');
 await import('./assets/lived-life.js');
 await import('./assets/public-life.js');
+await import('./assets/family-expansion.js');
 await import('./assets/demo-engine.js');
 
 const Game = globalThis.MINGUO_GAME;
@@ -22,6 +23,8 @@ const baseDecisions = {
   'shen-war': 'stay-public-work',
   'shanghai-path': 'business-heir',
   'shanghai-war': 'protect-workers',
+  'sichuan-path': 'pharmacy-clerk',
+  'sichuan-war': 'keep-verified-stock',
   'postwar-settlement': 'rebuild-local',
   'final-1949': 'stay-mainland',
   'later-life-livelihood': 'change-work',
@@ -112,12 +115,15 @@ const definitions = [
   { id: 'shanghai-heir', familyKey: 'shanghaigongshang', gender: '男', name: '顾承安', expectedRoute: 'shanghai-heir', expectedPost1949: 'taiwan', decisions: { 'final-1949': 'move-taiwan' } },
   { id: 'shanghai-newwoman', familyKey: 'shanghaigongshang', gender: '女', name: '顾明仪', expectedRoute: 'shanghai-newwoman', expectedPost1949: 'overseas', decisions: { 'shanghai-path': 'urban-new-woman', 'final-1949': 'move-overseas' } },
   { id: 'shanghai-professional', familyKey: 'shanghaigongshang', gender: '女', name: '顾衡仪', expectedRoute: 'shanghai-professional', expectedPost1949: 'unsettled', decisions: { 'shanghai-path': 'salaried-professional', 'shanghai-war': 'relocate-own-work', 'final-1949': 'leave-unsettled' } },
+  { id: 'sichuan-pharmacy', familyKey: 'sichuanmedicine', gender: '男', name: '唐济生', expectedRoute: 'sichuan-pharmacy', expectedPost1949: 'mainland', decisions: { 'sichuan-path': 'pharmacy-clerk' } },
+  { id: 'sichuan-foodshop', familyKey: 'sichuanmedicine', gender: '女', name: '唐秀莲', expectedRoute: 'sichuan-foodshop', expectedPost1949: 'mainland', decisions: { 'sichuan-path': 'food-shop', 'sichuan-war': 'local-food-substitute' } },
+  { id: 'sichuan-care', familyKey: 'sichuanmedicine', gender: '女', name: '唐慧生', expectedRoute: 'sichuan-care', expectedPost1949: 'mainland', decisions: { 'sichuan-path': 'care-training', 'sichuan-war': 'split-family-work' } },
 ];
 
 const states = definitions.map(runScenario);
 const report = Game.inspectCoverage(states);
-assert.equal(report.familyCount, 3);
-assert.equal(report.routeCount, 11);
+assert.equal(report.familyCount, 4);
+assert.equal(report.routeCount, 14);
 assert.equal(report.post1949PathCount, 6);
 assert.equal(report.factEndingCount, states.length);
 assert.equal(report.deathEndingCount, states.length);
@@ -129,13 +135,13 @@ assert.equal(report.informationEvidenceCount, states.length);
 assert.equal(report.contactEvidenceCount, states.length);
 assert.equal(report.familyLifecycleCount, states.length);
 assert.equal(report.annualNarrativeRate, 1);
-assert.equal(report.authoredActionCount, 76);
-assert.equal(report.keyDecisionCount, 53);
-assert.equal(report.decisionOptionCount, 178);
-assert.equal(report.authoredOrdinaryEventCount, 192);
-assert.equal(report.choiceEchoEventCount, 126);
+assert.equal(report.authoredActionCount, 85);
+assert.equal(report.keyDecisionCount, 61);
+assert.equal(report.decisionOptionCount, 202);
+assert.equal(report.authoredOrdinaryEventCount, 236);
+assert.equal(report.choiceEchoEventCount, 150);
 assert.equal(report.denseLifeCount, states.length);
-assert.equal(report.persistentContactCount, 42);
+assert.equal(report.persistentContactCount, 57);
 assert.equal(report.concreteCareerCount, states.length);
 assert.equal(report.parentLifecycleDetailCount, states.length);
 assert.equal(report.relationshipDetailCount, states.length);
@@ -149,7 +155,7 @@ assert.equal(report.publicActionCount, 6);
 assert.equal(report.publicDecisionCount, 7);
 assert.equal(report.publicOrdinarySceneCount, 21);
 assert.equal(report.publicEraEventCount, 11);
-assert.equal(report.publicContactProfileCount, 11);
+assert.equal(report.publicContactProfileCount, 14);
 
 const bundle = Game.inspectWholeGameProgressBundle(states);
 assert.equal(bundle.wholeGameStageLabel, '出生到死亡的具体生活与政治参与文字版已闭环');
@@ -157,8 +163,8 @@ assert.equal(bundle.hardGates.publicLife, true);
 
 console.log(`[minguo-life] engine ${Game.VERSION}`);
 console.log(`[scenarios] ${states.length}/${definitions.length} complete`);
-console.log(`[families] ${report.familyCount}/3`);
-console.log(`[routes] ${report.routeCount}/11 ${report.routeKeys.join(', ')}`);
+console.log(`[families] ${report.familyCount}/4`);
+console.log(`[routes] ${report.routeCount}/14 ${report.routeKeys.join(', ')}`);
 console.log(`[post-1949] ${report.post1949PathCount}/6 ${report.post1949PathKeys.join(', ')}`);
 console.log(`[post-1949-era] ${report.post1949EraEvidenceCount}/${states.length} lives, ${report.authoredEraEventCount} authored era events`);
 console.log(`[post-1949-employment] ${report.post1949EmploymentEvidenceCount}/${states.length} lives with role, result and next step`);

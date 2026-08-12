@@ -8,6 +8,7 @@ await import('../assets/complete-life.js');
 await import('../assets/postwar-era.js');
 await import('../assets/lived-life.js');
 await import('../assets/public-life.js');
+await import('../assets/family-expansion.js');
 await import('../assets/demo-engine.js');
 
 const Game = globalThis.MINGUO_GAME;
@@ -27,6 +28,7 @@ test('schema 6 publishes the 18-family, 48-domain, 8-destination design registry
   assert.deepEqual(Object.keys(Content.families).sort(), [
     'jiangnanshen',
     'shanghaigongshang',
+    'sichuanmedicine',
     'subeipoor',
   ]);
   assert.deepEqual(Object.keys(Content.contentRegistries).sort(), ['histories', 'people', 'reviews', 'scenes', 'sources']);

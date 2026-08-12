@@ -1,4 +1,4 @@
-// 民国人生 · 可测试文字版引擎 v0.7.2／schema 6
+// 民国人生 · 可测试文字版引擎 v0.7.3／schema 6
 // 运行时只负责规则与状态，不直接操作 DOM；浏览器 UI 与 Node 回归共用这一份实现。
 (function (root) {
   'use strict';
@@ -28,20 +28,25 @@
 
   function buildContentRegistries() {
     var registries = { scenes: {}, people: {}, histories: {}, sources: {}, reviews: {} };
+    Object.keys(C.reviewSources || {}).forEach(function (sourceId) {
+      registries.sources[sourceId] = Object.assign({ id: sourceId }, clone(C.reviewSources[sourceId]));
+    });
     (C.ordinaryEvents || []).forEach(function (scene) {
+      var reviewStatus = scene.reviewStatus || 'runtime-regression-only';
       registries.scenes[scene.id] = {
         id: scene.id,
         title: scene.title || '年度生活场景',
         families: clone(scene.families || []),
         routes: clone(scene.routes || []),
-        reviewStatus: 'runtime-regression-only',
+        sourceIds: clone(scene.sourceIds || []),
+        reviewStatus: reviewStatus,
       };
       registries.reviews['scene:' + scene.id] = {
         id: 'scene:' + scene.id,
         contentType: 'scene',
         contentId: scene.id,
-        status: 'runtime-regression-only',
-        note: '已进入自动可达性与完整人生回归；仍需外部史实和文字终审。',
+        status: reviewStatus,
+        note: scene.reviewNote || '已进入自动可达性与完整人生回归；仍需外部史实和文字终审。',
       };
     });
     (C.events || []).forEach(function (event) {
@@ -2133,6 +2138,13 @@
     return option ? option.label : null;
   }
 
+  function familyDecisionKey(state, kind) {
+    var config = C.familyDecisionKeys && C.familyDecisionKeys[state.familyKey];
+    if (config && config[kind]) return config[kind];
+    if (kind === 'war') return state.familyKey === 'subeipoor' ? 'subei-war' : (state.familyKey === 'jiangnanshen' ? 'shen-war' : 'shanghai-war');
+    return null;
+  }
+
   function buildLifeChapters(state) {
     var route = C.routes[state.routeKey];
     var postPath = C.post1949Paths && C.post1949Paths[state.post1949Choice];
@@ -2142,7 +2154,7 @@
       ? '明确谋生记录为「' + employment.role + '」，地点是' + employment.workplace + '，最后状态为「' + employmentStatusLabel(employment.status) + '」。'
       : '具体职业没有留下可确认记录。';
     var death = state.life || {};
-    var warDecision = state.familyKey === 'subeipoor' ? 'subei-war' : (state.familyKey === 'jiangnanshen' ? 'shen-war' : 'shanghai-war');
+    var warDecision = familyDecisionKey(state, 'war');
     return [
       { key: 'birth-family', title: '出生与成长', text: state.identity.name + '于 ' + state.identity.born + ' 年出生在' + state.identity.place + '，成长于' + state.identity.familyName + '。' + portrait.parents + (choiceLabel(state, 'education') ? '六岁时，选择了“' + choiceLabel(state, 'education') + '”。' : '') },
       { key: 'livelihood', title: '成年谋生', text: (route ? '成年道路主要经过「' + route.name + '」。' : '') + portrait.career + '公共生活与政治经历：' + portrait.publicLife },
@@ -2167,7 +2179,7 @@
     facts.push('出生家庭为' + state.identity.familyName + '，出生地点为' + state.identity.place + '。');
     if (route) facts.push('主要成年谋生路径为「' + route.name + '」。');
     if (state.routeHistory.length > 1) facts.push('人生路径先后经过：' + state.routeHistory.map(function (entry) { return C.routes[entry.to] ? C.routes[entry.to].name : entry.to; }).join(' → ') + '。');
-    var warDecision = state.familyKey === 'subeipoor' ? 'subei-war' : (state.familyKey === 'jiangnanshen' ? 'shen-war' : 'shanghai-war');
+    var warDecision = familyDecisionKey(state, 'war');
     var warLabel = choiceLabel(state, warDecision);
     if (warLabel) facts.push('战争转折时，' + warLabel + '。');
     var postwarLabel = choiceLabel(state, 'postwar-settlement');
@@ -2299,8 +2311,8 @@
     applyPublicEffect(state, option.publicEffect, 'decision:' + decision.id + ':' + option.id);
     if (option.echo) addUnique(state.echoes, option.echo);
     if (option.route) setRoute(state, option.route, decision.id + ':' + option.id);
-    if (has(['subei-livelihood', 'shen-path', 'shanghai-path'], decision.id)) state.livelihoodKey = option.route || state.routeKey;
-    if (has(['subei-war', 'shen-war', 'shanghai-war'], decision.id)) state.warTurnKey = option.warTurn || option.id;
+    if (decision.id === familyDecisionKey(state, 'path')) state.livelihoodKey = option.route || state.routeKey;
+    if (decision.id === familyDecisionKey(state, 'war')) state.warTurnKey = option.warTurn || option.id;
     if (decision.id === 'postwar-settlement') state.postwarSettlementKey = option.id;
     if (option.post1949Choice) {
       state.post1949Choice = option.post1949Choice;
@@ -2880,9 +2892,9 @@
       && coverage.publicDecisionCount >= 7
       && coverage.publicOrdinarySceneCount >= 21
       && coverage.publicEraEventCount >= 11
-      && coverage.publicContactProfileCount === 11;
+      && coverage.publicContactProfileCount >= coverage.routeCount;
     return {
-      wholeGameStageLabel: coverage.familyCount === 3 && coverage.routeCount === 11 && coverage.post1949PathCount === 6 && coverage.deathEndingCount === coverage.scenarioCount && coverage.post1949EraEvidenceCount === coverage.scenarioCount && coverage.post1949EmploymentEvidenceCount === coverage.scenarioCount && coverage.annualNarrativeRate === 1 && lifeDensityReady && livedLifeReady && publicLifeReady
+      wholeGameStageLabel: coverage.familyCount === Object.keys(C.families).length && coverage.routeCount === Object.keys(C.routes).length && coverage.post1949PathCount === 6 && coverage.deathEndingCount === coverage.scenarioCount && coverage.post1949EraEvidenceCount === coverage.scenarioCount && coverage.post1949EmploymentEvidenceCount === coverage.scenarioCount && coverage.annualNarrativeRate === 1 && lifeDensityReady && livedLifeReady && publicLifeReady
         ? '出生到死亡的具体生活与政治参与文字版已闭环'
         : '仍在补代表态',
       version: C.version,
