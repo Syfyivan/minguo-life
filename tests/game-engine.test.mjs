@@ -421,6 +421,26 @@ test('v0.4 endings at 1949 resume as an unfinished life in 1950', () => {
   assert.ok(restored.milestones.some((milestone) => milestone.id === 'v04-save-continued'));
 });
 
+test('v0.5 saves replace leaked postwar route rhythms with the settled region', () => {
+  const legacy = postwarState({ channel: true });
+  legacy.version = '0.5.0';
+  legacy.lastOrdinaryEvent = {
+    year: 1950,
+    id: 'rhythm:subei-soldier:1950',
+    title: '年度日常',
+    text: '点名以后，你在驻地等待下一次调动。',
+    kind: 'rhythm',
+    effects: { gains: [], risks: [], affectedPeople: [], channels: [] },
+  };
+  legacy.annualNarratives.push({ ...legacy.lastOrdinaryEvent });
+
+  const restored = Game.importGame(legacy);
+  assert.match(restored.lastOrdinaryEvent.id, /^rhythm:post-hong-kong:/);
+  assert.match(restored.lastOrdinaryEvent.text, /香港|街坊|房租|床位|电车|渡轮/);
+  assert.doesNotMatch(restored.lastOrdinaryEvent.text, /点名|驻地|军粮|下一次调动/);
+  assert.equal(restored.annualNarratives.at(-1).id, restored.lastOrdinaryEvent.id);
+});
+
 test('recommended actions stay appropriate to the protagonist age and route', () => {
   const state = Game.createGame({ familyKey: 'shanghaigongshang', gender: '女', name: '成年人物', seed: 30 });
   while (state.year < 1930) {

@@ -918,6 +918,30 @@
     }, null, 2);
   }
 
+  function migrateLegacyPostwarRhythms(state) {
+    if (!state.post1949Choice || !C.post1949Paths || !C.post1949Paths[state.post1949Choice]) return;
+    var rhythmKey = C.post1949Paths[state.post1949Choice].rhythmKey;
+    var rhythms = C.annualRhythms[rhythmKey] || [];
+    if (!rhythms.length) return;
+    function replacement(record) {
+      var legacyRhythm = record && record.year >= 1950 && /^rhythm:(?!post-)/.test(String(record.id || ''));
+      var leakedFrame = record && record.year >= 1950 && /点名|驻地|军粮|下一次调动/.test(String(record.text || ''));
+      if (!legacyRhythm && !leakedFrame) return record;
+      var id = 'rhythm:' + rhythmKey + ':' + record.year;
+      var rhythm = rhythms[stableIndex('migrate:' + state.seed + ':' + record.year, rhythms.length)];
+      return {
+        year: record.year,
+        id: id,
+        title: '年度日常',
+        text: resolveSceneText(state, { id: id, text: rhythm }),
+        kind: 'rhythm',
+        effects: record.effects || { gains: [], risks: [], affectedPeople: [], channels: [] },
+      };
+    }
+    state.annualNarratives = state.annualNarratives.map(replacement);
+    if (state.lastOrdinaryEvent) state.lastOrdinaryEvent = replacement(state.lastOrdinaryEvent);
+  }
+
   function importGame(payload) {
     var parsed = typeof payload === 'string' ? JSON.parse(payload) : clone(payload);
     var source = parsed && parsed.format === 'minguo-life-save' ? parsed.state : parsed;
@@ -965,6 +989,7 @@
       addUnique(state.firedDecisions, 'final-1949');
       state.milestones.push({ year: C.milestoneYear || 1949, id: 'v04-save-continued', text: '旧版存档已从 1949 年阶段结算继续进入后半生。' });
     }
+    migrateLegacyPostwarRhythms(state);
     return state;
   }
 
