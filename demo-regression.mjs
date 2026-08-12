@@ -4,6 +4,7 @@ globalThis.window = globalThis;
 await import('./assets/game-content.js');
 await import('./assets/life-expansion.js');
 await import('./assets/complete-life.js');
+await import('./assets/postwar-era.js');
 await import('./assets/demo-engine.js');
 
 const Game = globalThis.MINGUO_GAME;
@@ -79,6 +80,7 @@ function runScenario(definition) {
   assert.equal(state.annualNarratives.length, state.endYear - state.identity.born + 1, `${definition.id}: every year needs a life scene`);
   assert.ok(state.annualNarratives.every((entry) => entry.text.length >= 80), `${definition.id}: annual scenes must be concrete stories`);
   assert.ok(state.contactHistory.length > 0, `${definition.id}: persistent contacts need evidence`);
+  assert.ok(state.eraHistory.some((entry) => entry.year >= 1950), `${definition.id}: post-1949 era history needs evidence`);
   return state;
 }
 
@@ -104,6 +106,7 @@ assert.equal(report.post1949PathCount, 6);
 assert.equal(report.factEndingCount, states.length);
 assert.equal(report.deathEndingCount, states.length);
 assert.equal(report.post1949ContinuationCount, states.length);
+assert.equal(report.post1949EraEvidenceCount, states.length);
 assert.equal(report.subjectEvidenceCount, states.length);
 assert.equal(report.informationEvidenceCount, states.length);
 assert.equal(report.contactEvidenceCount, states.length);
@@ -125,6 +128,7 @@ console.log(`[scenarios] ${states.length}/${definitions.length} complete`);
 console.log(`[families] ${report.familyCount}/3`);
 console.log(`[routes] ${report.routeCount}/11 ${report.routeKeys.join(', ')}`);
 console.log(`[post-1949] ${report.post1949PathCount}/6 ${report.post1949PathKeys.join(', ')}`);
+console.log(`[post-1949-era] ${report.post1949EraEvidenceCount}/${states.length} lives, ${report.authoredEraEventCount} authored era events`);
 console.log(`[fact-endings] ${report.factEndingCount}/${states.length}`);
 console.log(`[death-endings] ${report.deathEndingCount}/${states.length}`);
 console.log(`[subject-evidence] ${report.subjectEvidenceCount}/${states.length}`);

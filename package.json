@@ -1,6 +1,6 @@
 {
   "name": "minguo-life-text-prototype",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "private": true,
   "description": "民国人生从出生到死亡的完整人生文字验证版",
   "scripts": {

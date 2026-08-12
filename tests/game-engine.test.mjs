@@ -5,6 +5,7 @@ globalThis.window = globalThis;
 await import('../assets/game-content.js');
 await import('../assets/life-expansion.js');
 await import('../assets/complete-life.js');
+await import('../assets/postwar-era.js');
 await import('../assets/demo-engine.js');
 
 const Game = globalThis.MINGUO_GAME;
@@ -352,7 +353,7 @@ test('portable v0.5 saves round-trip without changing the life ledger', () => {
   const state = playScenario({ familyKey: 'subeipoor', decisions: { 'subei-war': 'join-army' } });
   const restored = Game.importGame(Game.exportGame(state));
 
-  assert.equal(restored.version, '0.5.0');
+  assert.equal(restored.version, '0.5.1');
   assert.deepEqual(restored.identity, state.identity);
   assert.deepEqual(restored.facts, state.facts);
   assert.deepEqual(restored.annualNarratives, state.annualNarratives);
@@ -386,7 +387,7 @@ test('v0.2 states receive v0.5 complete-life defaults on import', () => {
   delete legacy.contactHistory;
 
   const restored = Game.importGame(legacy);
-  assert.equal(restored.version, '0.5.0');
+  assert.equal(restored.version, '0.5.1');
   assert.equal(Object.keys(restored.contacts).length, 3);
   assert.deepEqual(restored.annualNarratives, []);
   assert.deepEqual(restored.contactHistory, []);
@@ -408,7 +409,7 @@ test('v0.4 endings at 1949 resume as an unfinished life in 1950', () => {
   delete legacy.life;
 
   const restored = Game.importGame(legacy);
-  assert.equal(restored.version, '0.5.0');
+  assert.equal(restored.version, '0.5.1');
   assert.equal(restored.over, false);
   assert.equal(restored.year, 1950);
   assert.equal(restored.chapter, 'post1949');
@@ -435,6 +436,67 @@ test('recommended actions stay appropriate to the protagonist age and route', ()
   const recommendations = Game.recommendedActions(state);
   assert.ok(recommendations.some((id) => ['run-business', 'learn-business', 'help-workers'].includes(id)));
   assert.ok(!recommendations.includes('learn-characters'));
+});
+
+function postwarState({ channel = false } = {}) {
+  const state = Game.createGame({ familyKey: 'subeipoor', gender: '男', name: '后半生验收', seed: 1950 });
+  state.year = 1950;
+  state.age = state.year - state.identity.born;
+  state.routeKey = 'subei-soldier';
+  state.livelihoodKey = 'subei-stay';
+  state.warTurnKey = 'subei-soldier';
+  state.post1949Choice = 'hong-kong';
+  state.post1949.choice = 'hong-kong';
+  state.post1949.region = '迁往香港';
+  state.post1949.place = '香港一处拥挤的街坊';
+  state.chapter = 'post1949';
+  if (channel) state.information.channels.push('newspaper');
+  return state;
+}
+
+test('post-1949 daily stories use the new region instead of the former wartime route', () => {
+  const state = postwarState();
+  Game.advanceYear(state, []);
+
+  assert.match(state.lastOrdinaryEvent.id, /^rhythm:post-hong-kong:/);
+  assert.match(state.lastOrdinaryEvent.text, /香港|街坊|房租|床位|电车|渡轮/);
+  assert.doesNotMatch(state.lastOrdinaryEvent.text, /点名|驻地|队伍|军粮|下一次调动/);
+});
+
+test('1950 keeps personal daily life and regional era updates as separate records', () => {
+  const state = postwarState({ channel: true });
+  Game.advanceYear(state, []);
+
+  assert.equal(state.lastOrdinaryEvent.year, 1950);
+  assert.ok(state.currentEraUpdates.length >= 2);
+  assert.ok(state.currentEraUpdates.some((entry) => entry.id === 'korean-war-1950'));
+  const hongKong = state.currentEraUpdates.find((entry) => entry.id === 'hongkong-population-1950');
+  assert.equal(hongKong.scope, '香港');
+  assert.equal(hongKong.known, true);
+  assert.match(hongKong.text, /人口|住屋|床位|房租/);
+  assert.ok(hongKong.source.url.startsWith('https://'));
+  assert.ok(state.eraHistory.every((entry) => entry.year === 1950));
+});
+
+test('era updates respect information channels instead of exposing omniscient history', () => {
+  const state = postwarState();
+  Game.advanceYear(state, []);
+
+  assert.ok(state.currentEraUpdates.length >= 2);
+  assert.ok(state.currentEraUpdates.every((entry) => entry.known === false));
+  assert.ok(state.currentEraUpdates.every((entry) => entry.title === '影响先于完整消息抵达'));
+  assert.ok(state.currentEraUpdates.every((entry) => entry.source === null));
+  assert.ok(state.currentEraUpdates.some((entry) => /街坊|租金|通铺|短工/.test(entry.text)));
+});
+
+test('the postwar era layer covers all six destinations with sourced history', () => {
+  const events = Game.content.events.filter((event) => event.eraBrief && event.year >= 1950);
+  for (const path of Object.keys(POST1949_OPTIONS)) {
+    assert.ok(events.some((event) => event.post1949Choices?.includes(path)), `${path} needs a post-1949 era event`);
+  }
+  assert.ok(events.length >= 18);
+  assert.ok(events.every((event) => event.historySource?.url?.startsWith('https://')));
+  assert.ok(Game.content.events.filter((event) => event.eraBrief).every((event) => event.historySource?.url?.startsWith('https://')));
 });
 
 test('each route owns at least nine authored ordinary-life scenes', () => {

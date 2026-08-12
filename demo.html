@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>民国人生 · 完整人生文字版 Demo v0.5</title>
+<title>民国人生 · 完整人生文字版 Demo v0.5.1</title>
 <style>
 @font-face{font-family:Lora;src:url('./_shared/fonts/Lora-Regular.ttf') format('truetype');font-display:swap}
 @font-face{font-family:Lora;src:url('./_shared/fonts/Lora-Bold.ttf') format('truetype');font-weight:700;font-display:swap}
@@ -44,6 +44,7 @@ h1{margin:.25em 0 .05em;font-size:32px}
 .subjects{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.subject{padding:7px;background:rgba(255,255,255,.28);border-radius:5px;font-size:11px}.subject b{display:block;font-size:12px}.subject span{color:var(--muted)}
 .contacts{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.contact{padding:9px;background:rgba(255,255,255,.28);border-radius:5px;font-size:11px}.contact b{display:block;font-size:12px}.contact span{display:block;color:var(--muted)}.contact .bond{margin-top:4px;color:var(--green);font-family:Pixel,monospace}
 .today{margin:12px 0;padding:13px 15px;background:rgba(255,255,255,.34);border:1px solid var(--rule);border-left:4px solid var(--gold);border-radius:7px}.today b{color:var(--red)}
+.era-update{margin:10px 0;padding:13px 15px;background:rgba(75,112,145,.1);border:1px solid rgba(75,112,145,.42);border-left:4px solid var(--blue);border-radius:7px}.era-update h3{margin:0 0 7px;color:var(--blue);font:14px Pixel,monospace}.era-item{padding:7px 0;border-top:1px dashed rgba(75,112,145,.32)}.era-item:first-of-type{border-top:0}.era-item b{display:block}.era-item.unknown b{color:var(--red)}.era-meta{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:6px;color:var(--muted);font-size:11px}.era-meta a{color:var(--blue)}.era-status{padding:2px 7px;border-radius:10px;background:rgba(255,255,255,.5)}
 .turn-feedback{margin:8px 0;padding:10px 13px;background:rgba(53,107,100,.08);border-left:4px solid var(--green);border-radius:6px;font-size:13px}.turn-feedback:empty{display:none}.milestone{margin:10px 0;padding:10px 13px;color:#fff;background:var(--blue);border-radius:7px;font-family:Pixel,monospace}.milestone:empty{display:none}
 .year-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:18px 0 7px}.year-head h2{margin:0;color:var(--red);font-size:20px}.spirit{padding:3px 9px;border:1px solid var(--rule);border-radius:12px;color:var(--green);font:12px Pixel,monospace}
 .slots{display:grid;gap:8px}.slot{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;background:var(--paper2);border:1px solid var(--rule);border-radius:8px}.slot-no{padding:2px 7px;color:#fff;background:var(--green);border-radius:3px;font:10px Pixel,monospace}.picked{flex:1;min-width:180px}.picked.empty{color:var(--muted);font-style:italic}
@@ -62,7 +63,7 @@ h1{margin:.25em 0 .05em;font-size:32px}
 </head>
 <body>
 <header class="cover">
-  <div class="seal">DEMO<br>v0.5</div>
+  <div class="seal">DEMO<br>v0.5.1</div>
   <h1>民国人生 · 纯文字 Demo</h1>
   <div class="sub">从出生家庭出发，让行动、关系与时代共同写出一条人生路径</div>
   <nav class="nav">
@@ -94,6 +95,7 @@ h1{margin:.25em 0 .05em;font-size:32px}
     </div>
     <section class="status-card"><h3>持续人物</h3><div class="contacts" id="contactGrid"></div></section>
     <div class="today" id="todayEvent" aria-live="polite"></div>
+    <section class="era-update" id="eraUpdate" aria-live="polite"></section>
     <div class="turn-feedback" id="turnFeedback" aria-live="polite"></div>
     <div class="milestone" id="milestoneBanner"></div>
 
@@ -136,6 +138,7 @@ h1{margin:.25em 0 .05em;font-size:32px}
 <script src="./assets/game-content.js"></script>
 <script src="./assets/life-expansion.js"></script>
 <script src="./assets/complete-life.js"></script>
+<script src="./assets/postwar-era.js"></script>
 <script src="./assets/demo-engine.js"></script>
 <script>
 (function () {
@@ -256,6 +259,20 @@ h1{margin:.25em 0 .05em;font-size:32px}
   function renderToday() {
     var event = G.lastOrdinaryEvent;
     el('todayEvent').innerHTML = event ? '<b>' + esc(event.year + ' · ' + event.title) + '</b><div>' + esc(event.text) + '</div>' + qualitativeChips(event.effects, false) : '<b>本年生活尚未发生</b><div>安排行动后，日常场景与时代冲击会依次进入账本。</div>';
+    var currentUpdates = G.currentEraUpdates || [];
+    var eraHistory = G.eraHistory || [];
+    var updates = currentUpdates.length ? currentUpdates : (eraHistory.length ? [eraHistory[eraHistory.length - 1]] : []);
+    if (!updates.length) {
+      el('eraUpdate').innerHTML = '<h3>时代近况</h3><div>还没有进入已经编年的时代节点；个人日常与地方传闻仍会继续记录。</div>';
+    } else {
+      var heading = currentUpdates.length ? updates[0].year + ' 年 · 本年时代变化' : '最近一次记录到的时代变化 · ' + updates[0].year + ' 年';
+      el('eraUpdate').innerHTML = '<h3>' + esc(heading) + '</h3>' + updates.map(function (update) {
+        var sourceLink = update.source && update.source.url
+          ? '<a href="' + esc(update.source.url) + '" target="_blank" rel="noopener">史实依据：' + esc(update.source.label) + '</a>'
+          : '';
+        return '<article class="era-item ' + (update.known ? 'known' : 'unknown') + '"><b>' + esc(update.scope + ' · ' + update.title) + '</b><div>' + esc(update.text) + '</div><div class="era-meta"><span class="era-status">' + (update.known ? '已通过现有渠道获知名称与背景' : '目前只感受到生活影响，完整来由未知') + '</span>' + sourceLink + '</div></article>';
+      }).join('');
+    }
     var feedback = G.lastActionFeedback;
     el('turnFeedback').innerHTML = feedback ? '<b>' + feedback.year + ' 年行动回响</b><div>' + (feedback.actions.length ? '你亲自做了：' + esc(feedback.actions.join('、')) + '。' : '你没有额外安排，把时间留给日常。') + '</div>' + qualitativeChips(feedback, false) : '';
     el('milestoneBanner').textContent = G.year >= 1950 && G.facts.some(function (fact) { return fact.id === 'final-1949'; }) ? '1949 年的民国阶段已经结束，但这个人的人生仍在继续。' : '';

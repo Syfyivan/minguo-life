@@ -275,6 +275,8 @@
       annualNarratives: [],
       firedOrdinaryEvents: [],
       lastOrdinaryEvent: null,
+      eraHistory: [],
+      currentEraUpdates: [],
       contactHistory: [],
       firedEvents: [],
       firedDecisions: [],
@@ -521,19 +523,36 @@
   }
 
   function processEventInformation(state, event) {
+    var known = true;
+    var displayText = event.knownText || event.fact || '';
     if (!event.knownThrough || !event.knownThrough.length) {
       if (event.title) addLog(state, '【' + event.title + '】' + (event.knownText || event.fact || ''), 'event', 'event');
-      return;
-    }
-    var known = event.knownThrough.some(function (channel) {
-      return has(state.information.channels, channel);
-    });
-    if (known) {
-      addUnique(state.knownEvents, event.id);
-      addLog(state, '【时代快讯·' + event.title + '】' + event.knownText, 'event', 'info');
     } else {
-      addUnique(state.unknownImpacts, event.id);
-      addLog(state, '【时代冲击】' + event.unknownText, 'bad', 'info');
+      known = event.knownThrough.some(function (channel) {
+        return has(state.information.channels, channel);
+      });
+      if (known) {
+        addUnique(state.knownEvents, event.id);
+        addLog(state, '【时代快讯·' + event.title + '】' + event.knownText, 'event', 'info');
+      } else {
+        displayText = event.unknownText || event.fact || '';
+        addUnique(state.unknownImpacts, event.id);
+        addLog(state, '【时代冲击】' + displayText, 'bad', 'info');
+      }
+    }
+    if (event.eraBrief) {
+      var update = {
+        id: event.id,
+        year: state.year,
+        scope: event.eraScope || '时代环境',
+        title: known ? event.title : '影响先于完整消息抵达',
+        eventTitle: event.title,
+        text: displayText,
+        known: known,
+        source: known && event.historySource ? clone(event.historySource) : null,
+      };
+      state.currentEraUpdates.push(update);
+      state.eraHistory.push(update);
     }
   }
 
@@ -826,6 +845,7 @@
   function advanceYear(state, actionIds) {
     if (state.over) throw new Error('The life has already ended');
     if (state.pendingDecision) throw new Error('Resolve the current decision before advancing');
+    state.currentEraUpdates = [];
     processActions(state, actionIds || []);
     processOrdinaryLife(state);
     processEvents(state);
@@ -918,7 +938,7 @@
     state.contacts = Object.assign(clone(base.contacts), state.contacts || {});
     state.post1949 = Object.assign(clone(base.post1949), state.post1949 || {});
     state.life = Object.assign(clone(base.life), state.life || {});
-    ['routeHistory', 'knownEvents', 'unknownImpacts', 'echoes', 'facts', 'log', 'curve', 'actionHistory', 'annualNarratives', 'firedOrdinaryEvents', 'contactHistory', 'firedEvents', 'firedDecisions', 'decisionHistory', 'pendingDecisionQueue', 'endingFacts'].forEach(function (key) {
+    ['routeHistory', 'knownEvents', 'unknownImpacts', 'echoes', 'facts', 'log', 'curve', 'actionHistory', 'annualNarratives', 'firedOrdinaryEvents', 'eraHistory', 'currentEraUpdates', 'contactHistory', 'firedEvents', 'firedDecisions', 'decisionHistory', 'pendingDecisionQueue', 'endingFacts'].forEach(function (key) {
       if (!Array.isArray(state[key])) state[key] = [];
     });
     state.version = C.version;
@@ -1026,6 +1046,10 @@
       post1949ContinuationCount: states.filter(function (state) {
         return (state.endYear || state.year) > (C.milestoneYear || 1949);
       }).length,
+      post1949EraEvidenceCount: states.filter(function (state) {
+        return (state.eraHistory || []).some(function (entry) { return entry.year >= 1950; });
+      }).length,
+      authoredEraEventCount: (C.events || []).filter(function (event) { return event.eraBrief; }).length,
       deathEndingCount: states.filter(function (state) {
         return state.over && state.life && state.life.status === 'dead'
           && state.facts.some(function (fact) { return fact.id === 'protagonist-death-occurred'; })
@@ -1083,7 +1107,7 @@
       && coverage.keyDecisionCount >= 42
       && coverage.authoredOrdinaryEventCount >= 171;
     return {
-      wholeGameStageLabel: coverage.familyCount === 3 && coverage.routeCount === 11 && coverage.post1949PathCount === 6 && coverage.deathEndingCount === coverage.scenarioCount && coverage.annualNarrativeRate === 1 && lifeDensityReady
+      wholeGameStageLabel: coverage.familyCount === 3 && coverage.routeCount === 11 && coverage.post1949PathCount === 6 && coverage.deathEndingCount === coverage.scenarioCount && coverage.post1949EraEvidenceCount === coverage.scenarioCount && coverage.annualNarrativeRate === 1 && lifeDensityReady
         ? '出生到死亡的完整人生文字版已闭环'
         : '仍在补代表态',
       version: C.version,
@@ -1093,6 +1117,7 @@
         deathOnlyEnding: coverage.deathEndingCount === coverage.scenarioCount,
         milestone1949Continues: coverage.post1949ContinuationCount === coverage.scenarioCount,
         sixPost1949Paths: coverage.post1949PathCount === 6,
+        post1949EraLayer: coverage.post1949EraEvidenceCount === coverage.scenarioCount,
         deterministicSeed: true,
         subjectSchema: true,
         informationChannels: true,
