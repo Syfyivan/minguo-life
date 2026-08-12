@@ -1,4 +1,4 @@
-// 民国人生 · 可测试文字版引擎 v0.6
+// 民国人生 · 可测试文字版引擎 v0.7.2／schema 6
 // 运行时只负责规则与状态，不直接操作 DOM；浏览器 UI 与 Node 回归共用这一份实现。
 (function (root) {
   'use strict';
@@ -6,6 +6,7 @@
   var C = root.MINGUO_GAME_CONTENT;
   if (!C) throw new Error('MINGUO_GAME_CONTENT is required before demo-engine.js');
 
+  var SAVE_SCHEMA_VERSION = 6;
   var attrKeys = C.attributes.map(function (item) { return item.key; });
   var resourceKeys = C.resources.map(function (item) { return item.key; });
 
@@ -24,6 +25,67 @@
   function addUnique(list, value) {
     if (value != null && list.indexOf(value) < 0) list.push(value);
   }
+
+  function buildContentRegistries() {
+    var registries = { scenes: {}, people: {}, histories: {}, sources: {}, reviews: {} };
+    (C.ordinaryEvents || []).forEach(function (scene) {
+      registries.scenes[scene.id] = {
+        id: scene.id,
+        title: scene.title || '年度生活场景',
+        families: clone(scene.families || []),
+        routes: clone(scene.routes || []),
+        reviewStatus: 'runtime-regression-only',
+      };
+      registries.reviews['scene:' + scene.id] = {
+        id: 'scene:' + scene.id,
+        contentType: 'scene',
+        contentId: scene.id,
+        status: 'runtime-regression-only',
+        note: '已进入自动可达性与完整人生回归；仍需外部史实和文字终审。',
+      };
+    });
+    (C.events || []).forEach(function (event) {
+      registries.histories[event.id] = {
+        id: event.id,
+        year: event.year,
+        title: event.title,
+        eraScope: event.eraScope || null,
+        sourceId: event.historySource ? 'source:' + event.id : null,
+      };
+      if (event.historySource) {
+        registries.sources['source:' + event.id] = {
+          id: 'source:' + event.id,
+          label: event.historySource.label,
+          url: event.historySource.url,
+          supports: event.id,
+        };
+      }
+      registries.reviews['history:' + event.id] = {
+        id: 'history:' + event.id,
+        contentType: 'history',
+        contentId: event.id,
+        status: event.historySource ? 'source-linked-needs-final-review' : 'source-pending',
+        note: event.historySource ? '运行时已连接来源；仍需正式发布前逐项终审。' : '正式发布前必须补来源与终审。',
+      };
+    });
+    Object.keys(C.families || {}).forEach(function (familyKey) {
+      Object.keys(C.families[familyKey].contacts || {}).forEach(function (personId) {
+        registries.people[personId] = Object.assign({ id: personId, familyKey: familyKey, source: 'family-contact' }, clone(C.families[familyKey].contacts[personId]));
+      });
+    });
+    Object.keys(C.routeContactProfiles || {}).forEach(function (routeKey) {
+      (C.routeContactProfiles[routeKey] || []).forEach(function (person) {
+        registries.people[person.id] = Object.assign({ routeKey: routeKey, source: 'route-contact' }, clone(person));
+      });
+    });
+    Object.keys(C.publicRouteProfiles || {}).forEach(function (routeKey) {
+      var person = C.publicRouteProfiles[routeKey] && C.publicRouteProfiles[routeKey].contact;
+      if (person) registries.people[person.id] = Object.assign({ routeKey: routeKey, source: 'public-contact' }, clone(person));
+    });
+    return registries;
+  }
+
+  C.contentRegistries = buildContentRegistries();
 
   function subjectStatusLabel(status) {
     return (C.subjectStatusLabels && C.subjectStatusLabels[status]) || status;
@@ -206,14 +268,176 @@
     state.log.push({ year: state.year, text: text, tone: tone || '', kind: kind || '' });
   }
 
+  function canonicalFamilyKey(familyKey) {
+    return (C.runtimeFamilyDesignMap && C.runtimeFamilyDesignMap[familyKey]) || familyKey;
+  }
+
+  function routeDomainKey(routeKey) {
+    return routeKey && C.legacyRouteDomainMap ? C.legacyRouteDomainMap[routeKey] || null : null;
+  }
+
+  function routeLabel(routeKey) {
+    return routeKey && C.routes && C.routes[routeKey] ? C.routes[routeKey].name : routeKey || null;
+  }
+
+  function emptyEconomicLife() {
+    return {
+      positions: [], employments: [], assets: [], enterprises: [], shareholders: [],
+      debts: [], licenses: [], concessions: [], history: [],
+    };
+  }
+
+  function ensureEconomicLife(state) {
+    state.economicLife = Object.assign(emptyEconomicLife(), state.economicLife || {});
+    Object.keys(emptyEconomicLife()).forEach(function (key) {
+      if (!Array.isArray(state.economicLife[key])) state.economicLife[key] = [];
+    });
+    return state.economicLife;
+  }
+
+  function upsertEntity(list, id, record) {
+    var existing = list.find(function (item) { return item.id === id; });
+    if (existing) {
+      Object.assign(existing, record);
+      return existing;
+    }
+    list.push(Object.assign({ id: id }, record));
+    return list[list.length - 1];
+  }
+
+  function addMigrationRecord(state, migration, fromSchema, toSchema) {
+    if (!Array.isArray(state.migrationHistory)) state.migrationHistory = [];
+    if (state.migrationHistory.some(function (entry) { return entry.migration === migration; })) return;
+    state.migrationHistory.push({ migration: migration, fromSchema: fromSchema, toSchema: toSchema });
+  }
+
+  function makeCareerEpisode(state, routeKey, startYear, endYear, source, status) {
+    var profile = C.routeCareerProfiles && C.routeCareerProfiles[routeKey];
+    return {
+      id: 'career:' + routeKey + ':' + startYear,
+      domainKey: routeDomainKey(routeKey),
+      routeKey: routeKey,
+      routeLabel: routeLabel(routeKey),
+      kind: profile ? profile.kind : null,
+      role: profile ? profile.role : null,
+      workplace: profile ? profile.workplace : null,
+      employer: profile ? profile.employer : null,
+      startedYear: startYear,
+      endedYear: endYear == null ? null : endYear,
+      status: status || (endYear == null ? 'active' : 'ended'),
+      source: source || 'legacy-route',
+    };
+  }
+
+  function syncEconomicRouteEpisode(state, episode) {
+    var economicLife = ensureEconomicLife(state);
+    var profile = C.routeCareerProfiles && C.routeCareerProfiles[episode.routeKey];
+    if (!profile) return;
+    var positionId = 'position:' + episode.routeKey + ':' + episode.startedYear;
+    upsertEntity(economicLife.positions, positionId, {
+      personId: state.identity.id,
+      domainKey: episode.domainKey,
+      routeKey: episode.routeKey,
+      role: profile.role,
+      workplace: profile.workplace,
+      startedYear: episode.startedYear,
+      endedYear: episode.endedYear,
+      status: episode.status,
+      source: episode.source,
+    });
+    if (profile.business) {
+      var enterpriseId = 'enterprise:' + episode.routeKey + ':' + episode.startedYear;
+      upsertEntity(economicLife.enterprises, enterpriseId, {
+        name: profile.business.name,
+        domainKey: episode.domainKey,
+        kind: profile.kind,
+        workplace: profile.workplace,
+        supplier: profile.business.supplier || null,
+        product: profile.business.product || null,
+        openedYear: episode.startedYear,
+        closedYear: episode.endedYear,
+        status: episode.status === 'active' ? 'operating' : 'ended-or-transferred',
+        source: episode.source,
+      });
+      upsertEntity(economicLife.shareholders, 'shareholder:' + enterpriseId + ':' + state.identity.id, {
+        enterpriseId: enterpriseId,
+        personId: state.identity.id,
+        role: '经营责任人',
+        shareStatus: '具体产权比例尚未记录',
+        startedYear: episode.startedYear,
+        endedYear: episode.endedYear,
+        source: episode.source,
+      });
+    } else {
+      upsertEntity(economicLife.employments, 'employment:' + episode.routeKey + ':' + episode.startedYear, {
+        personId: state.identity.id,
+        domainKey: episode.domainKey,
+        routeKey: episode.routeKey,
+        role: profile.role,
+        workplace: profile.workplace,
+        employer: profile.employer,
+        terms: profile.terms,
+        startedYear: episode.startedYear,
+        endedYear: episode.endedYear,
+        status: episode.status,
+        source: episode.source,
+      });
+    }
+  }
+
+  function recordCanonicalRoute(state, routeKey, source) {
+    if (!routeKey) return;
+    if (!Array.isArray(state.domainHistory)) state.domainHistory = [];
+    if (!Array.isArray(state.careerHistory)) state.careerHistory = [];
+    var domainKey = routeDomainKey(routeKey);
+    var label = routeLabel(routeKey);
+    state.routeDomainKey = domainKey;
+    state.routeLabel = label;
+
+    var previousDomain = state.domainHistory[state.domainHistory.length - 1];
+    if (previousDomain && previousDomain.endYear == null && previousDomain.legacyRouteKey !== routeKey) {
+      previousDomain.endYear = Math.max(previousDomain.startYear, state.year - 1);
+    }
+    if (!previousDomain || previousDomain.legacyRouteKey !== routeKey || previousDomain.endYear != null) {
+      state.domainHistory.push({
+        id: 'domain:' + routeKey + ':' + state.year,
+        domainKey: domainKey,
+        startYear: state.year,
+        endYear: null,
+        source: source || 'decision',
+        legacyRouteKey: routeKey,
+      });
+    }
+
+    var previousCareer = state.careerHistory[state.careerHistory.length - 1];
+    if (previousCareer && previousCareer.endedYear == null && previousCareer.routeKey !== routeKey) {
+      previousCareer.endedYear = Math.max(previousCareer.startedYear, state.year - 1);
+      previousCareer.status = 'ended';
+      syncEconomicRouteEpisode(state, previousCareer);
+    }
+    if (!previousCareer || previousCareer.routeKey !== routeKey || previousCareer.endedYear != null) {
+      var episode = makeCareerEpisode(state, routeKey, state.year, null, source, 'active');
+      state.careerHistory.push(episode);
+      syncEconomicRouteEpisode(state, episode);
+    }
+  }
+
   function setRoute(state, routeKey, source) {
     if (!routeKey || state.routeKey === routeKey) return;
     if (!C.routes[routeKey]) throw new Error('Unknown route: ' + routeKey);
     var from = state.routeKey;
     state.routeKey = routeKey;
-    state.routeHistory.push({ year: state.year, from: from, to: routeKey, source: source || 'decision' });
+    state.routeHistory.push({
+      year: state.year,
+      from: from,
+      to: routeKey,
+      source: source || 'decision',
+      domainKey: routeDomainKey(routeKey),
+      routeLabel: routeLabel(routeKey),
+    });
     addLog(state, '人生路径转入「' + C.routes[routeKey].name + '」。', 'turn', 'route');
     enterRouteCareer(state, routeKey);
+    recordCanonicalRoute(state, routeKey, source);
   }
 
   function subjectIsDead(subject) {
@@ -1216,6 +1440,7 @@
     });
     addLog(state, '【谋生结果】' + result + ' 下一步：' + current.nextStep, current.status === 'employed' ? 'good' : 'turn', 'livelihood');
     syncCareerFromEmployment(state);
+    syncPost1949CanonicalLife(state);
     return result;
   }
 
@@ -1382,20 +1607,42 @@
     var gender = options.gender === '女' ? '女' : '男';
     var name = String(options.name || family.defaultNames[gender] || family.name + '的孩子').trim();
     var seed = Number.isFinite(Number(options.seed)) ? Number(options.seed) : 1;
+    var designFamilyKey = canonicalFamilyKey(options.familyKey);
     var state = {
       version: C.version,
+      schemaVersion: SAVE_SCHEMA_VERSION,
+      canonicalFamilyKey: designFamilyKey,
       identity: {
         id: options.familyKey + '-' + seed,
         name: name,
         gender: gender,
         familyKey: options.familyKey,
+        canonicalFamilyKey: designFamilyKey,
         familyName: family.name,
         born: family.born,
         place: family.place,
       },
       familyKey: options.familyKey,
       routeKey: null,
+      routeDomainKey: null,
+      routeLabel: null,
       routeHistory: [],
+      domainHistory: [],
+      careerHistory: [],
+      economicLife: emptyEconomicLife(),
+      genderContext: {
+        recordedGender: gender,
+        rule: '性别影响可见机会、身体经历、婚家压力和制度约束，但不把人生领域硬分成男女专属。',
+        history: [],
+      },
+      bodyLife: {
+        recordedGender: gender,
+        injuries: [],
+        chronicConditions: [],
+        reproductiveHistory: [],
+        bodilyAutonomyHistory: [],
+      },
+      migrationHistory: [],
       year: family.born,
       age: 0,
       attrs: clone(family.start),
@@ -2111,11 +2358,206 @@
     return state;
   }
 
+  function enrichLegacyRouteHistory(state) {
+    state.routeHistory = (state.routeHistory || []).map(function (entry) {
+      var routeKey = entry.to || entry.routeKey || null;
+      return Object.assign({}, entry, {
+        to: routeKey,
+        domainKey: entry.domainKey || routeDomainKey(routeKey),
+        routeLabel: entry.routeLabel || routeLabel(routeKey),
+      });
+    });
+    state.routeDomainKey = routeDomainKey(state.routeKey);
+    state.routeLabel = routeLabel(state.routeKey);
+  }
+
+  function rebuildCanonicalRouteHistories(state) {
+    state.domainHistory = [];
+    state.careerHistory = [];
+    ensureEconomicLife(state);
+    enrichLegacyRouteHistory(state);
+    var entries = state.routeHistory.slice();
+    if (!entries.length && state.routeKey) {
+      entries.push({
+        year: (state.lived && state.lived.career && state.lived.career.startedYear) || state.year,
+        from: null,
+        to: state.routeKey,
+        source: 'legacy-current-route',
+        domainKey: routeDomainKey(state.routeKey),
+        routeLabel: routeLabel(state.routeKey),
+      });
+    }
+    entries.forEach(function (entry, index) {
+      if (!entry.to) return;
+      var next = entries[index + 1];
+      var isCurrent = !next && entry.to === state.routeKey;
+      var endYear = next ? Math.max(entry.year, next.year - 1) : (isCurrent ? null : state.year);
+      state.domainHistory.push({
+        id: 'domain:' + entry.to + ':' + entry.year,
+        domainKey: entry.domainKey || routeDomainKey(entry.to),
+        startYear: entry.year,
+        endYear: endYear,
+        source: entry.source || 'legacy-route',
+        legacyRouteKey: entry.to,
+      });
+      var episode = makeCareerEpisode(
+        state,
+        entry.to,
+        entry.year,
+        endYear,
+        entry.source || 'legacy-route',
+        isCurrent ? 'active' : 'ended'
+      );
+      state.careerHistory.push(episode);
+      syncEconomicRouteEpisode(state, episode);
+    });
+  }
+
+  function post1949DomainKey(track) {
+    return { manual: 'D10', skilled: 'D11', literate: 'D22', care: 'D26' }[track] || 'D31';
+  }
+
+  function syncPost1949CanonicalLife(state) {
+    if (!state.post1949) return;
+    state.post1949.destinationKey = state.post1949Choice
+      ? ((C.legacyPost1949DestinationMap && C.legacyPost1949DestinationMap[state.post1949Choice]) || state.post1949Choice)
+      : null;
+    var employment = state.post1949.employment;
+    if (!employment || !employment.role) return;
+    if (!Array.isArray(state.domainHistory)) state.domainHistory = [];
+    if (!Array.isArray(state.careerHistory)) state.careerHistory = [];
+    var startedYear = employment.startedYear || Math.max(1950, state.year);
+    var postRouteKey = 'post:' + state.post1949.destinationKey;
+    var domainKey = post1949DomainKey(employment.track);
+    var previousDomain = state.domainHistory[state.domainHistory.length - 1];
+    if (previousDomain && previousDomain.legacyRouteKey !== postRouteKey && previousDomain.endYear == null) {
+      previousDomain.endYear = Math.max(previousDomain.startYear, startedYear - 1);
+    }
+    var domainId = 'domain:' + postRouteKey + ':' + startedYear;
+    var postDomain = state.domainHistory.find(function (entry) { return entry.id === domainId; });
+    var domainRecord = {
+      id: domainId,
+      domainKey: domainKey,
+      startYear: startedYear,
+      endYear: employment.status === 'retired' ? employment.lastResultYear || state.year : null,
+      source: 'post1949-employment',
+      legacyRouteKey: postRouteKey,
+    };
+    if (postDomain) Object.assign(postDomain, domainRecord);
+    else state.domainHistory.push(domainRecord);
+    var priorCareer = state.careerHistory[state.careerHistory.length - 1];
+    if (priorCareer && priorCareer.routeKey !== postRouteKey && priorCareer.endedYear == null) {
+      priorCareer.endedYear = Math.max(priorCareer.startedYear, startedYear - 1);
+      priorCareer.status = 'ended';
+      syncEconomicRouteEpisode(state, priorCareer);
+    }
+    var careerId = 'career:' + postRouteKey + ':' + startedYear;
+    var postCareer = state.careerHistory.find(function (entry) { return entry.id === careerId; });
+    var careerRecord = {
+      id: careerId,
+      domainKey: domainKey,
+      routeKey: postRouteKey,
+      routeLabel: state.post1949.region || state.post1949.destinationKey,
+      kind: 'employment',
+      role: employment.role,
+      workplace: employment.workplace,
+      employer: (C.post1949People && C.post1949People[state.post1949Choice] && C.post1949People[state.post1949Choice].employer) || null,
+      startedYear: startedYear,
+      endedYear: employment.status === 'retired' ? employment.lastResultYear || state.year : null,
+      status: employment.status === 'retired' ? 'ended' : 'active',
+      source: 'post1949-employment',
+    };
+    if (postCareer) Object.assign(postCareer, careerRecord);
+    else state.careerHistory.push(careerRecord);
+
+    var economicLife = ensureEconomicLife(state);
+    upsertEntity(economicLife.positions, 'position:' + postRouteKey + ':' + startedYear, {
+      personId: state.identity.id,
+      domainKey: domainKey,
+      routeKey: postRouteKey,
+      role: employment.role,
+      workplace: employment.workplace,
+      startedYear: startedYear,
+      endedYear: careerRecord.endedYear,
+      status: careerRecord.status,
+      source: 'post1949-employment',
+    });
+    upsertEntity(economicLife.employments, 'employment:' + postRouteKey + ':' + startedYear, {
+      personId: state.identity.id,
+      domainKey: domainKey,
+      destinationKey: state.post1949.destinationKey,
+      role: employment.role,
+      workplace: employment.workplace,
+      employer: careerRecord.employer,
+      terms: employment.terms,
+      startedYear: startedYear,
+      endedYear: careerRecord.endedYear,
+      status: employment.status,
+      source: 'post1949-employment',
+    });
+  }
+
+  function ensureSchemaSixContainers(state) {
+    state.canonicalFamilyKey = state.canonicalFamilyKey || canonicalFamilyKey(state.familyKey);
+    state.identity.canonicalFamilyKey = state.identity.canonicalFamilyKey || state.canonicalFamilyKey;
+    if (!Array.isArray(state.domainHistory)) state.domainHistory = [];
+    if (!Array.isArray(state.careerHistory)) state.careerHistory = [];
+    ensureEconomicLife(state);
+    state.genderContext = Object.assign({
+      recordedGender: state.identity.gender,
+      rule: '性别影响可见机会、身体经历、婚家压力和制度约束，但不把人生领域硬分成男女专属。',
+      history: [],
+    }, state.genderContext || {});
+    if (!Array.isArray(state.genderContext.history)) state.genderContext.history = [];
+    state.bodyLife = Object.assign({
+      recordedGender: state.identity.gender,
+      injuries: [], chronicConditions: [], reproductiveHistory: [], bodilyAutonomyHistory: [],
+    }, state.bodyLife || {});
+    ['injuries', 'chronicConditions', 'reproductiveHistory', 'bodilyAutonomyHistory'].forEach(function (key) {
+      if (!Array.isArray(state.bodyLife[key])) state.bodyLife[key] = [];
+    });
+    if (!Array.isArray(state.migrationHistory)) state.migrationHistory = [];
+    enrichLegacyRouteHistory(state);
+  }
+
+  function migrateSchema4To5(state) {
+    state.canonicalFamilyKey = canonicalFamilyKey(state.familyKey);
+    state.identity.canonicalFamilyKey = state.canonicalFamilyKey;
+    enrichLegacyRouteHistory(state);
+    state.schemaVersion = 5;
+    addMigrationRecord(state, 'schema-4-to-5', 4, 5);
+    return state;
+  }
+
+  function migrateSchema5To6(state) {
+    ensureSchemaSixContainers(state);
+    rebuildCanonicalRouteHistories(state);
+    syncPost1949CanonicalLife(state);
+    state.schemaVersion = SAVE_SCHEMA_VERSION;
+    addMigrationRecord(state, 'schema-5-to-6', 5, 6);
+    return state;
+  }
+
+  function ensureSchemaSixState(state, sourceSchema) {
+    var schema = Number(sourceSchema || state.schemaVersion || 4);
+    if (schema > SAVE_SCHEMA_VERSION) throw new Error('存档版本高于当前文字版能够读取的 schema 6');
+    if (schema <= 4) {
+      migrateSchema4To5(state);
+      schema = 5;
+    }
+    if (schema === 5) migrateSchema5To6(state);
+    else ensureSchemaSixContainers(state);
+    syncPost1949CanonicalLife(state);
+    state.schemaVersion = SAVE_SCHEMA_VERSION;
+    return state;
+  }
+
   function exportGame(state) {
     if (!state || !state.identity || !state.familyKey) throw new Error('A valid game state is required');
+    ensureSchemaSixState(state, state.schemaVersion || SAVE_SCHEMA_VERSION);
     return JSON.stringify({
       format: 'minguo-life-save',
-      schemaVersion: 4,
+      schemaVersion: SAVE_SCHEMA_VERSION,
       gameVersion: C.version,
       state: state,
     }, null, 2);
@@ -2151,6 +2593,11 @@
     if (!source || !source.identity || !source.familyKey || !C.families[source.familyKey]) {
       throw new Error('存档缺少有效的身份与出生家庭');
     }
+    var sourceSchema = Number(
+      parsed && parsed.format === 'minguo-life-save' && parsed.schemaVersion != null
+        ? parsed.schemaVersion
+        : (source.schemaVersion || 4)
+    );
     var sourceHadEmployment = Boolean(source.post1949 && source.post1949.employment);
     var base = createGame({
       familyKey: source.familyKey,
@@ -2215,6 +2662,7 @@
       state.post1949.employment.nextStep = '下一次安排谋生行动时，应聘一份具体工作并在当年取得明确答复。';
     }
     migrateLegacyPostwarRhythms(state);
+    ensureSchemaSixState(state, sourceSchema);
     return state;
   }
 

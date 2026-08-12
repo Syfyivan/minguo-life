@@ -1,4 +1,4 @@
-// 民国人生 · 公共生活与政治参与层 v0.7
+// 民国人生 · 公共生活与政治参与层 v0.7.2
 // 历史组织与公共事件使用可核对名称；所有玩家角色、联络人与个人经历均为合成虚构。
 (function (root) {
   'use strict';
@@ -6,7 +6,7 @@
   var C = root.MINGUO_GAME_CONTENT;
   if (!C) throw new Error('MINGUO_GAME_CONTENT is required before public-life.js');
 
-  C.version = '0.7.1';
+  C.version = '0.7.2';
   C.publicLifeStandard = {
     optional: true,
     contactBeforeMembership: true,

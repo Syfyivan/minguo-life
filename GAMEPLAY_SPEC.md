@@ -166,10 +166,12 @@ alive
 
 ## 存档
 
-存档格式：`minguo-life-save`，schema `4`。
+存档格式：`minguo-life-save`，当前 schema `6`。
 
 导入时：
 
+- schema 4 先补稳定家庭键、领域键和路径标签成为 schema 5，再确定性生成 `domainHistory[]`、`careerHistory[]` 与经济实体账本成为 schema 6
+- schema 5 已有的 `routeKey` 继续保留兼容，但不再是完整设计的唯一职业真相
 - 补齐联系人、年度叙事、1949 后状态和死亡状态
 - 年份上限为出生年加最大年龄，不再截断到 1949
 - v0.4 已在 1949 结束且没有主人公死亡事实的存档会恢复为进行中，并从 1950 年继续

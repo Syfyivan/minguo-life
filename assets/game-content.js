@@ -1,4 +1,4 @@
-// 民国人生 · 文字版玩法核心内容 v0.4
+// 民国人生 · 文字版玩法核心内容 v0.7.2／schema 6
 // 这是 demo 的权威核心数据；完整内容由本文件与 life-expansion.js 共同组成。
 // 所有数值仍是玩法示意值；史实名称与具体制度口径上线前仍需逐项校核。
 (function (root) {
@@ -55,6 +55,126 @@
       nearby: '在身边', distant: '远方有信', missing: '消息不定', separated: '各自安身',
       coworker: '同路做工', colleague: '同在公共工作', traveling: '同路迁徙', deceased: '已去世',
     },
+  };
+
+  // design-v2.0.0 的正式键注册表。它描述完整游戏的数据边界，不等于这些内容已经可玩。
+  // 开局仍只读取 C.families；只有 runtimeStatus=playable-verified 且存在 runtimeFamilyKey 的家庭可进入试玩。
+  function indexRegistry(rows) {
+    return rows.reduce(function (result, row) {
+      result[row.key] = row;
+      return result;
+    }, {});
+  }
+
+  C.designRegistry = {
+    schemaVersion: 6,
+    families: indexRegistry([
+      { key: 'F01', name: '苏北无地／少地农户', region: '苏北', designStatus: 'runtime-verified-needs-v2-review', runtimeStatus: 'playable-verified', runtimeFamilyKey: 'subeipoor' },
+      { key: 'F02', name: '苏北手艺与集市小贩家', region: '苏北', designStatus: 'authored-draft', runtimeStatus: 'not-implemented', runtimeFamilyKey: null },
+      { key: 'F03', name: '江南佃农与蚕桑户', region: '江南', designStatus: 'authored-draft', runtimeStatus: 'not-implemented', runtimeFamilyKey: null },
+      { key: 'F04', name: '江南士绅与塾师家', region: '江南', designStatus: 'runtime-verified-needs-v2-review', runtimeStatus: 'playable-verified', runtimeFamilyKey: 'jiangnanshen' },
+      { key: 'F05', name: '上海散工、棚户与人力车家', region: '上海', designStatus: 'authored-draft', runtimeStatus: 'not-implemented', runtimeFamilyKey: null },
+      { key: 'F06', name: '上海工商家', region: '上海', designStatus: 'runtime-verified-needs-v2-review', runtimeStatus: 'playable-verified', runtimeFamilyKey: 'shanghaigongshang' },
+      { key: 'F07', name: '华北小农、长工与灾荒迁移家', region: '华北', designStatus: 'authored-draft', runtimeStatus: 'not-implemented', runtimeFamilyKey: null },
+      { key: 'F08', name: '北平／天津手艺铺与基层职员家', region: '北平／天津', designStatus: 'authored-draft', runtimeStatus: 'not-implemented', runtimeFamilyKey: null },
+      { key: 'F09', name: '东北垦殖与移民家', region: '东北', designStatus: 'outline', runtimeStatus: 'not-implemented', runtimeFamilyKey: null },
+      { key: 'F10', name: '东北铁路、矿业与服务工人家', region: '东北', designStatus: 'authored-draft', runtimeStatus: 'not-implemented', runtimeFamilyKey: null },
+      { key: 'F11', name: '汉口码头、船工与人力车家', region: '汉口', designStatus: 'authored-draft', runtimeStatus: 'not-implemented', runtimeFamilyKey: null },
+      { key: 'F12', name: '汉口商号、职员与小商人家', region: '汉口', designStatus: 'outline', runtimeStatus: 'not-implemented', runtimeFamilyKey: null },
+      { key: 'F13', name: '广东侨乡与侨汇家', region: '广东', designStatus: 'authored-draft', runtimeStatus: 'not-implemented', runtimeFamilyKey: null },
+      { key: 'F14', name: '广东沿海水客、航运与跨境小商家', region: '广东', designStatus: 'authored-draft', runtimeStatus: 'not-implemented', runtimeFamilyKey: null },
+      { key: 'F15', name: '西南战时迁入工厂与基层行政家', region: '西南', designStatus: 'outline', runtimeStatus: 'not-implemented', runtimeFamilyKey: null },
+      { key: 'F16', name: '成都／重庆医护、餐饮与手艺家', region: '成都／重庆', designStatus: 'outline', runtimeStatus: 'not-implemented', runtimeFamilyKey: null },
+      { key: 'F17', name: '关中农户、水利与迁移家', region: '关中', designStatus: 'outline', runtimeStatus: 'not-implemented', runtimeFamilyKey: null },
+      { key: 'F18', name: '西安手艺、商贸与交通家', region: '西安', designStatus: 'outline', runtimeStatus: 'not-implemented', runtimeFamilyKey: null },
+    ]),
+    domains: indexRegistry([
+      { key: 'D01', category: '乡村生产', name: '种植、租佃与自耕' },
+      { key: 'D02', category: '乡村生产', name: '农业雇工与季节工' },
+      { key: 'D03', category: '乡村生产', name: '蚕桑、畜养与家庭副业' },
+      { key: 'D04', category: '乡村生产', name: '乡村手艺' },
+      { key: 'D05', category: '乡村生产', name: '集市贸易与乡村店铺' },
+      { key: 'D06', category: '乡村生产', name: '水利、合作与地方事务' },
+      { key: 'D07', category: '工业交通', name: '纺织与轻工业' },
+      { key: 'D08', category: '工业交通', name: '矿业与重体力劳动' },
+      { key: 'D09', category: '工业交通', name: '铁路与车站' },
+      { key: 'D10', category: '工业交通', name: '码头、航运与城市交通' },
+      { key: 'D11', category: '工业交通', name: '机械修理与公用事业' },
+      { key: 'D12', category: '工业交通', name: '战时迁厂与供应' },
+      { key: 'D13', category: '商贸服务', name: '流动摊贩' },
+      { key: 'D14', category: '商贸服务', name: '店员、账务与采购' },
+      { key: 'D15', category: '商贸服务', name: '店铺、餐饮与小生意' },
+      { key: 'D16', category: '商贸服务', name: '批发、商号与进出口' },
+      { key: 'D17', category: '商贸服务', name: '住宿、旅游与娱乐服务' },
+      { key: 'D18', category: '商贸服务', name: '家政、照料与生活服务' },
+      { key: 'D19', category: '教育文化', name: '求学、进修与留学' },
+      { key: 'D20', category: '教育文化', name: '教书与学校' },
+      { key: 'D21', category: '教育文化', name: '写作、新闻与出版' },
+      { key: 'D22', category: '教育文化', name: '翻译、文书与秘书' },
+      { key: 'D23', category: '教育文化', name: '表演、艺术与手工创作' },
+      { key: 'D24', category: '教育文化', name: '图书、研究与知识工作' },
+      { key: 'D25', category: '医疗照护', name: '中医与药房' },
+      { key: 'D26', category: '医疗照护', name: '助产与护理' },
+      { key: 'D27', category: '医疗照护', name: '医师、诊所与医院' },
+      { key: 'D28', category: '医疗照护', name: '检验、药剂与医院行政' },
+      { key: 'D29', category: '医疗照护', name: '救济、防疫与公共卫生' },
+      { key: 'D30', category: '医疗照护', name: '长期照护、康复与丧葬' },
+      { key: 'D31', category: '专业事务', name: '基层行政与地方事务' },
+      { key: 'D32', category: '专业事务', name: '法律、会计与审计协助' },
+      { key: 'D33', category: '专业事务', name: '工程、建筑与测绘' },
+      { key: 'D34', category: '专业事务', name: '邮政、电报与通信' },
+      { key: 'D35', category: '专业事务', name: '银行、钱庄、保险与证券雇员' },
+      { key: 'D36', category: '专业事务', name: '商会、同业与社会组织' },
+      { key: 'D37', category: '战争迁徙', name: '士兵、征募与被迫从军' },
+      { key: 'D38', category: '战争迁徙', name: '战地医护、运输与通信支援' },
+      { key: 'D39', category: '战争迁徙', name: '地方保卫、消防与救济' },
+      { key: 'D40', category: '战争迁徙', name: '难民、逃亡与跨区迁移' },
+      { key: 'D41', category: '公共生活', name: '公共服务与社区组织' },
+      { key: 'D42', category: '公共生活', name: '秘密联络、情报与双重身份' },
+      { key: 'D43', category: '企业经营', name: '作坊、工厂与制造企业' },
+      { key: 'D44', category: '企业经营', name: '零售、百货与餐旅企业' },
+      { key: 'D45', category: '企业经营', name: '贸易、商号与进出口企业' },
+      { key: 'D46', category: '企业经营', name: '航运、铁路配套与运输企业' },
+      { key: 'D47', category: '企业经营', name: '银行、投资与保险经营' },
+      { key: 'D48', category: '企业经营', name: '酒店、旅游、娱乐与博彩特许经营' },
+    ]),
+    post1949Destinations: indexRegistry([
+      { key: 'mainland', name: '留在中国大陆', runtimeStatus: 'playable-verified', legacyKeys: ['mainland'] },
+      { key: 'hong-kong', name: '迁往香港', runtimeStatus: 'playable-verified', legacyKeys: ['hong-kong'] },
+      { key: 'taiwan', name: '迁往台湾', runtimeStatus: 'playable-verified', legacyKeys: ['taiwan'] },
+      { key: 'macau', name: '迁往澳门', runtimeStatus: 'not-implemented', legacyKeys: [] },
+      { key: 'southeast-asia', name: '迁往东南亚', runtimeStatus: 'not-implemented', legacyKeys: [] },
+      { key: 'other-overseas', name: '迁往其他海外地区', runtimeStatus: 'playable-via-legacy-bundle', legacyKeys: ['overseas'] },
+      { key: 'in-motion', name: '继续流动', runtimeStatus: 'playable-verified', legacyKeys: ['in-motion'] },
+      { key: 'unconfirmed', name: '长期落点尚未确认', runtimeStatus: 'playable-via-legacy-bundle', legacyKeys: ['unsettled'] },
+    ]),
+  };
+
+  C.runtimeFamilyDesignMap = {
+    subeipoor: 'F01',
+    jiangnanshen: 'F04',
+    shanghaigongshang: 'F06',
+  };
+  C.legacyRouteDomainMap = {
+    'subei-stay': 'D01',
+    'subei-millworker': 'D07',
+    'subei-soldier': 'D37',
+    'subei-refugee': 'D40',
+    'shen-scholar': 'D20',
+    'shen-newwoman': 'D20',
+    'shen-refugee': 'D40',
+    'shen-professional': 'D26',
+    'shanghai-heir': 'D43',
+    'shanghai-newwoman': 'D44',
+    'shanghai-professional': 'D11',
+  };
+  C.legacyPost1949DestinationMap = {
+    mainland: 'mainland',
+    'hong-kong': 'hong-kong',
+    taiwan: 'taiwan',
+    overseas: 'other-overseas',
+    'in-motion': 'in-motion',
+    unsettled: 'unconfirmed',
   };
 
   C.families = {
