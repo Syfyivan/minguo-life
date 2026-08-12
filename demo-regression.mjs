@@ -10,6 +10,7 @@ await import('./assets/public-life.js');
 await import('./assets/family-expansion.js');
 await import('./assets/family-expansion-f17.js');
 await import('./assets/family-expansion-f18.js');
+await import('./assets/family-expansion-f05.js');
 await import('./assets/demo-engine.js');
 
 const Game = globalThis.MINGUO_GAME;
@@ -31,6 +32,8 @@ const baseDecisions = {
   'guanzhong-war': 'keep-family-address-ledger',
   'xian-path': 'repair-apprentice',
   'xian-war': 'civilian-repair-only',
+  'shanghai-labor-path': 'textile-trial',
+  'shanghai-labor-war': 'separate-address-work',
   'postwar-settlement': 'rebuild-local',
   'final-1949': 'stay-mainland',
   'later-life-livelihood': 'change-work',
@@ -130,12 +133,15 @@ const definitions = [
   { id: 'xian-repair', familyKey: 'xianartisans', gender: '男', name: '杜修远', expectedRoute: 'xian-repair', expectedPost1949: 'mainland', decisions: { 'xian-path': 'repair-apprentice', 'route-xian-repair-1942': 'family-repair-partnership' } },
   { id: 'xian-station', familyKey: 'xianartisans', gender: '女', name: '杜月琴', expectedRoute: 'xian-station', expectedPost1949: 'mainland', decisions: { 'xian-path': 'station-service', 'xian-war': 'documented-logistics-job' } },
   { id: 'xian-shop', familyKey: 'xianartisans', gender: '女', name: '杜月琴', expectedRoute: 'xian-shop', expectedPost1949: 'mainland', decisions: { 'xian-path': 'shop-ledger-service', 'route-xian-shop-1942': 'family-limited-partnership' } },
+  { id: 'shanghai-textile-worker', familyKey: 'shanghailabor', gender: '女', name: '李玉兰', expectedRoute: 'shanghai-textile-worker', expectedPost1949: 'mainland', decisions: { 'shanghai-labor-path': 'textile-trial' } },
+  { id: 'shanghai-transport-worker', familyKey: 'shanghailabor', gender: '男', name: '李守成', expectedRoute: 'shanghai-transport-worker', expectedPost1949: 'mainland', decisions: { 'shanghai-labor-path': 'transport-trial' } },
+  { id: 'shanghai-domestic-service', familyKey: 'shanghailabor', gender: '女', name: '李玉兰', expectedRoute: 'shanghai-domestic-service', expectedPost1949: 'mainland', decisions: { 'shanghai-labor-path': 'domestic-service-trial', 'route-shanghai-domestic-service-1942': 'lane-laundry-partnership' } },
 ];
 
 const states = definitions.map(runScenario);
 const report = Game.inspectCoverage(states);
-assert.equal(report.familyCount, 6);
-assert.equal(report.routeCount, 20);
+assert.equal(report.familyCount, 7);
+assert.equal(report.routeCount, 23);
 assert.equal(report.post1949PathCount, 6);
 assert.equal(report.factEndingCount, states.length);
 assert.equal(report.deathEndingCount, states.length);
@@ -147,13 +153,13 @@ assert.equal(report.informationEvidenceCount, states.length);
 assert.equal(report.contactEvidenceCount, states.length);
 assert.equal(report.familyLifecycleCount, states.length);
 assert.equal(report.annualNarrativeRate, 1);
-assert.equal(report.authoredActionCount, 103);
-assert.equal(report.keyDecisionCount, 77);
-assert.equal(report.decisionOptionCount, 250);
-assert.equal(report.authoredOrdinaryEventCount, 324);
-assert.equal(report.choiceEchoEventCount, 198);
+assert.equal(report.authoredActionCount, 112);
+assert.equal(report.keyDecisionCount, 85);
+assert.equal(report.decisionOptionCount, 274);
+assert.equal(report.authoredOrdinaryEventCount, 368);
+assert.equal(report.choiceEchoEventCount, 222);
 assert.equal(report.denseLifeCount, states.length);
-assert.equal(report.persistentContactCount, 87);
+assert.equal(report.persistentContactCount, 102);
 assert.equal(report.concreteCareerCount, states.length);
 assert.equal(report.parentLifecycleDetailCount, states.length);
 assert.equal(report.relationshipDetailCount, states.length);
@@ -167,16 +173,16 @@ assert.equal(report.publicActionCount, 6);
 assert.equal(report.publicDecisionCount, 7);
 assert.equal(report.publicOrdinarySceneCount, 21);
 assert.equal(report.publicEraEventCount, 11);
-assert.equal(report.publicContactProfileCount, 20);
+assert.equal(report.publicContactProfileCount, 23);
 
 const bundle = Game.inspectWholeGameProgressBundle(states);
-assert.equal(bundle.wholeGameStageLabel, '出生到死亡的具体生活与政治参与文字版已闭环');
+assert.equal(bundle.wholeGameStageLabel, '当前已实装内容通过出生到死亡验证；完整设计仍在扩建');
 assert.equal(bundle.hardGates.publicLife, true);
 
 console.log(`[minguo-life] engine ${Game.VERSION}`);
 console.log(`[scenarios] ${states.length}/${definitions.length} complete`);
-console.log(`[families] ${report.familyCount}/6`);
-console.log(`[routes] ${report.routeCount}/20 ${report.routeKeys.join(', ')}`);
+console.log(`[families] ${report.familyCount}/7`);
+console.log(`[routes] ${report.routeCount}/23 ${report.routeKeys.join(', ')}`);
 console.log(`[post-1949] ${report.post1949PathCount}/6 ${report.post1949PathKeys.join(', ')}`);
 console.log(`[post-1949-era] ${report.post1949EraEvidenceCount}/${states.length} lives, ${report.authoredEraEventCount} authored era events`);
 console.log(`[post-1949-employment] ${report.post1949EmploymentEvidenceCount}/${states.length} lives with role, result and next step`);

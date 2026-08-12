@@ -11,6 +11,7 @@ await import('../assets/public-life.js');
 await import('../assets/family-expansion.js');
 await import('../assets/family-expansion-f17.js');
 await import('../assets/family-expansion-f18.js');
+await import('../assets/family-expansion-f05.js');
 await import('../assets/demo-engine.js');
 
 const Game = globalThis.MINGUO_GAME;
@@ -31,6 +32,7 @@ test('schema 6 publishes the 18-family, 48-domain, 8-destination design registry
     'guanzhongirrigation',
     'jiangnanshen',
     'shanghaigongshang',
+    'shanghailabor',
     'sichuanmedicine',
     'subeipoor',
     'xianartisans',

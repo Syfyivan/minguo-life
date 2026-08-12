@@ -316,8 +316,14 @@
     state.migrationHistory.push({ migration: migration, fromSchema: fromSchema, toSchema: toSchema });
   }
 
+  function routeCareerProfileFor(state, routeKey) {
+    var genderProfiles = C.routeCareerProfilesByGender && C.routeCareerProfilesByGender[routeKey];
+    var gender = state && state.identity && state.identity.gender;
+    return (genderProfiles && genderProfiles[gender]) || (C.routeCareerProfiles && C.routeCareerProfiles[routeKey]);
+  }
+
   function makeCareerEpisode(state, routeKey, startYear, endYear, source, status) {
-    var profile = C.routeCareerProfiles && C.routeCareerProfiles[routeKey];
+    var profile = routeCareerProfileFor(state, routeKey);
     return {
       id: 'career:' + routeKey + ':' + startYear,
       domainKey: routeDomainKey(routeKey),
@@ -336,7 +342,7 @@
 
   function syncEconomicRouteEpisode(state, episode) {
     var economicLife = ensureEconomicLife(state);
-    var profile = C.routeCareerProfiles && C.routeCareerProfiles[episode.routeKey];
+    var profile = routeCareerProfileFor(state, episode.routeKey);
     if (!profile) return;
     var positionId = 'position:' + episode.routeKey + ':' + episode.startedYear;
     upsertEntity(economicLife.positions, positionId, {
@@ -698,7 +704,7 @@
   }
 
   function enterRouteCareer(state, routeKey) {
-    var profile = C.routeCareerProfiles && C.routeCareerProfiles[routeKey];
+    var profile = routeCareerProfileFor(state, routeKey);
     if (!profile) return;
     var lived = ensureLivedLife(state);
     var career = lived.career;
@@ -799,7 +805,7 @@
     if (state.post1949Choice && state.post1949 && state.post1949.employment && state.post1949.employment.role) {
       return post1949CareerProfile(state);
     }
-    return C.routeCareerProfiles && C.routeCareerProfiles[state.routeKey];
+    return routeCareerProfileFor(state, state.routeKey);
   }
 
   function buildRoutineWorkText(state, profile) {
@@ -2981,7 +2987,7 @@
       && coverage.publicContactProfileCount >= coverage.routeCount;
     return {
       wholeGameStageLabel: coverage.familyCount === Object.keys(C.families).length && coverage.routeCount === Object.keys(C.routes).length && coverage.post1949PathCount === 6 && coverage.deathEndingCount === coverage.scenarioCount && coverage.post1949EraEvidenceCount === coverage.scenarioCount && coverage.post1949EmploymentEvidenceCount === coverage.scenarioCount && coverage.annualNarrativeRate === 1 && lifeDensityReady && livedLifeReady && publicLifeReady
-        ? '出生到死亡的具体生活与政治参与文字版已闭环'
+        ? '当前已实装内容通过出生到死亡验证；完整设计仍在扩建'
         : '仍在补代表态',
       version: C.version,
       coverage: coverage,
