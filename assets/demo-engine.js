@@ -404,7 +404,7 @@
     var enterpriseId = 'enterprise:decision:' + config.id + ':' + state.year;
     var enterprise = upsertEntity(economicLife.enterprises, enterpriseId, {
       name: config.name,
-      domainKey: domainKey,
+      domainKey: config.domainKey || domainKey,
       kind: config.kind || 'small-enterprise',
       workplace: config.workplace || (state.lived && state.lived.career && state.lived.career.workplace) || null,
       supplier: config.supplier || null,
@@ -453,6 +453,33 @@
         purpose: config.debt.purpose || '开业工具与押金',
         status: 'outstanding',
         startedYear: state.year,
+        source: sourceId,
+      });
+    }
+    if (config.license) {
+      upsertEntity(economicLife.licenses, 'license:' + enterpriseId + ':' + (config.license.id || 'operating'), {
+        enterpriseId: enterpriseId,
+        holderPersonId: state.identity.id,
+        kind: config.license.kind || 'operating-license',
+        authority: config.license.authority || '具名许可机关待核',
+        scope: config.license.scope || '仅限记录所列业务范围',
+        status: config.license.status || 'active',
+        startedYear: state.year,
+        endedYear: null,
+        source: sourceId,
+      });
+    }
+    if (config.concession) {
+      upsertEntity(economicLife.concessions, 'concession:' + enterpriseId + ':' + (config.concession.id || 'public-award'), {
+        enterpriseId: enterpriseId,
+        holderPersonId: state.identity.id,
+        kind: config.concession.kind || 'public-concession',
+        authority: config.concession.authority || '具名特许机关待核',
+        scope: config.concession.scope || '只在公开合同列明的地点和期限内有效',
+        awardMethod: config.concession.awardMethod || '公开投标或经可核程序取得',
+        status: config.concession.status || 'active',
+        startedYear: config.concession.startedYear || state.year,
+        endedYear: null,
         source: sourceId,
       });
     }
@@ -929,6 +956,7 @@
     var reunionChoices = [
       'mainland-local-work', 'hongkong-share-rent', 'taiwan-household-first',
       'overseas-sponsored-room', 'motion-stay-season', 'unsettled-search-family',
+      'macau-family-room-work', 'singapore-family-address-work',
     ];
     var canReunite = relationship.status !== 'separated' && has(reunionChoices, option.id);
     var place = state.post1949.place || (C.post1949Paths[state.post1949Choice] && C.post1949Paths[state.post1949Choice].place) || '新的落脚地';
@@ -2986,7 +3014,7 @@
       && coverage.publicEraEventCount >= 11
       && coverage.publicContactProfileCount >= coverage.routeCount;
     return {
-      wholeGameStageLabel: coverage.familyCount === Object.keys(C.families).length && coverage.routeCount === Object.keys(C.routes).length && coverage.post1949PathCount === 6 && coverage.deathEndingCount === coverage.scenarioCount && coverage.post1949EraEvidenceCount === coverage.scenarioCount && coverage.post1949EmploymentEvidenceCount === coverage.scenarioCount && coverage.annualNarrativeRate === 1 && lifeDensityReady && livedLifeReady && publicLifeReady
+      wholeGameStageLabel: coverage.familyCount === Object.keys(C.families).length && coverage.routeCount === Object.keys(C.routes).length && coverage.post1949PathCount === Object.keys(C.post1949Paths || {}).length && coverage.deathEndingCount === coverage.scenarioCount && coverage.post1949EraEvidenceCount === coverage.scenarioCount && coverage.post1949EmploymentEvidenceCount === coverage.scenarioCount && coverage.annualNarrativeRate === 1 && lifeDensityReady && livedLifeReady && publicLifeReady
         ? '当前已实装内容通过出生到死亡验证；完整设计仍在扩建'
         : '仍在补代表态',
       version: C.version,
@@ -2995,7 +3023,7 @@
         identityStable: true,
         deathOnlyEnding: coverage.deathEndingCount === coverage.scenarioCount,
         milestone1949Continues: coverage.post1949ContinuationCount === coverage.scenarioCount,
-        sixPost1949Paths: coverage.post1949PathCount === 6,
+        allPost1949Paths: coverage.post1949PathCount === Object.keys(C.post1949Paths || {}).length,
         post1949EraLayer: coverage.post1949EraEvidenceCount === coverage.scenarioCount,
         post1949Livelihood: coverage.post1949EmploymentEvidenceCount === coverage.scenarioCount,
         deterministicSeed: true,

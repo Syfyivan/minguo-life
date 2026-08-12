@@ -13,6 +13,7 @@ await import('./assets/family-expansion-f18.js');
 await import('./assets/family-expansion-f05.js');
 await import('./assets/family-expansion-f10.js');
 await import('./assets/family-expansion-f13.js');
+await import('./assets/family-expansion-f14.js');
 await import('./assets/demo-engine.js');
 
 const Game = globalThis.MINGUO_GAME;
@@ -40,6 +41,8 @@ const baseDecisions = {
   'northeast-worker-system-change': 'stay-with-duty-boundary',
   'qiaoxiang-path': 'local-shop-trial',
   'qiaoxiang-war': 'split-address-and-accounts',
+  'coastal-path': 'ship-ticket-trial',
+  'coastal-war': 'coastal-split-addresses',
   'postwar-settlement': 'rebuild-local',
   'final-1949': 'stay-mainland',
   'later-life-livelihood': 'change-work',
@@ -68,8 +71,9 @@ function runScenario(definition) {
     const availableActions = Game.availableActions(state);
     const preferred = [];
     if (!state.information.channels.includes('newspaper') && availableActions.some((action) => action.id === 'read-newspaper')) preferred.push('read-newspaper');
-    if (['hong-kong', 'taiwan', 'overseas'].includes(definition.expectedPost1949)) {
-      const earningAction = ['run-business', 'workroom', 'write-and-teach', 'clinic-service', 'salaried-technical-work'].find((id) => availableActions.some((action) => action.id === id));
+    if (definition.expectedPost1949 === 'southeast-asia' && !state.information.channels.includes('conversation') && availableActions.some((action) => action.id === 'talk-neighbors')) preferred.push('talk-neighbors');
+    if (['hong-kong', 'taiwan', 'macau', 'southeast-asia', 'overseas'].includes(definition.expectedPost1949)) {
+      const earningAction = ['run-business', 'workroom', 'write-and-teach', 'clinic-service', 'salaried-technical-work', 'f14-ship-ticket-cargo-handoff', 'f14-guesthouse-room-meal-shift', 'f14-trade-source-delivery-ledger'].find((id) => availableActions.some((action) => action.id === id));
       if (earningAction) preferred.push(earningAction);
     }
     preferred.push(...Game.recommendedActions(state));
@@ -148,13 +152,16 @@ const definitions = [
   { id: 'qiaoxiang-local-shop', familyKey: 'guangdongqiaoxiang', gender: '女', name: '梁月清', expectedRoute: 'qiaoxiang-local-shop', expectedPost1949: 'mainland', decisions: { 'qiaoxiang-path': 'local-shop-trial', 'route-qiaoxiang-local-shop-1942': 'family-shop-partnership' } },
   { id: 'qiaopi-correspondence-clerk', familyKey: 'guangdongqiaoxiang', gender: '男', name: '梁守信', expectedRoute: 'qiaopi-correspondence-clerk', expectedPost1949: 'hong-kong', decisions: { 'qiaoxiang-path': 'correspondence-trial', 'qiaoxiang-war': 'trace-through-public-channels', 'final-1949': 'move-hong-kong' } },
   { id: 'qiaopi-remittance-clerk', familyKey: 'guangdongqiaoxiang', gender: '女', name: '梁月清', expectedRoute: 'qiaopi-remittance-clerk', expectedPost1949: 'overseas', decisions: { 'qiaoxiang-path': 'remittance-trial', 'final-1949': 'move-overseas' } },
+  { id: 'coastal-passenger-cargo-operator', familyKey: 'guangdongcoastal', gender: '男', name: '梁海宁', expectedRoute: 'coastal-passenger-cargo-operator', expectedPost1949: 'macau', decisions: { 'coastal-path': 'ship-ticket-trial', 'route-coastal-passenger-cargo-operator-1946': 'ship-limited-share', 'final-1949': 'move-macau', 'post49-arrival': 'macau-inner-harbour-bed-work' } },
+  { id: 'port-guesthouse-caterer', familyKey: 'guangdongcoastal', gender: '女', name: '梁燕宁', expectedRoute: 'port-guesthouse-caterer', expectedPost1949: 'mainland', decisions: { 'coastal-path': 'guesthouse-trial', 'route-port-guesthouse-caterer-1946': 'guesthouse-limited-partnership' } },
+  { id: 'recorded-coastal-small-trader', familyKey: 'guangdongcoastal', gender: '女', name: '梁燕宁', expectedRoute: 'recorded-coastal-small-trader', expectedPost1949: 'southeast-asia', decisions: { 'coastal-path': 'recorded-trade-trial', 'route-recorded-coastal-small-trader-1946': 'trade-documented-partnership', 'final-1949': 'move-southeast-asia', 'post49-arrival': 'singapore-language-trade-work' } },
 ];
 
 const states = definitions.map(runScenario);
 const report = Game.inspectCoverage(states);
-assert.equal(report.familyCount, 9);
-assert.equal(report.routeCount, 29);
-assert.equal(report.post1949PathCount, 6);
+assert.equal(report.familyCount, 10);
+assert.equal(report.routeCount, 32);
+assert.equal(report.post1949PathCount, 8);
 assert.equal(report.factEndingCount, states.length);
 assert.equal(report.deathEndingCount, states.length);
 assert.equal(report.post1949ContinuationCount, states.length);
@@ -165,13 +172,13 @@ assert.equal(report.informationEvidenceCount, states.length);
 assert.equal(report.contactEvidenceCount, states.length);
 assert.equal(report.familyLifecycleCount, states.length);
 assert.equal(report.annualNarrativeRate, 1);
-assert.equal(report.authoredActionCount, 130);
-assert.equal(report.keyDecisionCount, 101);
-assert.equal(report.decisionOptionCount, 322);
-assert.equal(report.authoredOrdinaryEventCount, 456);
-assert.equal(report.choiceEchoEventCount, 270);
+assert.equal(report.authoredActionCount, 143);
+assert.equal(report.keyDecisionCount, 110);
+assert.equal(report.decisionOptionCount, 357);
+assert.equal(report.authoredOrdinaryEventCount, 515);
+assert.equal(report.choiceEchoEventCount, 303);
 assert.equal(report.denseLifeCount, states.length);
-assert.equal(report.persistentContactCount, 132);
+assert.equal(report.persistentContactCount, 147);
 assert.equal(report.concreteCareerCount, states.length);
 assert.equal(report.parentLifecycleDetailCount, states.length);
 assert.equal(report.relationshipDetailCount, states.length);
@@ -185,7 +192,7 @@ assert.equal(report.publicActionCount, 6);
 assert.equal(report.publicDecisionCount, 7);
 assert.equal(report.publicOrdinarySceneCount, 21);
 assert.equal(report.publicEraEventCount, 11);
-assert.equal(report.publicContactProfileCount, 29);
+assert.equal(report.publicContactProfileCount, 32);
 
 const bundle = Game.inspectWholeGameProgressBundle(states);
 assert.equal(bundle.wholeGameStageLabel, '当前已实装内容通过出生到死亡验证；完整设计仍在扩建');
@@ -193,9 +200,9 @@ assert.equal(bundle.hardGates.publicLife, true);
 
 console.log(`[minguo-life] engine ${Game.VERSION}`);
 console.log(`[scenarios] ${states.length}/${definitions.length} complete`);
-console.log(`[families] ${report.familyCount}/9`);
-console.log(`[routes] ${report.routeCount}/29 ${report.routeKeys.join(', ')}`);
-console.log(`[post-1949] ${report.post1949PathCount}/6 ${report.post1949PathKeys.join(', ')}`);
+console.log(`[families] ${report.familyCount}/10`);
+console.log(`[routes] ${report.routeCount}/32 ${report.routeKeys.join(', ')}`);
+console.log(`[post-1949] ${report.post1949PathCount}/8 ${report.post1949PathKeys.join(', ')}`);
 console.log(`[post-1949-era] ${report.post1949EraEvidenceCount}/${states.length} lives, ${report.authoredEraEventCount} authored era events`);
 console.log(`[post-1949-employment] ${report.post1949EmploymentEvidenceCount}/${states.length} lives with role, result and next step`);
 console.log(`[concrete-career] ${report.concreteCareerCount}/${states.length} lives with workplace, employer and work scenes`);
