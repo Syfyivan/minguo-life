@@ -10,6 +10,7 @@ await import('../assets/lived-life.js');
 await import('../assets/public-life.js');
 await import('../assets/family-expansion.js');
 await import('../assets/family-expansion-f17.js');
+await import('../assets/family-expansion-f18.js');
 await import('../assets/demo-engine.js');
 
 const Game = globalThis.MINGUO_GAME;
@@ -29,6 +30,8 @@ const DEFAULT_DECISIONS = {
   'sichuan-war': 'keep-verified-stock',
   'guanzhong-path': 'farm-water-work',
   'guanzhong-war': 'keep-family-address-ledger',
+  'xian-path': 'repair-apprentice',
+  'xian-war': 'civilian-repair-only',
   'postwar-settlement': 'rebuild-local',
   'final-1949': 'stay-mainland',
   'later-life-livelihood': 'change-work',
@@ -61,6 +64,9 @@ const ROUTE_SETUPS = {
   'guanzhong-farmwater': { familyKey: 'guanzhongirrigation', gender: '男', decisions: { 'guanzhong-path': 'farm-water-work', 'guanzhong-war': 'keep-family-address-ledger' } },
   'guanzhong-market': { familyKey: 'guanzhongirrigation', gender: '女', decisions: { 'guanzhong-path': 'market-grain-work', 'guanzhong-war': 'split-work-with-addresses' } },
   'guanzhong-migration': { familyKey: 'guanzhongirrigation', gender: '男', decisions: { 'guanzhong-path': 'verified-migration-work', 'guanzhong-war': 'keep-family-address-ledger' } },
+  'xian-repair': { familyKey: 'xianartisans', gender: '男', decisions: { 'xian-path': 'repair-apprentice', 'xian-war': 'civilian-repair-only' } },
+  'xian-station': { familyKey: 'xianartisans', gender: '女', decisions: { 'xian-path': 'station-service', 'xian-war': 'documented-logistics-job' } },
+  'xian-shop': { familyKey: 'xianartisans', gender: '女', decisions: { 'xian-path': 'shop-ledger-service', 'xian-war': 'keep-shop-civilian' } },
 };
 
 const POST1949_OPTIONS = {
@@ -81,7 +87,8 @@ function setupForFamily(familyKey) {
   if (familyKey === 'jiangnanshen') return cloneSetup(ROUTE_SETUPS['shen-scholar']);
   if (familyKey === 'shanghaigongshang') return cloneSetup(ROUTE_SETUPS['shanghai-heir']);
   if (familyKey === 'sichuanmedicine') return cloneSetup(ROUTE_SETUPS['sichuan-pharmacy']);
-  return cloneSetup(ROUTE_SETUPS['guanzhong-farmwater']);
+  if (familyKey === 'guanzhongirrigation') return cloneSetup(ROUTE_SETUPS['guanzhong-farmwater']);
+  return cloneSetup(ROUTE_SETUPS['xian-repair']);
 }
 
 function playScenario({
@@ -205,13 +212,14 @@ test('information channels change what the player can name about an era shock', 
   assert.ok(informed.information.channels.includes('newspaper'));
 });
 
-test('all five playable families continue beyond 1949 and end only after a confirmed death', () => {
+test('all six playable families continue beyond 1949 and end only after a confirmed death', () => {
   const scenarios = [
     playScenario({ familyKey: 'subeipoor' }),
     playScenario({ familyKey: 'jiangnanshen' }),
     playScenario({ familyKey: 'shanghaigongshang' }),
     playScenario({ familyKey: 'sichuanmedicine' }),
     playScenario({ familyKey: 'guanzhongirrigation' }),
+    playScenario({ familyKey: 'xianartisans' }),
   ];
   const bannedRanks = /成功|失败|安稳|挣扎|爬得很高|万幸/;
 
@@ -374,11 +382,11 @@ test('family lifecycle allows care without forcing marriage or children', () => 
   assert.ok(unmarried.facts.some((fact) => fact.source === 'family-future'));
 });
 
-test('portable v0.7.4 saves round-trip without changing the life ledger', () => {
+test('portable v0.7.5 saves round-trip without changing the life ledger', () => {
   const state = playScenario({ familyKey: 'subeipoor', decisions: { 'subei-war': 'join-army' } });
   const restored = Game.importGame(Game.exportGame(state));
 
-  assert.equal(restored.version, '0.7.4');
+  assert.equal(restored.version, '0.7.5');
   assert.equal(JSON.parse(Game.exportGame(restored)).schemaVersion, 6);
   assert.deepEqual(restored.identity, state.identity);
   assert.deepEqual(restored.facts, state.facts);
@@ -413,7 +421,7 @@ test('v0.2 states receive v0.7 complete-life and public-life defaults on import'
   delete legacy.contactHistory;
 
   const restored = Game.importGame(legacy);
-  assert.equal(restored.version, '0.7.4');
+  assert.equal(restored.version, '0.7.5');
   assert.equal(restored.publicLife.status, 'unaffiliated');
   assert.equal(Object.keys(restored.contacts).length, 3);
   assert.deepEqual(restored.annualNarratives, []);
@@ -436,7 +444,7 @@ test('v0.4 endings at 1949 resume as an unfinished life in 1950', () => {
   delete legacy.life;
 
   const restored = Game.importGame(legacy);
-  assert.equal(restored.version, '0.7.4');
+  assert.equal(restored.version, '0.7.5');
   assert.equal(restored.over, false);
   assert.equal(restored.year, 1950);
   assert.equal(restored.chapter, 'post1949');
@@ -724,11 +732,11 @@ test('keeping distance or staying nonparty remains a complete playable public-li
 
 test('the birth-to-death pack reaches the published content-density baseline', () => {
   const content = Game.content;
-  assert.equal(content.actions.length, 94);
-  assert.equal(content.decisions.length, 69);
-  assert.equal(content.decisions.reduce((sum, decision) => sum + decision.options.length, 0), 226);
-  assert.equal(content.ordinaryEvents.length, 280);
-  assert.equal(content.ordinaryEvents.filter((event) => event.requiresEchoes).length, 173);
+  assert.equal(content.actions.length, 103);
+  assert.equal(content.decisions.length, 77);
+  assert.equal(content.decisions.reduce((sum, decision) => sum + decision.options.length, 0), 250);
+  assert.equal(content.ordinaryEvents.length, 324);
+  assert.equal(content.ordinaryEvents.filter((event) => event.requiresEchoes).length, 197);
   assert.equal(new Set(content.actions.map((action) => action.id)).size, content.actions.length);
   assert.equal(new Set(content.decisions.map((decision) => decision.id)).size, content.decisions.length);
   assert.equal(new Set(content.ordinaryEvents.map((event) => event.id)).size, content.ordinaryEvents.length);
@@ -765,7 +773,7 @@ test('route choices produce guaranteed next-year echoes and ending facts', () =>
   assert.match(Game.buildEndingNarrative(state), /1942 年/);
 });
 
-test('all 226 key-decision options are reachable in a compatible life', () => {
+test('all 250 key-decision options are reachable in a compatible life', () => {
   for (const decision of Game.content.decisions) {
     for (const target of decision.options) {
       const routeKey = decision.routes?.[0] || target.routes?.[0];
@@ -806,7 +814,7 @@ test('all 226 key-decision options are reachable in a compatible life', () => {
   }
 });
 
-test('all 94 annual actions can be performed in a compatible life', () => {
+test('all 103 annual actions can be performed in a compatible life', () => {
   for (const target of Game.content.actions) {
     const routeKey = target.routes?.[0];
     const setup = routeKey
@@ -853,7 +861,7 @@ test('coverage inspection reports family, route, subject and ending evidence', (
   assert.equal(report.subjectEvidenceCount, scenarios.length);
   assert.equal(report.post1949EmploymentEvidenceCount, scenarios.length);
   assert.equal(report.annualNarrativeRate, 1);
-  assert.equal(report.persistentContactCount, 72);
+  assert.equal(report.persistentContactCount, 87);
 });
 
 test('a career is a concrete workplace with bosses, coworkers, customers and work records', () => {

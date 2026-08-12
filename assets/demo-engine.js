@@ -390,6 +390,91 @@
     }
   }
 
+  function startDecisionEnterprise(state, config, sourceId) {
+    if (!config || !config.id || !config.name) return null;
+    var economicLife = ensureEconomicLife(state);
+    var routeKey = state.routeKey;
+    var domainKey = routeDomainKey(routeKey);
+    var enterpriseId = 'enterprise:decision:' + config.id + ':' + state.year;
+    var enterprise = upsertEntity(economicLife.enterprises, enterpriseId, {
+      name: config.name,
+      domainKey: domainKey,
+      kind: config.kind || 'small-enterprise',
+      workplace: config.workplace || (state.lived && state.lived.career && state.lived.career.workplace) || null,
+      supplier: config.supplier || null,
+      product: config.product || null,
+      openedYear: state.year,
+      closedYear: null,
+      status: 'operating',
+      source: sourceId,
+    });
+    upsertEntity(economicLife.shareholders, 'shareholder:' + enterpriseId + ':' + state.identity.id, {
+      enterpriseId: enterpriseId,
+      personId: state.identity.id,
+      role: config.ownerRole || '经营与劳动责任人',
+      shareStatus: config.shareStatus || '出资、劳动与分配办法已记录，精确产权比例未记录',
+      startedYear: state.year,
+      endedYear: null,
+      source: sourceId,
+    });
+    (config.partners || []).forEach(function (partner) {
+      upsertEntity(economicLife.shareholders, 'shareholder:' + enterpriseId + ':' + partner.personId, {
+        enterpriseId: enterpriseId,
+        personId: partner.personId,
+        role: partner.role || '合伙人',
+        shareStatus: partner.shareStatus || '具体出资与劳动责任按书面约定分别记录',
+        startedYear: state.year,
+        endedYear: null,
+        source: sourceId,
+      });
+    });
+    if (config.asset) {
+      upsertEntity(economicLife.assets, 'asset:' + enterpriseId + ':' + (config.asset.id || 'tools'), {
+        enterpriseId: enterpriseId,
+        ownerPersonId: state.identity.id,
+        kind: config.asset.kind || 'tools-and-stock',
+        description: config.asset.description || '已列入清单的工具与存货',
+        status: 'in-use',
+        acquiredYear: state.year,
+        source: sourceId,
+      });
+    }
+    if (config.debt) {
+      upsertEntity(economicLife.debts, 'debt:' + enterpriseId + ':' + (config.debt.id || 'opening'), {
+        enterpriseId: enterpriseId,
+        debtorPersonId: state.identity.id,
+        creditor: config.debt.creditor || '具名出借人尚待填写',
+        purpose: config.debt.purpose || '开业工具与押金',
+        status: 'outstanding',
+        startedYear: state.year,
+        source: sourceId,
+      });
+    }
+    economicLife.history.push({
+      year: state.year,
+      kind: 'enterprise-start',
+      entityId: enterpriseId,
+      source: sourceId,
+      text: config.historyText || ('建立“' + config.name + '”，工具、出资、劳动、债务和客户责任分别登记。'),
+    });
+    var career = state.lived && state.lived.career;
+    if (career) {
+      career.kind = 'business';
+      career.employer = config.name;
+      career.workplace = config.workplace || career.workplace;
+      career.business = {
+        name: config.name,
+        openedYear: state.year,
+        active: true,
+        employees: Number(config.employees || 0),
+        ordersHandled: 0,
+        lastCustomer: null,
+        lastProblem: config.historyText || '开业清单已经建立，首批订单仍待逐件确认。',
+      };
+    }
+    return enterprise;
+  }
+
   function recordCanonicalRoute(state, routeKey, source) {
     if (!routeKey) return;
     if (!Array.isArray(state.domainHistory)) state.domainHistory = [];
@@ -2343,6 +2428,7 @@
       state.lived.career.business.ordersHandled += 1;
       state.lived.career.business.lastProblem = option.fact;
     }
+    if (option.enterpriseStart) startDecisionEnterprise(state, option.enterpriseStart, 'decision:' + decision.id + ':' + option.id);
     if (option.spouseStatus) {
       state.subjects.spouse.status = option.spouseStatus;
       addFact(state, {
