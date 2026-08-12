@@ -5,6 +5,7 @@ await import('./assets/game-content.js');
 await import('./assets/life-expansion.js');
 await import('./assets/complete-life.js');
 await import('./assets/postwar-era.js');
+await import('./assets/lived-life.js');
 await import('./assets/demo-engine.js');
 
 const Game = globalThis.MINGUO_GAME;
@@ -81,6 +82,14 @@ function runScenario(definition) {
   assert.ok(state.annualNarratives.every((entry) => entry.text.length >= 80), `${definition.id}: annual scenes must be concrete stories`);
   assert.ok(state.contactHistory.length > 0, `${definition.id}: persistent contacts need evidence`);
   assert.ok(state.eraHistory.some((entry) => entry.year >= 1950), `${definition.id}: post-1949 era history needs evidence`);
+  assert.ok(state.lived.career.role && state.lived.career.workplace && state.lived.career.employer, `${definition.id}: concrete career`);
+  assert.ok(state.lived.career.history.length > 0, `${definition.id}: work scenes`);
+  assert.ok(Object.values(state.lived.parents).every((parent) => parent.name && parent.occupation && parent.deathYear), `${definition.id}: parent lives`);
+  assert.ok(state.lived.relationship.history.length > 0, `${definition.id}: relationship consequences`);
+  assert.ok(state.lived.health.history.filter((entry) => entry.condition).length >= 4, `${definition.id}: illness history`);
+  assert.ok(Object.keys(state.contacts).length >= 6, `${definition.id}: social world`);
+  assert.equal(state.lived.yearHistory.length, state.annualNarratives.length, `${definition.id}: concrete year records`);
+  assert.equal(state.lived.inner.history.length, state.annualNarratives.length, `${definition.id}: inner life`);
   return state;
 }
 
@@ -113,16 +122,23 @@ assert.equal(report.informationEvidenceCount, states.length);
 assert.equal(report.contactEvidenceCount, states.length);
 assert.equal(report.familyLifecycleCount, states.length);
 assert.equal(report.annualNarrativeRate, 1);
-assert.equal(report.authoredActionCount, 66);
-assert.equal(report.keyDecisionCount, 42);
-assert.equal(report.decisionOptionCount, 143);
+assert.equal(report.authoredActionCount, 70);
+assert.equal(report.keyDecisionCount, 46);
+assert.equal(report.decisionOptionCount, 155);
 assert.equal(report.authoredOrdinaryEventCount, 171);
 assert.equal(report.choiceEchoEventCount, 105);
 assert.equal(report.denseLifeCount, states.length);
-assert.equal(report.persistentContactCount, 9);
+assert.equal(report.persistentContactCount, 42);
+assert.equal(report.concreteCareerCount, states.length);
+assert.equal(report.parentLifecycleDetailCount, states.length);
+assert.equal(report.relationshipDetailCount, states.length);
+assert.equal(report.healthHistoryCount, states.length);
+assert.equal(report.socialWorldCount, states.length);
+assert.equal(report.innerLifeCount, states.length);
+assert.equal(report.concreteYearCount, report.expectedNarrativeYears);
 
 const bundle = Game.inspectWholeGameProgressBundle(states);
-assert.equal(bundle.wholeGameStageLabel, '出生到死亡的完整人生文字版已闭环');
+assert.equal(bundle.wholeGameStageLabel, '出生到死亡的具体生活文字版已闭环');
 
 console.log(`[minguo-life] engine ${Game.VERSION}`);
 console.log(`[scenarios] ${states.length}/${definitions.length} complete`);
@@ -131,6 +147,12 @@ console.log(`[routes] ${report.routeCount}/11 ${report.routeKeys.join(', ')}`);
 console.log(`[post-1949] ${report.post1949PathCount}/6 ${report.post1949PathKeys.join(', ')}`);
 console.log(`[post-1949-era] ${report.post1949EraEvidenceCount}/${states.length} lives, ${report.authoredEraEventCount} authored era events`);
 console.log(`[post-1949-employment] ${report.post1949EmploymentEvidenceCount}/${states.length} lives with role, result and next step`);
+console.log(`[concrete-career] ${report.concreteCareerCount}/${states.length} lives with workplace, employer and work scenes`);
+console.log(`[parent-lives] ${report.parentLifecycleDetailCount}/${states.length} lives with named working parents and deaths`);
+console.log(`[relationships] ${report.relationshipDetailCount}/${states.length} lives with consequences`);
+console.log(`[illness-history] ${report.healthHistoryCount}/${states.length} lives with recurring conditions`);
+console.log(`[social-world] ${report.socialWorldCount}/${states.length} lives with six or more named people`);
+console.log(`[inner-life] ${report.innerLifeCount}/${states.length} lives with yearly thoughts`);
 console.log(`[fact-endings] ${report.factEndingCount}/${states.length}`);
 console.log(`[death-endings] ${report.deathEndingCount}/${states.length}`);
 console.log(`[subject-evidence] ${report.subjectEvidenceCount}/${states.length}`);

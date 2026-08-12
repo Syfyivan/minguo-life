@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>民国人生 · 完整人生文字版 Demo v0.5.2</title>
+<title>民国人生 · 具体生活文字版 Demo v0.6.0</title>
 <style>
 @font-face{font-family:Lora;src:url('./_shared/fonts/Lora-Regular.ttf') format('truetype');font-display:swap}
 @font-face{font-family:Lora;src:url('./_shared/fonts/Lora-Bold.ttf') format('truetype');font-weight:700;font-display:swap}
@@ -43,6 +43,7 @@ h1{margin:.25em 0 .05em;font-size:32px}
 .status-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:12px;margin:12px 0}.status-card{padding:12px 14px;background:var(--paper2);border:1px solid var(--rule);border-radius:8px}.status-card h3{margin:0 0 6px;font:14px Pixel,monospace;color:var(--green)}
 .subjects{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.subject{padding:7px;background:rgba(255,255,255,.28);border-radius:5px;font-size:11px}.subject b{display:block;font-size:12px}.subject span{color:var(--muted)}
 .contacts{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.contact{padding:9px;background:rgba(255,255,255,.28);border-radius:5px;font-size:11px}.contact b{display:block;font-size:12px}.contact span{display:block;color:var(--muted)}.contact .bond{margin-top:4px;color:var(--green);font-family:Pixel,monospace}
+.life-detail-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:12px 0}.life-detail{padding:13px 15px;background:rgba(255,255,255,.34);border:1px solid var(--rule);border-radius:8px}.life-detail h3{margin:0 0 7px;color:var(--green);font:14px Pixel,monospace}.detail-lead{font-weight:700;color:var(--red)}.detail-row{margin-top:6px;padding-top:6px;border-top:1px dashed var(--rule);font-size:12px}.detail-row b{color:var(--green)}.detail-quote{margin-top:5px;color:var(--blue)}.mind-card{border-left:4px solid var(--blue)}.health-card{border-left:4px solid var(--red)}
 .today{margin:12px 0;padding:13px 15px;background:rgba(255,255,255,.34);border:1px solid var(--rule);border-left:4px solid var(--gold);border-radius:7px}.today b{color:var(--red)}
 .era-update{margin:10px 0;padding:13px 15px;background:rgba(75,112,145,.1);border:1px solid rgba(75,112,145,.42);border-left:4px solid var(--blue);border-radius:7px}.era-update h3{margin:0 0 7px;color:var(--blue);font:14px Pixel,monospace}.era-item{padding:7px 0;border-top:1px dashed rgba(75,112,145,.32)}.era-item:first-of-type{border-top:0}.era-item b{display:block}.era-item.unknown b{color:var(--red)}.era-meta{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:6px;color:var(--muted);font-size:11px}.era-meta a{color:var(--blue)}.era-status{padding:2px 7px;border-radius:10px;background:rgba(255,255,255,.5)}
 .turn-feedback{margin:8px 0;padding:10px 13px;background:rgba(53,107,100,.08);border-left:4px solid var(--green);border-radius:6px;font-size:13px}.turn-feedback:empty{display:none}.milestone{margin:10px 0;padding:10px 13px;color:#fff;background:var(--blue);border-radius:7px;font-family:Pixel,monospace}.milestone:empty{display:none}
@@ -54,17 +55,17 @@ h1{margin:.25em 0 .05em;font-size:32px}
 .decision{margin:18px 0;padding:16px;background:var(--paper2);border:2px solid var(--red);border-radius:11px}.decision h2{margin:0 0 5px;color:var(--red);font-size:20px}.decision .prompt{font-style:italic}.choice{display:block;width:100%;margin:8px 0;padding:11px 13px;text-align:left;background:rgba(255,255,255,.35);border:1px solid var(--rule);border-radius:8px}.choice:hover:not(:disabled){border-color:var(--green);transform:translateX(3px)}.choice b{display:block}.choice small{color:var(--muted)}
 .curve{width:100%;height:190px;margin-top:14px;background:rgba(255,255,255,.3);border:1px solid var(--rule);border-radius:8px}.caption{text-align:center;color:var(--muted);font-size:12px}
 .log{max-height:310px;overflow:auto;padding:8px 14px;background:rgba(255,255,255,.28);border:1px solid var(--rule);border-radius:8px;font-size:13px}.log-row{padding:5px 0;border-bottom:1px dashed var(--rule)}.log-row:last-child{border:0}.log-year{display:inline-block;margin-right:6px;padding:1px 5px;color:#fff;background:var(--muted);border-radius:2px;font:9px Pixel,monospace}.log-row.info .log-year{background:var(--blue)}.log-row.route .log-year,.log-row.choice .log-year{background:var(--green)}.log-row.bad{color:#842a23}
-.ending{padding:22px;background:var(--paper2);border:2px solid var(--red);border-radius:12px}.ending h2{margin-top:0;color:var(--red)}.ending li{margin:7px 0}.facts{margin-top:16px;padding:12px;background:rgba(255,255,255,.3);border-radius:7px;font-size:13px}.disc{text-align:center;color:var(--muted);font-size:12px;font-style:italic}
+.ending{padding:22px;background:var(--paper2);border:2px solid var(--red);border-radius:12px}.ending h2{margin-top:0;color:var(--red)}.ending li{margin:7px 0}.facts{margin-top:16px;padding:12px;background:rgba(255,255,255,.3);border-radius:7px;font-size:13px}.portrait-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin:16px 0}.portrait-card{padding:12px;background:rgba(255,255,255,.4);border-left:4px solid var(--green);border-radius:7px}.portrait-card h3{margin:0 0 5px;color:var(--green);font:13px Pixel,monospace}.portrait-card p{margin:0;font-size:13px}.disc{text-align:center;color:var(--muted);font-size:12px;font-style:italic}
 .life-chapters{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin:16px 0}.life-chapter{padding:12px;background:rgba(255,255,255,.35);border:1px solid var(--rule);border-radius:8px}.life-chapter h3{margin:0 0 5px;color:var(--green);font:13px Pixel,monospace}.life-chapter p{margin:0;font-size:13px}.death-summary{padding:12px 14px;color:#fff;background:var(--red);border-radius:8px}
 .mask{position:fixed;inset:0;z-index:40;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(45,36,28,.58)}.mask.on{display:flex}.panel{width:min(680px,100%);max-height:84vh;overflow:auto;background:var(--paper);border:2px solid var(--rule);border-radius:12px}.panel-head{display:flex;justify-content:space-between;padding:12px 16px;color:#fff;background:var(--green);font-family:Pixel,monospace}.close{border:0;background:none;color:#fff;font-size:18px}.panel-body{padding:12px 16px}.action-guide{margin:2px 0 10px;padding:9px 11px;background:rgba(53,107,100,.08);border-left:3px solid var(--green);color:var(--muted);font-size:12px}.action-option{width:100%;margin:7px 0;padding:10px 12px;text-align:left;background:var(--paper2);border:1px solid var(--rule);border-radius:7px}.action-option:hover:not(:disabled){border-color:var(--red)}.action-option b{display:block}.action-option small{display:block;color:var(--muted)}.effect-line{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}.effect-chip{padding:2px 7px;border-radius:10px;background:rgba(255,255,255,.48);color:var(--green);font-size:11px}.effect-chip.risk{color:var(--red)}.effect-chip.context{color:var(--blue)}.effect-chip.spirit{color:#7d5311}.unavailable{display:block;margin-top:5px;color:var(--red);font-size:11px}
-@media(max-width:760px){.families{grid-template-columns:1fr}.family .motif{min-height:0}.status-grid{grid-template-columns:1fr}.subjects{grid-template-columns:repeat(2,1fr)}.bars{grid-template-columns:1fr}.life-chapters{grid-template-columns:1fr}h1{font-size:26px}}
+@media(max-width:760px){.families{grid-template-columns:1fr}.family .motif{min-height:0}.status-grid{grid-template-columns:1fr}.subjects{grid-template-columns:repeat(2,1fr)}.bars{grid-template-columns:1fr}.life-chapters,.life-detail-grid,.portrait-grid{grid-template-columns:1fr}h1{font-size:26px}}
 @media(max-width:760px){.contacts{grid-template-columns:1fr}.start-fields{grid-template-columns:1fr 1fr}.start-fields label:first-child{grid-column:1/-1}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
 </style>
 </head>
 <body>
 <header class="cover">
-  <div class="seal">DEMO<br>v0.5.2</div>
+  <div class="seal">DEMO<br>v0.6.0</div>
   <h1>民国人生 · 纯文字 Demo</h1>
   <div class="sub">从出生家庭出发，让行动、关系与时代共同写出一条人生路径</div>
   <nav class="nav">
@@ -76,8 +77,8 @@ h1{margin:.25em 0 .05em;font-size:32px}
 
 <main class="wrap">
   <section class="screen on" id="screen-pick">
-    <div class="note warn"><span class="tag">当前定位</span>这是从出生持续玩到主人公真实死亡的完整人生文字验证版。1949 年只是中段分水岭；其后可进入大陆、香港、台湾、其他海外、继续流动或落点未定六种后半生。当前共有三棵出生家庭树、十一条主要谋生路径、66 个年度行动、143 个关键选项与 171 个作者场景。</div>
-    <div class="note"><span class="tag">玩法节奏</span>一回合是一年。你安排少量关键行动，生活场景和时代冲击随后发生；关键年份出现抉择。想快速看设计可以使用“自动到下个抉择”，想仔细玩则可每年自行安排。</div>
+    <div class="note warn"><span class="tag">当前定位</span>这是从出生持续玩到主人公真实死亡的具体生活文字验证版。1949 年只是中段分水岭；其后可进入大陆、香港、台湾、其他海外、继续流动或落点未定六种后半生。当前共有三棵出生家庭树、十一条主要谋生路径、70 个年度行动、155 个关键选项与 171 个作者场景；每年另生成工作现场、家人近况、疾病和心理记录。</div>
+    <div class="note"><span class="tag">玩法节奏</span>一回合是一年。你安排少量关键行动，随后会看到这一年具体在哪儿做什么工作、和谁发生了什么、身体怎样、心里在担心什么，再进入时代变化与关键抉择。想快速看设计可以使用“自动到下个抉择”，想仔细玩则可每年自行安排。</div>
     <div class="note"><span class="tag">随机编号说明</span>“随机编号（世界种子）”只决定同等条件下抽到哪段日常、人物如何独立回应，不代表难度。可以填写任意正整数，也可以点“随机”；同一家庭、同一编号、相同行动与选择会复现同一段人生。</div>
     <div id="savedStart"></div>
     <h2 class="pix">选择出生家庭</h2>
@@ -94,7 +95,13 @@ h1{margin:.25em 0 .05em;font-size:32px}
       <section class="status-card"><h3>当前路径与知情边界</h3><div id="routeStatus"></div><div id="infoStatus"></div></section>
       <section class="status-card"><h3>家庭与外围主体</h3><div class="subjects" id="subjectGrid"></div></section>
     </div>
-    <section class="status-card"><h3>持续人物</h3><div class="contacts" id="contactGrid"></div></section>
+    <div class="life-detail-grid">
+      <section class="life-detail" id="careerDetail" aria-live="polite"></section>
+      <section class="life-detail" id="familyDetail" aria-live="polite"></section>
+      <section class="life-detail health-card" id="healthDetail" aria-live="polite"></section>
+      <section class="life-detail mind-card" id="mindDetail" aria-live="polite"></section>
+    </div>
+    <section class="status-card"><h3>朋友、同事、雇主与往来的人</h3><div class="contacts" id="contactGrid"></div></section>
     <div class="today" id="todayEvent" aria-live="polite"></div>
     <section class="era-update" id="eraUpdate" aria-live="polite"></section>
     <div class="turn-feedback" id="turnFeedback" aria-live="polite"></div>
@@ -140,6 +147,7 @@ h1{margin:.25em 0 .05em;font-size:32px}
 <script src="./assets/life-expansion.js"></script>
 <script src="./assets/complete-life.js"></script>
 <script src="./assets/postwar-era.js"></script>
+<script src="./assets/lived-life.js"></script>
 <script src="./assets/demo-engine.js"></script>
 <script>
 (function () {
@@ -258,16 +266,57 @@ h1{margin:.25em 0 .05em;font-size:32px}
     Object.keys(G.subjects).forEach(function (key) {
       var subject = G.subjects[key];
       var item = document.createElement('div'); item.className = 'subject';
-      item.innerHTML = '<b>' + esc(subject.label) + '</b><span>' + esc(Content.subjectStatusLabels[subject.status] || subject.status) + '</span>';
+      item.innerHTML = '<b>' + esc(subject.label + (subject.name ? ' · ' + subject.name : '')) + '</b><span>' + esc(Content.subjectStatusLabels[subject.status] || subject.status) + '</span>' + (subject.occupation ? '<span>' + esc(subject.occupation) + '</span>' : '');
       subjectGrid.appendChild(item);
     });
     var contactGrid = el('contactGrid'); contactGrid.innerHTML = '';
     Object.keys(G.contacts || {}).forEach(function (key) {
       var contact = G.contacts[key];
       var item = document.createElement('div'); item.className = 'contact';
-      item.innerHTML = '<b>' + esc(contact.label) + '</b><span>' + esc(contact.role) + '</span><span>' + esc(Content.contactStatusLabels[contact.status] || contact.status) + '</span><span class="bond">关系 ' + Math.round(contact.relation || 0) + '</span>';
+      item.innerHTML = '<b>' + esc(contact.label) + '</b><span>' + esc(contact.role) + '</span><span>' + esc(Content.contactStatusLabels[contact.status] || contact.status) + '</span>' +
+        (contact.currentActivity ? '<span>近况：' + esc(contact.currentActivity) + '</span>' : '') +
+        (contact.lastWords ? '<span class="detail-quote">最近的话：' + esc(contact.lastWords) + '</span>' : '') +
+        '<span class="bond">关系 ' + Math.round(contact.relation || 0) + (contact.lastUpdateYear ? ' · 最近记录 ' + contact.lastUpdateYear : '') + '</span>';
       contactGrid.appendChild(item);
     });
+  }
+
+  function renderLifeDetails() {
+    var lived = G.lived || {};
+    var career = lived.career || {};
+    var lastWork = career.lastWork;
+    el('careerDetail').innerHTML = '<h3>这份工作具体在做什么</h3>' + (career.role
+      ? '<div class="detail-lead">' + esc(career.role) + ' · ' + esc(career.workplace) + '</div>' +
+        '<div class="detail-row"><b>雇主／经营关系：</b>' + esc(career.employer || '自行承担') + '</div>' +
+        '<div class="detail-row"><b>每天实际负责：</b>' + esc(career.duties || '尚未留下职责记录') + '</div>' +
+        '<div class="detail-row"><b>老板、同事与客户：</b>' + esc([career.supervisor, career.colleague, career.publicPerson].filter(Boolean).join('、') || '尚未形成具名往来') + '</div>' +
+        (lastWork ? '<div class="detail-row"><b>最近一次工作现场：</b>' + esc(lastWork.text) + '</div>' : '') +
+        (career.nextStep ? '<div class="detail-row"><b>下一步：</b>' + esc(career.nextStep) + '</div>' : '')
+      : '<div>还没有进入成年营生。童年与少年阶段先记录家人的工作、学习和身体。</div>');
+
+    var parents = Object.keys((lived.parents || {})).map(function (key) { return lived.parents[key]; });
+    var parentHtml = parents.map(function (parent) {
+      var status = parent.deathYear ? (parent.status === 'dead-confirmed' ? '已去世并确认' : '已去世，消息待确认') : (Content.subjectStatusLabels[parent.status] || parent.status);
+      return '<div class="detail-row"><b>' + esc(parent.name) + ' · ' + esc(status) + '</b><div>' + esc(parent.occupation) + '</div><div>最近：' + esc(parent.deathYear ? ('于 ' + parent.deathYear + ' 年去世') : parent.lastActivity) + '</div><div class="detail-quote">对你说过：' + esc(parent.lastWords) + '</div></div>';
+    }).join('');
+    var relationship = lived.relationship || {};
+    var relationshipHtml = relationship.spouse
+      ? '<div class="detail-row"><b>配偶 ' + esc(relationship.spouse.name) + ' · ' + esc(relationship.spouse.occupation) + '</b><div>关系状态：' + esc((Content.relationshipStatusLabels && Content.relationshipStatusLabels[relationship.status]) || relationship.status) + '；明确争执 ' + Number(relationship.conflictCount || 0) + ' 次</div><div>' + esc(relationship.lastInteraction) + '</div></div>'
+      : '<div class="detail-row"><b>亲密生活</b><div>' + esc(relationship.lastInteraction || '尚未形成伴侣关系。') + '</div></div>';
+    var childrenHtml = (lived.children || []).map(function (child) { return '<div class="detail-row"><b>' + esc(child.name) + '</b><div>' + esc(child.status) + '；' + esc(child.lastUpdate) + '</div></div>'; }).join('');
+    el('familyDetail').innerHTML = '<h3>父母、配偶与孩子各自在做什么</h3>' + parentHtml + relationshipHtml + (childrenHtml || '<div class="detail-row">目前没有孩子的具体生活记录。</div>');
+
+    var health = lived.health || {};
+    var episodes = (health.history || []).filter(function (entry) { return entry.condition; });
+    el('healthDetail').innerHTML = '<h3>身体与疾病不是一个数字</h3>' + (health.current
+      ? '<div class="detail-lead">当前记录：' + esc(health.current.condition) + ' · ' + esc(health.current.status) + '</div><div class="detail-row">' + esc(health.current.text) + '</div><div class="detail-row"><b>处理结果：</b>' + esc(health.current.result || '还在观察') + '</div>'
+      : '<div>目前没有正在发作的疾病，但以后会记录症状、持续时间、求医和工作影响。</div>') +
+      '<div class="detail-row"><b>一生已记录：</b>' + episodes.length + ' 次具体身体发作' + (episodes.length ? '；最近包括 ' + esc(episodes.slice(-3).map(function (entry) { return entry.year + ' 年 ' + entry.condition; }).join('、')) : '') + '</div>';
+
+    var year = lived.lastYear;
+    el('mindDetail').innerHTML = '<h3>这一年我心里怎么想</h3><div class="detail-lead">' + esc((lived.inner && lived.inner.current) || '还没有形成这一年的心理记录。') + '</div>' +
+      (year && year.social ? '<div class="detail-row"><b>这一年的关系背景：</b>' + esc(year.social) + '</div>' : '') +
+      (year && year.decision ? '<div class="detail-row"><b>刚作出的决定：</b>' + esc(year.decision) + '</div>' : '');
   }
 
   function renderToday() {
@@ -382,8 +431,15 @@ h1{margin:.25em 0 .05em;font-size:32px}
     showScreen('end'); var route = G.routeKey ? Content.routes[G.routeKey] : null;
     var routeHistory = G.routeHistory.map(function (entry) { return entry.year + '：' + Content.routes[entry.to].name; }).join(' → ');
     var chapters = Game.buildLifeChapters(G);
+    var portrait = Game.buildLifePortrait(G);
     function factLine(fact) { var text = String(fact.text || '').replace(new RegExp('^' + fact.year + '\\s*年[，,：:]?\\s*'), ''); return fact.year + ' · ' + esc(text); }
-    el('endingBox').innerHTML = '<h2>' + esc(G.identity.name) + '的一生 · ' + G.identity.born + '—' + G.endYear + '</h2><div class="death-summary">' + esc(G.life.deathOccurredYear + ' 年，享年 ' + (G.life.deathOccurredYear - G.identity.born) + ' 岁；在' + G.life.deathPlace + '因' + G.life.cause + '去世。死亡于 ' + G.life.deathConfirmedYear + ' 年完成确认。') + '</div><div class="life-chapters">' + chapters.map(function (chapter) { return '<section class="life-chapter"><h3>' + esc(chapter.title) + '</h3><p>' + esc(chapter.text) + '</p></section>'; }).join('') + '</div><h3>一生事实回收</h3><ul>' + G.endingFacts.map(function (fact) { return '<li>' + esc(fact) + '</li>'; }).join('') + '</ul><div class="facts"><b>路径记录</b><div>' + esc(routeHistory || (route ? route.name : '没有形成独立路径记录')) + '</div><b>事实账本</b><div>' + G.facts.map(factLine).join('<br>') + '</div></div>';
+    var portraitItems = [
+      ['做过的具体工作', portrait.career], ['父母各自的一生', portrait.parents],
+      ['婚姻与亲密关系', portrait.relationship], ['孩子与下一代', portrait.children],
+      ['朋友、同事、雇主和客户', portrait.friends], ['疾病与身体', portrait.health],
+      ['最后留下的心事', portrait.inner],
+    ];
+    el('endingBox').innerHTML = '<h2>' + esc(G.identity.name) + '的一生 · ' + G.identity.born + '—' + G.endYear + '</h2><div class="death-summary">' + esc(G.life.deathOccurredYear + ' 年，享年 ' + (G.life.deathOccurredYear - G.identity.born) + ' 岁；在' + G.life.deathPlace + '因' + G.life.cause + '去世。死亡于 ' + G.life.deathConfirmedYear + ' 年完成确认。') + '</div><div class="life-chapters">' + chapters.map(function (chapter) { return '<section class="life-chapter"><h3>' + esc(chapter.title) + '</h3><p>' + esc(chapter.text) + '</p></section>'; }).join('') + '</div><h3>这个人具体怎样生活</h3><div class="portrait-grid">' + portraitItems.map(function (item) { return '<section class="portrait-card"><h3>' + esc(item[0]) + '</h3><p>' + esc(item[1]) + '</p></section>'; }).join('') + '</div><h3>一生事实回收</h3><ul>' + G.endingFacts.map(function (fact) { return '<li>' + esc(fact) + '</li>'; }).join('') + '</ul><div class="facts"><b>路径记录</b><div>' + esc(routeHistory || (route ? route.name : '没有形成独立路径记录')) + '</div><b>事实账本</b><div>' + G.facts.map(factLine).join('<br>') + '</div></div>';
     writeAutoSave();
   }
 
@@ -397,7 +453,7 @@ h1{margin:.25em 0 .05em;font-size:32px}
     el('hudStage').textContent = (chapterLabels[G.chapter] || stage.name) + ' · ' + stage.name;
     el('hudTime').textContent = G.year + ' 年 · ' + G.age + ' 岁';
     el('yearTitle').textContent = G.year + ' 年 · 安排 ' + stage.slots + ' 件事';
-    renderBars(); renderStatus(); renderToday(); renderSlots(); renderDecision(); renderCurve(); renderLog();
+    renderBars(); renderStatus(); renderLifeDetails(); renderToday(); renderSlots(); renderDecision(); renderCurve(); renderLog();
     el('advanceBtn').disabled = Boolean(G.pendingDecision);
     el('autoPlanBtn').disabled = Boolean(G.pendingDecision);
     el('fastForwardBtn').disabled = Boolean(G.pendingDecision);

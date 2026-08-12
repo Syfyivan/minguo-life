@@ -1,8 +1,8 @@
 {
   "name": "minguo-life-text-prototype",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "private": true,
-  "description": "民国人生从出生到死亡的完整人生文字验证版",
+  "description": "民国人生从出生到死亡的具体生活文字验证版",
   "scripts": {
     "test": "node --test tests/*.test.mjs",
     "regression": "node demo-regression.mjs",

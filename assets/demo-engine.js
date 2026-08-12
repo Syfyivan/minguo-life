@@ -1,4 +1,4 @@
-// 民国人生 · 可测试文字版引擎 v0.5
+// 民国人生 · 可测试文字版引擎 v0.6
 // 运行时只负责规则与状态，不直接操作 DOM；浏览器 UI 与 Node 回归共用这一份实现。
 (function (root) {
   'use strict';
@@ -213,10 +213,821 @@
     state.routeKey = routeKey;
     state.routeHistory.push({ year: state.year, from: from, to: routeKey, source: source || 'decision' });
     addLog(state, '人生路径转入「' + C.routes[routeKey].name + '」。', 'turn', 'route');
+    enterRouteCareer(state, routeKey);
   }
 
   function subjectIsDead(subject) {
     return subject && (subject.status === 'dead-unconfirmed' || subject.status === 'dead-confirmed');
+  }
+
+  function ensureLivedLife(state) {
+    var parentProfiles = (C.parentProfiles && C.parentProfiles[state.familyKey]) || {};
+    var defaults = {
+      parents: {},
+      relationship: {
+        status: 'single', spouse: null, startedYear: null, livingArrangement: null,
+        lastInteraction: '尚未形成伴侣关系。', lastInteractionYear: null, conflictCount: 0, history: [],
+      },
+      children: [],
+      career: {
+        routeKey: null, phase: 'not-started', kind: null, role: null, workplace: null, employer: null,
+        supervisor: null, colleague: null, publicPerson: null, duties: null, terms: null,
+        active: false, startedYear: null, retiredYear: null, lastWork: null, nextStep: null, history: [], transitions: [], business: null,
+      },
+      health: { current: null, lastEpisode: null, history: [], treatedCount: 0 },
+      social: { lastUpdate: null, history: [] },
+      inner: { current: '这一生才刚开始，眼前先是家里人的声音和每天的吃穿。', history: [] },
+      yearHistory: [],
+      lastYear: null,
+    };
+    state.lived = Object.assign(defaults, state.lived || {});
+    state.lived.relationship = Object.assign(defaults.relationship, state.lived.relationship || {});
+    state.lived.career = Object.assign(defaults.career, state.lived.career || {});
+    state.lived.health = Object.assign(defaults.health, state.lived.health || {});
+    state.lived.social = Object.assign(defaults.social, state.lived.social || {});
+    state.lived.inner = Object.assign(defaults.inner, state.lived.inner || {});
+    ['history'].forEach(function (key) {
+      if (!Array.isArray(state.lived.relationship[key])) state.lived.relationship[key] = [];
+      if (!Array.isArray(state.lived.career[key])) state.lived.career[key] = [];
+      if (!Array.isArray(state.lived.health[key])) state.lived.health[key] = [];
+      if (!Array.isArray(state.lived.social[key])) state.lived.social[key] = [];
+      if (!Array.isArray(state.lived.inner[key])) state.lived.inner[key] = [];
+    });
+    if (!Array.isArray(state.lived.career.transitions)) state.lived.career.transitions = [];
+    if (!Array.isArray(state.lived.children)) state.lived.children = [];
+    if (!Array.isArray(state.lived.yearHistory)) state.lived.yearHistory = [];
+
+    Object.keys(parentProfiles).forEach(function (key) {
+      var profile = parentProfiles[key];
+      var subject = state.subjects && state.subjects[key];
+      var deathAge = clamp(Number(profile.deathAgeBase || 72) + stableIndex(state.seed + ':' + key + ':parent-age', 9) - 4, 50, 88);
+      var existing = state.lived.parents[key] || {};
+      state.lived.parents[key] = Object.assign({
+        key: key,
+        name: profile.name,
+        born: profile.born,
+        occupation: profile.occupation,
+        targetDeathYear: profile.born + deathAge,
+        status: subject ? subject.status : 'alive',
+        health: subject && subject.health != null ? subject.health : 50,
+        place: state.identity.place,
+        lastActivity: profile.activities[0],
+        lastWords: profile.words[0],
+        lastUpdateYear: state.identity.born,
+        deathYear: null,
+        confirmationYear: null,
+        history: [],
+      }, existing);
+      if (!Array.isArray(state.lived.parents[key].history)) state.lived.parents[key].history = [];
+      if (subject) {
+        subject.name = state.lived.parents[key].name;
+        subject.occupation = state.lived.parents[key].occupation;
+      }
+    });
+    return state.lived;
+  }
+
+  function addDetailedContact(state, contact) {
+    if (!contact || !contact.id) return null;
+    if (!state.contacts[contact.id]) {
+      var ageOffset = stableIndex(state.seed + ':' + contact.id + ':life', 18);
+      state.contacts[contact.id] = Object.assign({
+        status: 'nearby', relation: 10, agency: 68, born: state.identity.born - 10,
+        targetDeathAge: 68 + ageOffset, currentActivity: contact.role,
+        lastWords: '你们还没有把话说深。', lastUpdateYear: state.year, history: [],
+      }, clone(contact));
+      if (!Array.isArray(state.contacts[contact.id].history)) state.contacts[contact.id].history = [];
+    }
+    return state.contacts[contact.id];
+  }
+
+  function installRouteContacts(state, routeKey) {
+    ((C.routeContactProfiles && C.routeContactProfiles[routeKey]) || []).forEach(function (contact) {
+      addDetailedContact(state, contact);
+    });
+  }
+
+  function enterRouteCareer(state, routeKey) {
+    var profile = C.routeCareerProfiles && C.routeCareerProfiles[routeKey];
+    if (!profile) return;
+    var lived = ensureLivedLife(state);
+    var career = lived.career;
+    if (career.routeKey === routeKey && career.phase === 'route') return;
+    if (career.role) {
+      career.transitions.push({
+        year: state.year, fromRole: career.role, fromWorkplace: career.workplace,
+        toRole: profile.role, toWorkplace: profile.workplace,
+      });
+    }
+    career.routeKey = routeKey;
+    career.phase = 'route';
+    career.active = true;
+    career.retiredYear = null;
+    career.kind = profile.kind;
+    career.role = profile.role;
+    career.workplace = profile.workplace;
+    career.employer = profile.employer;
+    career.supervisor = profile.supervisor;
+    career.colleague = profile.colleague;
+    career.publicPerson = profile.publicPerson;
+    career.duties = profile.duties;
+    career.terms = profile.terms;
+    career.startedYear = state.year;
+    career.nextStep = '在下一次具体工作中处理职责、报酬和与人发生的实际问题。';
+    career.business = profile.business ? Object.assign({
+      active: true, openedYear: state.year, lastActiveYear: null,
+      ordersHandled: 0, lastCustomer: profile.publicPerson, lastProblem: null,
+    }, clone(profile.business)) : null;
+    installRouteContacts(state, routeKey);
+    addFact(state, {
+      id: 'career-start:' + routeKey,
+      kind: 'livelihood',
+      text: state.year + ' 年开始在' + profile.workplace + '做' + profile.role + '，主要负责' + profile.duties + '；' + profile.terms + '。',
+      source: 'career-state',
+    });
+    addLog(state, '【具体营生】在' + profile.workplace + '开始做' + profile.role + '；往来对象包括' + profile.supervisor + '、' + profile.colleague + '和' + profile.publicPerson + '。', 'turn', 'livelihood');
+  }
+
+  function post1949CareerProfile(state) {
+    var employment = state.post1949 && state.post1949.employment;
+    if (!employment || !employment.role) return null;
+    var people = (C.post1949People && C.post1949People[state.post1949Choice]) || {};
+    return {
+      kind: 'employment', role: employment.role, workplace: employment.workplace,
+      employer: people.employer || '当前工作地点的负责人', supervisor: people.employer || '当前负责人',
+      colleague: people.coworker || '同班同事', publicPerson: people.neighbor || '住处邻人',
+      duties: employment.duties, terms: employment.terms,
+      scenes: [],
+    };
+  }
+
+  function installPost1949Contacts(state) {
+    var people = C.post1949People && C.post1949People[state.post1949Choice];
+    if (!people) return;
+    [
+      { id: 'post_employer_' + state.post1949Choice, label: people.employer, role: '负责说明岗位、工钱与是否留用的人', status: 'coworker', relation: 12, born: state.identity.born - 12 },
+      { id: 'post_coworker_' + state.post1949Choice, label: people.coworker, role: '与你在同一地点做工、也有自己家计的同事', status: 'coworker', relation: 18, born: state.identity.born + 1 },
+      { id: 'post_neighbor_' + state.post1949Choice, label: people.neighbor, role: '与你共享地方消息但不共享全部家计的邻人', status: 'nearby', relation: 16, born: state.identity.born - 3 },
+    ].forEach(function (contact) { addDetailedContact(state, contact); });
+  }
+
+  function syncCareerFromEmployment(state) {
+    var profile = post1949CareerProfile(state);
+    if (!profile) return;
+    var career = ensureLivedLife(state).career;
+    if (career.phase !== 'post1949' || career.role !== profile.role || career.workplace !== profile.workplace) {
+      if (career.business && career.business.active !== false) {
+        career.business.active = false;
+        career.business.lastActiveYear = Math.max(career.business.openedYear || state.year, state.year - 1);
+      }
+      if (career.role) {
+        career.transitions.push({
+          year: state.year, fromRole: career.role, fromWorkplace: career.workplace,
+          toRole: profile.role, toWorkplace: profile.workplace,
+        });
+      }
+      career.phase = 'post1949';
+      career.active = true;
+      career.retiredYear = null;
+      career.routeKey = 'post:' + state.post1949Choice;
+      career.kind = profile.kind;
+      career.role = profile.role;
+      career.workplace = profile.workplace;
+      career.employer = profile.employer;
+      career.supervisor = profile.supervisor;
+      career.colleague = profile.colleague;
+      career.publicPerson = profile.publicPerson;
+      career.duties = profile.duties;
+      career.terms = profile.terms;
+      career.startedYear = state.post1949.employment.startedYear || state.year;
+    }
+    career.nextStep = state.post1949.employment.nextStep;
+    installPost1949Contacts(state);
+  }
+
+  function currentCareerProfile(state) {
+    if (state.post1949Choice && state.post1949 && state.post1949.employment && state.post1949.employment.role) {
+      return post1949CareerProfile(state);
+    }
+    return C.routeCareerProfiles && C.routeCareerProfiles[state.routeKey];
+  }
+
+  function buildRoutineWorkText(state, profile) {
+    var people = [profile.supervisor, profile.colleague, profile.publicPerson].filter(Boolean);
+    var selector = stableIndex(state.seed + ':' + state.year + ':' + (state.routeKey || state.post1949Choice) + ':work', 3);
+    if (profile.scenes && profile.scenes.length) return profile.scenes[selector % profile.scenes.length];
+    if (selector === 0) {
+      return profile.supervisor + '把当天的' + profile.role + '职责逐项交代给你。你完成了' + profile.duties + '，又与' + profile.colleague + '核对工时和遗漏；' + profile.terms + '，没有把口头答应当成已经到账。';
+    }
+    if (selector === 1) {
+      return profile.publicPerson + '带来一项临时需要，与你原定的工作撞在一起。你先说明自己在' + profile.workplace + '负责什么，只接下能够按时完成的一部分；其余事情留下经手人和下一次答复时间。';
+    }
+    return '在' + profile.workplace + '，你与' + profile.colleague + '重新核对了' + profile.duties + '。一次差错在交付前被发现，返工占去半日；' + profile.supervisor + '确认了责任和结算，没有让问题消失在“照常做工”四个字里。';
+  }
+
+  function recordCareerWork(state, source, actionName) {
+    var lived = ensureLivedLife(state);
+    var profile = currentCareerProfile(state);
+    if (!profile || !lived.career.role) return null;
+    var text = buildRoutineWorkText(state, profile);
+    var record = {
+      year: state.year,
+      source: source || 'routine-work',
+      action: actionName || ('继续做' + profile.role),
+      role: profile.role,
+      workplace: profile.workplace,
+      employer: profile.employer,
+      people: [profile.supervisor, profile.colleague, profile.publicPerson].filter(Boolean),
+      text: text,
+      result: text.split('。').filter(Boolean).slice(-2).join('。') + '。',
+    };
+    lived.career.lastWork = record;
+    lived.career.nextStep = state.post1949 && state.post1949.employment && state.post1949.employment.nextStep
+      ? state.post1949.employment.nextStep
+      : '下一年继续核对职责、报酬以及这次工作留下的人情或返工。';
+    lived.career.history.push(record);
+    if (lived.career.business && lived.career.phase === 'route' && lived.career.business.active !== false) {
+      lived.career.business.ordersHandled += 1;
+      lived.career.business.lastCustomer = profile.publicPerson;
+      lived.career.business.lastProblem = text;
+    }
+    addLog(state, '【工作现场·' + profile.role + '】' + text, '', 'work');
+    return '工作结果：' + text;
+  }
+
+  function spouseProfileFor(state) {
+    var familyProfiles = C.spouseProfiles && C.spouseProfiles[state.familyKey];
+    return familyProfiles && familyProfiles[state.identity.gender];
+  }
+
+  function applyRelationshipEntry(state, entry) {
+    var lived = ensureLivedLife(state);
+    var relationship = lived.relationship;
+    if (entry === 'delayed' || entry === 'single-by-choice') {
+      relationship.status = entry;
+      relationship.lastInteraction = entry === 'delayed'
+        ? '你把婚事延后，眼前先处理自己的住处和生计。'
+        : '你明确不以婚姻组织生活，开始把支持关系放到朋友、亲族与个人储备上。';
+      relationship.lastInteractionYear = state.year;
+      relationship.history.push({ year: state.year, type: entry, text: relationship.lastInteraction });
+      return;
+    }
+    var profile = spouseProfileFor(state);
+    if (!profile) return;
+    relationship.status = entry === 'partner-separate-homes' ? 'partnered-separate-homes' : 'married';
+    relationship.startedYear = state.year;
+    relationship.livingArrangement = entry === 'partner-separate-homes' ? '各自保留住处与收入，固定共同生活时间' : '共同生活，但各自工作与原生家庭责任分开协商';
+    relationship.spouse = {
+      name: profile.name,
+      born: state.identity.born + Number(profile.bornOffset || 0),
+      occupation: profile.occupation,
+      values: profile.values,
+      health: 68,
+      relation: 56,
+      status: 'alive',
+      targetDeathAge: 72 + stableIndex(state.seed + ':spouse-life', 20),
+      lastActivity: profile.occupation,
+      lastWords: '“先把我们各自已经答应的事情写下来，再谈怎么一起过。”',
+      deathYear: null,
+    };
+    relationship.lastInteraction = '你与' + profile.name + '谈清共同家用、各自收入和双方父母的责任，开始' + (relationship.status === 'married' ? '共同生活' : '一段保留各自住处的伴侣关系') + '。';
+    relationship.lastInteractionYear = state.year;
+    relationship.history.push({ year: state.year, type: relationship.status, text: relationship.lastInteraction });
+    state.subjects.spouse.name = profile.name;
+    state.subjects.spouse.occupation = profile.occupation;
+    state.subjects.spouse.status = 'married-with-terms';
+    state.subjects.spouse.health = relationship.spouse.health;
+    addDetailedContact(state, {
+      id: 'spouse_partner', label: profile.name, role: '配偶；' + profile.occupation,
+      status: 'nearby', relation: 56, born: relationship.spouse.born, currentActivity: profile.occupation,
+      lastWords: relationship.spouse.lastWords,
+    });
+  }
+
+  function applyRelationshipResolution(state, resolution) {
+    var relationship = ensureLivedLife(state).relationship;
+    if (!relationship.spouse) return;
+    var texts = {
+      'reconcile-budget': '争吵后，你与' + relationship.spouse.name + '把共同家用、双方父母用钱和各自可支配收入重新分账。问题没有靠一句道歉消失，但以后谁能动哪笔钱已经写清。',
+      'reconcile-labor': '争吵后，你与' + relationship.spouse.name + '把做饭、跑腿、照料和加班逐项排开。两人各自接下一部分，也承认有些日子仍会顾不过来。',
+      separate: '你与' + relationship.spouse.name + '暂时分开居住，约定三个月后再谈共同家用和是否继续生活；关系没有被假装成已经结束，也没有被假装成已经和好。',
+    };
+    relationship.conflictCount += 1;
+    relationship.status = resolution === 'separate' ? 'separated' : 'married';
+    relationship.lastInteraction = texts[resolution];
+    relationship.lastInteractionYear = state.year;
+    relationship.spouse.relation = clamp(relationship.spouse.relation + (resolution === 'separate' ? -8 : 5), 0, 100);
+    relationship.history.push({ year: state.year, type: resolution, text: texts[resolution] });
+    var contact = state.contacts.spouse_partner;
+    if (contact) {
+      contact.status = resolution === 'separate' ? 'separated' : 'nearby';
+      contact.relation = relationship.spouse.relation;
+      contact.lastWords = resolution === 'separate' ? '“先分开住，不等于以后都不用再说清。”' : '“这次写下来了，往后谁累了也要重新谈。”';
+    }
+    addLog(state, '【婚姻关系】' + texts[resolution], resolution === 'separate' ? 'bad' : 'turn', 'relationship');
+  }
+
+  function resolvePost1949Relationship(state, option) {
+    var relationship = ensureLivedLife(state).relationship;
+    if (!relationship.spouse || relationship.spouse.status === 'dead') return;
+    var reunionChoices = [
+      'mainland-local-work', 'hongkong-share-rent', 'taiwan-household-first',
+      'overseas-sponsored-room', 'motion-stay-season', 'unsettled-search-family',
+    ];
+    var canReunite = relationship.status !== 'separated' && has(reunionChoices, option.id);
+    var place = state.post1949.place || (C.post1949Paths[state.post1949Choice] && C.post1949Paths[state.post1949Choice].place) || '新的落脚地';
+    var text;
+    if (canReunite) {
+      relationship.status = 'married';
+      relationship.livingArrangement = '在' + place + '重新共同生活，各自的工作、汇款与照料责任继续分开协商';
+      relationship.spouse.place = place;
+      text = relationship.spouse.name + '在住处和生计能够落地后与你会合。你们在' + place + '重新共同生活，但' + relationship.spouse.name + '仍保留自己的' + relationship.spouse.occupation + '与家人责任。';
+    } else {
+      relationship.status = 'living-apart';
+      relationship.livingArrangement = '分别在两处生活，通过书信、转寄人与有限会面维持关系';
+      relationship.spouse.place = '原有落脚处';
+      text = '这次迁移没有自动带走' + relationship.spouse.name + '。' + relationship.spouse.name + '留在原有落脚处继续' + relationship.spouse.occupation + '，你们约定通过书信和可靠转寄人保持联系；是否以后会合仍是未决事项。';
+    }
+    relationship.lastInteraction = text;
+    relationship.lastInteractionYear = state.year;
+    relationship.history.push({ year: state.year, type: canReunite ? 'postwar-reunion' : 'postwar-living-apart', text: text });
+    if (state.contacts.spouse_partner) {
+      state.contacts.spouse_partner.status = canReunite ? 'nearby' : 'distant';
+      state.contacts.spouse_partner.currentActivity = relationship.spouse.occupation + '；' + (canReunite ? '在同一住处继续自己的工作' : '在原有落脚处独立生活');
+      state.contacts.spouse_partner.lastWords = canReunite ? '“既然住到一起，就把两个人的工作都排进日常。”' : '“先把每封信能转到哪里写清，我们都不能只靠等。”';
+      state.contacts.spouse_partner.lastUpdateYear = state.year;
+    }
+    if (state.post1949) {
+      state.post1949.companions = (state.post1949.companions ? state.post1949.companions + '；' : '') + text;
+    }
+    addFact(state, { id: 'post1949-spouse-arrangement', kind: 'subject', text: state.year + ' 年，' + text, source: 'family-lifecycle', ending: true });
+    addLog(state, '【迁移后的婚姻】' + text, 'turn', 'relationship');
+  }
+
+  function applyFamilyFuture(state, optionId) {
+    var lived = ensureLivedLife(state);
+    if (optionId === 'raise-child-together' && !lived.children.length) {
+      var names = (C.childNames && C.childNames[state.familyKey]) || ['孩子'];
+      lived.children.push({
+        name: names[stableIndex(state.seed + ':child-name', names.length)],
+        born: state.year + 1,
+        status: '等待出生',
+        occupation: null,
+        relation: 50,
+        lastUpdate: '配偶和你正在商量生产、住处、工作与谁能提供照料。',
+        history: [{ year: state.year, text: '决定共同承担一个孩子的抚养，但没有预设孩子以后必须怎样生活。' }],
+      });
+    }
+  }
+
+  function familyMemberForAction(state) {
+    var lived = ensureLivedLife(state);
+    var candidates = Object.keys(lived.parents).map(function (key) { return lived.parents[key]; }).filter(function (parent) { return !/^dead/.test(parent.status); });
+    if (lived.relationship.spouse && lived.relationship.spouse.status !== 'dead') candidates.push(lived.relationship.spouse);
+    lived.children.forEach(function (child) { if (child.status !== '等待出生') candidates.push(child); });
+    return candidates.length ? candidates[stableIndex(state.seed + ':' + state.year + ':family-action', candidates.length)] : null;
+  }
+
+  function resolveFamilyAction(state) {
+    var member = familyMemberForAction(state);
+    if (!member) return '家人近况：当年没有仍能当面交谈的家人，你把时间用来核对最后地址与旧信。';
+    var parent = Object.keys(ensureLivedLife(state).parents).map(function (key) { return state.lived.parents[key]; }).find(function (item) { return item === member; });
+    var text;
+    if (parent) {
+      text = '你坐下来听' + parent.name + '说完这一年的事。' + parent.name + '仍在' + parent.occupation + '，最近' + parent.lastActivity + '。' + parent.lastWords + '你没有立刻替对方作决定，只把能够承担的一件事和下次再谈的时间说清。';
+      parent.history.push({ year: state.year, type: 'conversation', text: text });
+    } else if (ensureLivedLife(state).relationship.spouse === member) {
+      text = resolveSpouseAction(state).replace(/^关系结果：/, '');
+    } else {
+      text = '你听' + member.name + '讲完最近的学习、做工和住处安排。' + member.lastUpdate + '你能提供一部分帮助，却没有替对方决定下一步。';
+      member.history.push({ year: state.year, text: text });
+    }
+    addLog(state, '【家人谈话】' + text, 'turn', 'family');
+    return '家人近况：' + text;
+  }
+
+  function resolveSpouseAction(state) {
+    var relationship = ensureLivedLife(state).relationship;
+    if (!relationship.spouse || relationship.spouse.status === 'dead') return '关系结果：当前没有可以进行这次谈话的配偶。';
+    var issues = [
+      '给双方父母的钱应从共同家用还是个人收入里出',
+      '谁在工作最忙的几天负责做饭、取药和跑腿',
+      '是否为了一份工作搬家，以及另一人的工作怎么办',
+      '孩子或晚辈的学费能承担到什么程度',
+    ];
+    var issue = issues[stableIndex(state.seed + ':' + state.year + ':spouse-issue', issues.length)];
+    var opening = has(['separated', 'separated-by-war', 'living-apart'], relationship.status)
+      ? '借一封终于送到的信或一次短暂见面，你与'
+      : '晚饭后，你与';
+    var text = opening + relationship.spouse.name + '谈到' + issue + '。' + relationship.spouse.name + '先说：“' + relationship.spouse.values + '。”你们各自说出不能放下的一项责任，最后只定下未来三个月的办法；仍有分歧的部分被明确留下。';
+    relationship.lastInteraction = text;
+    relationship.lastInteractionYear = state.year;
+    relationship.history.push({ year: state.year, type: 'conversation', text: text });
+    relationship.spouse.relation = clamp(relationship.spouse.relation + 2, 0, 100);
+    if (state.contacts.spouse_partner) {
+      state.contacts.spouse_partner.relation = relationship.spouse.relation;
+      state.contacts.spouse_partner.lastWords = '“先按三个月做，到时再看谁真的承担了什么。”';
+      state.contacts.spouse_partner.lastUpdateYear = state.year;
+    }
+    addLog(state, '【伴侣谈话】' + text, 'turn', 'relationship');
+    return '关系结果：' + text;
+  }
+
+  function livingFriends(state) {
+    return Object.keys(state.contacts || {}).map(function (key) {
+      var value = state.contacts[key];
+      return { key: key, value: value };
+    }).filter(function (entry) {
+      return entry.key !== 'spouse_partner' && entry.value.status !== 'deceased';
+    }).sort(function (left, right) { return Number(right.value.relation || 0) - Number(left.value.relation || 0); });
+  }
+
+  function resolveFriendAction(state) {
+    var friends = livingFriends(state);
+    if (!friends.length) return '朋友近况：这一年没有找到能够见面或通信的朋友。';
+    var picked = friends[stableIndex(state.seed + ':' + state.year + ':friend-action', Math.min(friends.length, 5))];
+    var friend = picked.value;
+    var text = '你去见了' + friend.label + '。' + friend.label + '没有只来问你的事，而是先讲自己最近仍在' + (friend.currentActivity || friend.role) + '；临走前说：“我能帮你问一次消息，但我也得先顾住自己的工作和家里。”你们约定了下一次联系办法。';
+    friend.relation = clamp(Number(friend.relation || 0) + 3, 0, 100);
+    friend.lastWords = '“我能帮你问一次消息，但我也得先顾住自己的工作和家里。”';
+    friend.lastUpdateYear = state.year;
+    if (!Array.isArray(friend.history)) friend.history = [];
+    friend.history.push({ year: state.year, text: text });
+    ensureLivedLife(state).social.lastUpdate = text;
+    ensureLivedLife(state).social.history.push({ year: state.year, contactKey: picked.key, text: text });
+    addLog(state, '【朋友见面】' + text, 'turn', 'social');
+    return '朋友近况：' + text;
+  }
+
+  function resolveHealthAction(state) {
+    var health = ensureLivedLife(state).health;
+    var condition = health.current && health.current.status !== 'treated' && health.current.condition;
+    var text;
+    if (condition) {
+      health.current.status = 'treated';
+      health.current.result = '说明了症状和持续时间，接受了能负担的处置，并减少最容易诱发不适的工作。';
+      text = '你为“' + condition + '”找到能够接触到的医生或药铺，逐项说明何时发作、是否影响睡眠和还能否做工。对方没有保证立刻治好，只给出用药、休息和必须复诊的条件；你付了费用，也把最伤身体的一段工作停下来。';
+    } else {
+      text = '你没有把“最近总是不舒服”当成一句带过的话，而是说明睡眠、食欲、疼痛和工时。没有发现必须立即停工的急症，但得到一份何时需要再去求医的明确提醒。';
+    }
+    health.treatedCount += 1;
+    health.history.push({ year: state.year, type: condition ? 'treatment' : 'check-up', condition: condition || null, severity: 'treated', text: text });
+    addLog(state, '【求医与休养】' + text, 'good', 'health');
+    return '身体结果：' + text;
+  }
+
+  function decorateLifeAction(state, action) {
+    var result = employmentActionForState(state, clone(action));
+    var lived = ensureLivedLife(state);
+    if (action.careerAction && lived.career.role) {
+      result.name = action.name + ' · ' + lived.career.role;
+      result.note = '地点：' + lived.career.workplace + '；往来对象：' + [lived.career.supervisor, lived.career.colleague, lived.career.publicPerson].filter(Boolean).join('、') + '。本年会留下具体工作结果。';
+    } else if (action.lifeAction === 'health') {
+      result.name = lived.health.current ? '为「' + lived.health.current.condition + '」求医并安排休养' : '把最近的身体不适看明白';
+    } else if (action.lifeAction === 'family') {
+      var member = familyMemberForAction(state);
+      result.name = member ? '坐下来听' + member.name + '把近况说完' : action.name;
+    } else if (action.lifeAction === 'spouse' && lived.relationship.spouse) {
+      result.name = '与' + lived.relationship.spouse.name + '谈清最近的一次分歧';
+    } else if (action.lifeAction === 'friend') {
+      var friends = livingFriends(state);
+      if (friends.length) result.name = '去见' + friends[0].value.label + '并听近况';
+    }
+    return result;
+  }
+
+  function resolveLifeAction(state, action, presentedAction) {
+    if (action.careerAction) return recordCareerWork(state, action.id, presentedAction.name);
+    if (action.lifeAction === 'health') return resolveHealthAction(state);
+    if (action.lifeAction === 'family') return resolveFamilyAction(state);
+    if (action.lifeAction === 'spouse') return resolveSpouseAction(state);
+    if (action.lifeAction === 'friend') return resolveFriendAction(state);
+    return null;
+  }
+
+  function parentIsSeparated(state) {
+    return state.routeKey === 'subei-soldier' || state.routeKey === 'subei-refugee' || state.routeKey === 'shen-refugee'
+      || (state.post1949Choice && state.post1949Choice !== 'mainland');
+  }
+
+  function markParentDeath(state, key, parent) {
+    if (parent.deathYear) return;
+    var subject = state.subjects[key];
+    var delayed = parentIsSeparated(state) || (subject && subject.status === 'dead-unconfirmed');
+    parent.deathYear = state.year;
+    parent.confirmationYear = state.year + (delayed ? 1 + stableIndex(state.seed + ':' + key + ':confirm', 2) : 0);
+    if (state.familyKey === 'subeipoor' && key === 'mother' && state.year <= 1932) parent.confirmationYear = 1933;
+    parent.status = delayed ? 'dead-unconfirmed' : 'dead-confirmed';
+    parent.health = 0;
+    if (subject) {
+      subject.health = 0;
+      subject.status = parent.status;
+    }
+    var text = parent.name + '在 ' + state.year + ' 年去世。去世前仍在' + parent.occupation + '，最后一次留下的话是' + parent.lastWords + (delayed ? '；消息当时尚未完成交叉确认。' : '；死亡由身边家人与邻人当年确认。');
+    parent.history.push({ year: state.year, type: 'death', text: text });
+    addFact(state, { id: 'parent-death:' + key, kind: 'subject', text: text, source: 'family-lifecycle', ending: true });
+    addLog(state, '【家人死亡】' + text, 'bad', 'family');
+  }
+
+  function processParentLifecycle(state) {
+    var profiles = (C.parentProfiles && C.parentProfiles[state.familyKey]) || {};
+    var parents = ensureLivedLife(state).parents;
+    Object.keys(parents).forEach(function (key) {
+      var parent = parents[key];
+      var profile = profiles[key];
+      var subject = state.subjects[key];
+      if (subjectIsDead(subject) && !parent.deathYear) markParentDeath(state, key, parent);
+      if (!parent.deathYear && state.year >= parent.targetDeathYear) markParentDeath(state, key, parent);
+      if (parent.deathYear) {
+        if (state.year >= parent.confirmationYear && parent.status === 'dead-unconfirmed') {
+          parent.status = 'dead-confirmed';
+          if (subject) subject.status = 'dead-confirmed';
+          addFact(state, { id: 'parent-death-confirmed:' + key, kind: 'subject', text: parent.name + '的死亡在 ' + state.year + ' 年经亲友、住处或转寄消息完成确认。', source: 'family-lifecycle', ending: true });
+        } else if (subject && subject.status === 'dead-confirmed') {
+          parent.status = 'dead-confirmed';
+        }
+        return;
+      }
+      var activityIndex = stableIndex(state.seed + ':' + state.year + ':' + key + ':activity', profile.activities.length);
+      var wordIndex = stableIndex(state.seed + ':' + state.year + ':' + key + ':words', profile.words.length);
+      parent.lastActivity = profile.activities[activityIndex];
+      parent.lastWords = profile.words[wordIndex];
+      parent.lastUpdateYear = state.year;
+      parent.status = subject ? subject.status : parent.status;
+      parent.health = subject && subject.health != null ? subject.health : parent.health;
+      if ((state.year - state.identity.born) % 4 === (key === 'mother' ? 1 : 3)) {
+        parent.history.push({ year: state.year, type: 'life', text: parent.name + '这一年' + parent.lastActivity + '，并对你说：' + parent.lastWords });
+      }
+    });
+  }
+
+  function processRelationshipLifecycle(state) {
+    var relationship = ensureLivedLife(state).relationship;
+    var spouse = relationship.spouse;
+    if (!spouse || spouse.status === 'dead') return;
+    var subjectStatus = state.subjects.spouse && state.subjects.spouse.status;
+    var migrationResolved = state.facts.some(function (fact) { return fact.id === 'post1949-spouse-arrangement'; });
+    if (has(['running-household', 'working-independently', 'returned-to-own-kin'], subjectStatus) && relationship.status !== 'separated-by-war' && !migrationResolved) {
+      relationship.status = 'separated-by-war';
+      relationship.livingArrangement = '因战争与迁徙分别安身，通过能够抵达的口信保留联系';
+      relationship.lastInteraction = spouse.name + '没有留在原地等待，而是继续' + spouse.occupation + '并按自己的家口条件安身；你们只能通过断续口信协商关系。';
+      relationship.lastInteractionYear = state.year;
+      relationship.history.push({ year: state.year, type: 'war-separation', text: relationship.lastInteraction });
+      if (state.contacts.spouse_partner) state.contacts.spouse_partner.status = 'distant';
+    }
+    var spouseAge = state.year - spouse.born;
+    if (spouseAge >= spouse.targetDeathAge) {
+      spouse.status = 'dead';
+      spouse.deathYear = state.year;
+      relationship.status = 'widowed';
+      relationship.lastInteraction = spouse.name + '在 ' + state.year + ' 年去世。去世前仍在' + spouse.occupation + '，你们最后谈的是各自已经答应却还没做完的事情。';
+      relationship.lastInteractionYear = state.year;
+      relationship.history.push({ year: state.year, type: 'spouse-death', text: relationship.lastInteraction });
+      state.subjects.spouse.status = parentIsSeparated(state) ? 'dead-unconfirmed' : 'dead-confirmed';
+      if (state.contacts.spouse_partner) state.contacts.spouse_partner.status = 'deceased';
+      addFact(state, { id: 'spouse-death', kind: 'subject', text: relationship.lastInteraction, source: 'family-lifecycle', ending: true });
+      addLog(state, '【配偶死亡】' + relationship.lastInteraction, 'bad', 'relationship');
+      return;
+    }
+    spouse.lastActivity = spouse.occupation + '；这一年也在处理自己家人的住处和身体问题';
+    if ((state.year - relationship.startedYear) > 0 && (state.year - relationship.startedYear) % 4 === 0) {
+      var text = resolveSpouseAction(state).replace(/^关系结果：/, '');
+      relationship.lastInteraction = text;
+    }
+  }
+
+  function processChildrenLifecycle(state) {
+    var children = ensureLivedLife(state).children;
+    children.forEach(function (child) {
+      var age = state.year - child.born;
+      var text = null;
+      if (age < 0) return;
+      if (age === 0 && child.status === '等待出生') {
+        child.status = '幼年在家';
+        text = child.name + '出生。生产、照料和你的工作时间由配偶、亲友与能够支付的帮助共同接住，没有默认由一个人承担。';
+      } else if (age === 6) {
+        child.status = '开始识字与跑腿';
+        text = child.name + '到了开始识字的年纪。你说明家里能承担的学费和时间，孩子也说出自己更想学什么。';
+      } else if (age === 15) {
+        child.status = '学习或学徒中';
+        text = child.name + '开始在继续读书和学一门活计之间作自己的选择；你能提供条件，不能替孩子决定。';
+      } else if (age === 20) {
+        child.status = '成年并有自己的营生';
+        child.occupation = state.familyKey === 'subeipoor' ? '在当地做手艺和短工' : (state.familyKey === 'jiangnanshen' ? '教书或在书局做事' : '在商号或工作室领薪');
+        text = child.name + '成年后开始' + child.occupation + '，收入、住处和是否迁居都单独记账，没有成为你的养老数值。';
+      } else if (age > 20 && age % 7 === 0) {
+        text = child.name + '带着自己的工作和家口近况来信，接受了你能提供的一部分帮助，也拒绝了不适合自己的安排。';
+      }
+      if (text) {
+        child.lastUpdate = text;
+        child.history.push({ year: state.year, text: text });
+        addFact(state, { id: 'child:' + child.name + ':' + state.year, kind: 'subject', text: text, source: 'family-lifecycle' });
+        addLog(state, '【孩子近况】' + text, 'turn', 'family');
+      }
+    });
+  }
+
+  function processContactLifecycle(state) {
+    var lived = ensureLivedLife(state);
+    Object.keys(state.contacts || {}).forEach(function (key) {
+      if (key === 'spouse_partner') return;
+      var contact = state.contacts[key];
+      if (!Array.isArray(contact.history)) contact.history = [];
+      var born = Number(contact.born || state.identity.born - 5);
+      var targetAge = Number(contact.targetDeathAge || 68 + stableIndex(state.seed + ':' + key + ':contact-death', 20));
+      if (contact.status !== 'deceased' && state.year - born >= targetAge) {
+        contact.status = 'deceased';
+        contact.lastWords = contact.lastWords || '最后一次谈话没有预告这会成为最后一次。';
+        var deathText = contact.label + '在 ' + state.year + ' 年去世；此前最后已知身份是' + contact.role + '。你们最后留下的话是：' + contact.lastWords;
+        contact.history.push({ year: state.year, type: 'death', text: deathText });
+        addFact(state, { id: 'contact-death:' + key, kind: 'subject', text: deathText, source: 'social-lifecycle' });
+        return;
+      }
+      if (contact.status !== 'deceased' && state.age >= 12 && stableIndex(state.seed + ':' + state.year + ':' + key + ':contact-update', 7) === 0) {
+        contact.currentActivity = contact.role + '；同时要处理自己的工作、家人和住处';
+        contact.lastWords = '“我记得我们以前一起做过的事，但我现在也有自己的难处。”';
+        contact.lastUpdateYear = state.year;
+        var text = contact.label + '告诉你，自己最近仍在' + contact.currentActivity + '。关系没有消失，也不能假定对方永远在原地等你。';
+        contact.history.push({ year: state.year, type: 'update', text: text });
+        lived.social.lastUpdate = text;
+        lived.social.history.push({ year: state.year, contactKey: key, text: text });
+      }
+    });
+  }
+
+  function processHealthLifecycle(state) {
+    var health = ensureLivedLife(state).health;
+    if (health.current && has(['treated', 'managed'], health.current.status) && state.year - health.current.year >= 2) {
+      health.current = null;
+    }
+    if (health.current && health.current.status === 'active' && state.year - health.current.year >= 2) {
+      health.current.status = 'managed';
+      health.current.result = '症状没有完全消失，但通过休息、调整工作或有限治疗，已经不再持续影响每天。';
+    }
+    var triggerAges = [7, 27, 46, 58, 68, 78, 86];
+    var lastYear = health.lastEpisode && health.lastEpisode.year;
+    var shouldTrigger = has(triggerAges, state.age) || (state.res.health < 40 && (!lastYear || state.year - lastYear >= 6));
+    if (!shouldTrigger) return;
+    var profiles = (C.healthProfiles && C.healthProfiles[state.routeKey]) || ['风寒发热', '劳累后的疼痛', '反复的肠胃不适'];
+    var career = ensureLivedLife(state).career;
+    var employment = state.post1949 && state.post1949.employment;
+    if (career.retiredYear) {
+      profiles = ['旧劳损引起的腰腿疼痛', '夜间反复失眠', '消化不适'];
+    } else if (career.phase === 'post1949' && employment && employment.track) {
+      var postwarHealth = {
+        manual: ['搬运后的腰背疼痛', '长期站立造成的腿痛', '饮食不定时引起的胃痛'],
+        skilled: ['机器噪声后的耳鸣', '反复检修造成的肩背疼痛', '工场粉尘引起的咳嗽'],
+        literate: ['伏案后的眼痛', '赶写记录造成的头痛', '久坐与欠眠造成的胸闷'],
+        care: ['夜班后的过劳', '长期站立造成的腰痛', '接触病患后的发热'],
+      };
+      profiles = postwarHealth[employment.track] || profiles;
+    }
+    var condition = profiles[stableIndex(state.seed + ':' + state.year + ':condition', profiles.length)];
+    var severity = state.age >= 63 || state.res.health < 40 ? '反复发作' : (state.age >= 40 ? '需要停工数日' : '短期发作');
+    var text = state.year + ' 年，你出现了' + condition + '。症状持续到影响睡眠、吃饭或做工，你才把发作时间、此前工时和能否负担药费说清；这次被记为“' + severity + '”，而不是笼统扣掉健康数值。';
+    var episode = { year: state.year, type: 'episode', condition: condition, severity: severity, status: 'active', text: text, result: '尚需观察与处理。' };
+    health.current = episode;
+    health.lastEpisode = episode;
+    health.history.push(episode);
+    applyDelta(state, { health: state.age >= 63 ? -3 : -2, mind: -1 });
+    addFact(state, { id: 'health-episode:' + state.year, kind: 'health', text: text, source: 'health-lifecycle', ending: state.age >= 46 });
+    addLog(state, '【身体发作】' + text, 'bad', 'health');
+  }
+
+  function processRetirementLifecycle(state) {
+    var career = ensureLivedLife(state).career;
+    if (!career.active || state.age < 68) return;
+    career.active = false;
+    career.retiredYear = state.year;
+    career.nextStep = '不再把往后每一年写成照常上工；日常改由既有储备、家庭协商、邻里互助与能够承担的零散帮忙接住。';
+    var employment = state.post1949 && state.post1949.employment;
+    if (employment && employment.role) {
+      employment.status = 'retired';
+      employment.lastResultYear = state.year;
+      employment.lastResult = state.year + ' 年，你与' + career.workplace + '核对最后一段工钱和交接，停止固定担任' + career.role + '。';
+      employment.nextStep = career.nextStep;
+      employment.history.push({
+        year: state.year, source: 'retirement-lifecycle', status: 'retired', role: employment.role,
+        workplace: employment.workplace, result: employment.lastResult, nextStep: employment.nextStep,
+      });
+      state.post1949.livelihood = '已经停止固定工作：' + employment.role + '（' + employment.workplace + '）。' + employment.lastResult;
+    }
+    var text = state.year + ' 年，你在' + career.workplace + '交清最后一段职责、工钱和需要转给后来人的记录，停止固定担任' + career.role + '；此后仍可偶尔帮忙，但不再被写成每天照常上工。';
+    addFact(state, { id: 'career-retired', kind: 'livelihood', text: text, source: 'career-lifecycle', ending: true });
+    addLog(state, '【停止固定工作】' + text, 'turn', 'livelihood');
+  }
+
+  function processFamilyYearSummary(state) {
+    var lived = ensureLivedLife(state);
+    var parentDeath = Object.keys(lived.parents).map(function (key) { return lived.parents[key]; }).find(function (parent) { return parent.deathYear === state.year; });
+    if (parentDeath) return parentDeath.name + '在这一年去世。最后一次留下的话是' + parentDeath.lastWords + (parentDeath.confirmationYear > state.year ? '消息还需要继续核对。' : '死亡在当年得到确认。');
+    var livingParents = Object.keys(lived.parents).map(function (key) { return lived.parents[key]; }).filter(function (parent) { return !parent.deathYear; });
+    if (livingParents.length) {
+      var parent = livingParents[stableIndex(state.seed + ':' + state.year + ':parent-summary', livingParents.length)];
+      return parent.name + '这一年' + parent.lastActivity + '。' + parent.lastWords;
+    }
+    if (lived.relationship.spouse && lived.relationship.spouse.status !== 'dead') return lived.relationship.lastInteraction;
+    if (lived.children.length) return lived.children[0].lastUpdate;
+    return '这一年没有新的家人消息；旧地址和已经确认的死亡仍分别保留。';
+  }
+
+  function composeInnerThought(state, record) {
+    var thoughts = [];
+    if (record.decision) thoughts.push('我已经作了选择，但选择只解决了眼前一步；真正的后果要看明年钱、身体和身边的人怎样接住。');
+    if (record.health) thoughts.push('我最担心的不是“健康少了几点”，而是这次不舒服会不会让我做不了眼前的工作，又由谁来接住药钱和日常。');
+    if (record.relationship && /争|分开|谈不拢/.test(record.relationship)) thoughts.push('我知道一起生活不等于对方必须认同我；有些话今天说开了，有些账还要看以后谁真正承担。');
+    if (/去世|死亡/.test(record.family || '')) thoughts.push('我反复想起最后一次说过的话，也知道自己记得的和后来确认的消息并不完全一样。');
+    if (record.work) thoughts.push('我这一年确实在' + record.work.workplace + '做' + record.work.role + '。我在意的不只是有没有收入，也在意' + record.work.people.slice(0, 2).join('和') + '会怎样记住这次处理。');
+    if (!thoughts.length && record.social) thoughts.push('我不是只认识名单上的两个人。朋友们各自忙着工作和家口，愿意回一次信、见一面，本身就是关系仍在发生。');
+    if (!thoughts.length) thoughts.push('这一年没有戏剧性结论，但我清楚钱花在了哪里、和谁说过什么，也知道有一件事必须留到明年继续。');
+    return thoughts.slice(0, 2).join('');
+  }
+
+  function processLivedLife(state) {
+    var lived = ensureLivedLife(state);
+    processParentLifecycle(state);
+    processRelationshipLifecycle(state);
+    processChildrenLifecycle(state);
+    processContactLifecycle(state);
+    processHealthLifecycle(state);
+    if (state.routeKey && !lived.career.role) enterRouteCareer(state, state.routeKey);
+    if (state.post1949Choice && state.post1949 && state.post1949.employment && state.post1949.employment.role) syncCareerFromEmployment(state);
+    processRetirementLifecycle(state);
+    if (lived.career.active && lived.career.role && (!lived.career.lastWork || lived.career.lastWork.year !== state.year)) {
+      recordCareerWork(state, 'routine-work', '完成本年日常职责');
+    }
+    var friends = livingFriends(state);
+    var socialText = lived.social.lastUpdate;
+    if ((!socialText || !lived.social.history.length || lived.social.history[lived.social.history.length - 1].year !== state.year) && friends.length) {
+      var friend = friends[stableIndex(state.seed + ':' + state.year + ':social-summary', Math.min(friends.length, 6))].value;
+      socialText = friend.label + '最近仍是' + friend.role + '，最后已知状态为“' + ((C.contactStatusLabels && C.contactStatusLabels[friend.status]) || friend.status) + '”；你们的关系为 ' + Math.round(friend.relation || 0) + '。';
+    }
+    var record = {
+      year: state.year,
+      location: state.post1949 && state.post1949.place ? state.post1949.place : state.identity.place,
+      work: lived.career.lastWork && lived.career.lastWork.year === state.year ? clone(lived.career.lastWork) : null,
+      family: processFamilyYearSummary(state),
+      relationship: lived.relationship.lastInteractionYear === state.year ? lived.relationship.lastInteraction : null,
+      health: lived.health.lastEpisode && lived.health.lastEpisode.year === state.year ? lived.health.lastEpisode.text : null,
+      social: socialText,
+      thought: null,
+      decision: null,
+    };
+    record.thought = composeInnerThought(state, record);
+    lived.inner.current = record.thought;
+    lived.inner.history.push({ year: state.year, text: record.thought });
+    lived.lastYear = record;
+    lived.yearHistory.push(record);
+    if (state.lastOrdinaryEvent) state.lastOrdinaryEvent.lived = clone(record);
+    addLog(state, '【这一年心里在想】' + record.thought, 'thought', 'inner');
+  }
+
+  function attachDecisionToLivedYear(state, decision, option) {
+    var lived = ensureLivedLife(state);
+    if (!lived.lastYear || lived.lastYear.year !== state.year) return;
+    lived.lastYear.decision = '面对“' + decision.title + '”，你选择：' + option.label + '。' + (option.fact || '');
+    lived.lastYear.thought = composeInnerThought(state, lived.lastYear);
+    lived.inner.current = lived.lastYear.thought;
+    if (lived.inner.history.length && lived.inner.history[lived.inner.history.length - 1].year === state.year) {
+      lived.inner.history[lived.inner.history.length - 1].text = lived.lastYear.thought;
+    }
+  }
+
+  function buildLifePortrait(state) {
+    var lived = ensureLivedLife(state);
+    var parentText = Object.keys(lived.parents).map(function (key) {
+      var parent = lived.parents[key];
+      return parent.name + '（' + parent.occupation + '）' + (parent.deathYear ? '于 ' + parent.deathYear + ' 年去世，' + (parent.status === 'dead-confirmed' ? '死亡已确认' : '确认仍不完整') : '最后记录仍在世') + '；最后留下的话是' + parent.lastWords;
+    }).join(' ');
+    var relationshipText = lived.relationship.spouse
+      ? '与' + lived.relationship.spouse.name + '（' + lived.relationship.spouse.occupation + '）从 ' + lived.relationship.startedYear + ' 年开始共同安排生活。关系经历过 ' + lived.relationship.conflictCount + ' 次被明确记录的争执；最后状态为“' + ((C.relationshipStatusLabels && C.relationshipStatusLabels[lived.relationship.status]) || lived.relationship.status) + '”。' + lived.relationship.lastInteraction
+      : (lived.relationship.status === 'single-by-choice' ? '明确选择独身，并把长期支持放在朋友、亲族和个人储备上。' : '没有形成被记录的婚姻或伴侣关系。');
+    var childText = lived.children.length
+      ? lived.children.map(function (child) { return child.name + '：' + child.status + (child.occupation ? '，后来' + child.occupation : '') + '。'; }).join('')
+      : '没有子女；这不被写成人生缺失。';
+    var friends = Object.keys(state.contacts || {}).map(function (key) { return state.contacts[key]; }).filter(function (contact) { return contact.label && contact.label !== (lived.relationship.spouse && lived.relationship.spouse.name); }).sort(function (a, b) { return Number(b.relation || 0) - Number(a.relation || 0); });
+    var friendText = friends.slice(0, 6).map(function (contact) {
+      return contact.label + '（' + contact.role + '，' + ((C.contactStatusLabels && C.contactStatusLabels[contact.status]) || contact.status) + '）';
+    }).join('、') + (friends.length > 6 ? '等 ' + friends.length + ' 位有名有姓的人' : '');
+    var careerText = lived.career.history.length
+      ? '最后一份明确职业是在' + lived.career.workplace + '担任' + lived.career.role + '，往来对象包括' + [lived.career.supervisor, lived.career.colleague, lived.career.publicPerson].filter(Boolean).join('、') + '。一生留下 ' + lived.career.history.length + ' 条具体工作记录。'
+      : '没有留下可以确认的具体职业记录。';
+    if (lived.career.retiredYear) careerText += lived.career.retiredYear + ' 年完成最后一段工钱与交接，此后停止固定工作。';
+    if (lived.career.business) careerText += '从 ' + lived.career.business.openedYear + ' 年到 ' + (lived.career.business.lastActiveYear || '仍在经营') + ' 经营过“' + lived.career.business.name + '”，记录了 ' + lived.career.business.ordersHandled + ' 次订单、客户或经营问题；最近一次客户为' + lived.career.business.lastCustomer + '。';
+    var illnessEntries = lived.health.history.filter(function (item) { return item.type === 'episode' || (item.condition && item.type !== 'treatment'); });
+    var healthText = illnessEntries.length
+      ? '明确记录过 ' + illnessEntries.length + ' 次身体发作，包括' + illnessEntries.slice(-6).map(function (item) { return item.condition + '（' + item.year + '）'; }).join('、') + '；另有 ' + lived.health.treatedCount + ' 次主动求医或检查。'
+      : '没有留下具体疾病记录。';
+    var thoughtText = lived.inner.history.length ? lived.inner.history[lived.inner.history.length - 1].text : lived.inner.current;
+    return {
+      career: careerText,
+      parents: parentText,
+      relationship: relationshipText,
+      children: childText,
+      friends: friendText || '没有留下能够确认姓名的朋友记录。',
+      health: healthText,
+      inner: thoughtText,
+    };
   }
 
   function ensureEmployment(state) {
@@ -318,6 +1129,7 @@
       source: sourceId,
     });
     addLog(state, '【谋生结果】' + result + ' 下一步：' + current.nextStep, current.status === 'employed' ? 'good' : 'turn', 'livelihood');
+    syncCareerFromEmployment(state);
     return result;
   }
 
@@ -567,6 +1379,7 @@
       endingFacts: [],
       endingNarrative: '',
     };
+    ensureLivedLife(state);
     addFact(state, {
       id: 'birth',
       year: family.born,
@@ -585,11 +1398,17 @@
       return { ok: false, hidden: true, reason: '需要先走入「' + actionRoutes.join('／') + '」人生路径；当前是「' + (C.routes[state.routeKey] ? C.routes[state.routeKey].name : '尚未定路') + '」。' };
     }
     if (action.post1949Choices && !has(action.post1949Choices, state.post1949Choice)) return { ok: false, hidden: true, reason: '只适用于另一种 1949 年后去向' };
+    if (state.year >= 1950 && action.careerAction && !action.post1949Choices) return { ok: false, hidden: true, reason: '原有路线工作已经结束，请使用当前落脚地的具体谋生行动。' };
+    if (action.livelihoodAction && ensureEmployment(state).status === 'retired') return { ok: false, hidden: true, reason: '已经停止固定工作，晚年日常改由储备、关系与照料安排接住。' };
     if (action.minYear != null && state.year < action.minYear) return { ok: false, hidden: true, reason: '需到 ' + action.minYear + ' 年后才出现；当前为 ' + state.year + ' 年。' };
     if (action.maxYear != null && state.year > action.maxYear) return { ok: false, hidden: true, reason: '只在 ' + action.maxYear + ' 年以前适用。' };
     if (action.minAge != null && state.age < action.minAge) return { ok: false, reason: '需要年满 ' + action.minAge + ' 岁；当前 ' + state.age + ' 岁。' };
     if (action.maxAge != null && state.age > action.maxAge) return { ok: false, reason: '只适用于 ' + action.maxAge + ' 岁以前；当前 ' + state.age + ' 岁。' };
     if (action.id === 'care-mother' && subjectIsDead(state.subjects.mother)) return { ok: false, reason: '母亲已经去世' };
+    if (action.requiresSpouse) {
+      var relationship = ensureLivedLife(state).relationship;
+      if (!relationship.spouse || relationship.spouse.status === 'dead') return { ok: false, reason: '当前没有能够进行这次谈话的配偶。' };
+    }
     return gateResult(state, action.gate);
   }
 
@@ -597,7 +1416,7 @@
     options = options || {};
     return C.actions.map(function (action) {
       var availability = actionAvailability(state, action);
-      var result = employmentActionForState(state, clone(action));
+      var result = decorateLifeAction(state, action);
       result.enabled = availability.ok;
       result.disabledReason = availability.reason;
       result.hidden = Boolean(availability.hidden);
@@ -627,7 +1446,7 @@
       spent = nextSpent;
       var times = counts[actionId] || 0;
       var scale = 1 / (1 + times * 0.35);
-      var presentedAction = employmentActionForState(state, clone(action));
+      var presentedAction = decorateLifeAction(state, action);
       applyDelta(state, action.delta, scale);
       applySubjectEffects(state, action.subjectDelta);
       applyContactEffects(state, action.contactEffects);
@@ -642,6 +1461,10 @@
       if (action.livelihoodAction && times === 0) {
         var outcome = resolveEmployment(state, action.id, 'action');
         if (outcome) outcomes.push(outcome);
+      }
+      if (times === 0) {
+        var lifeOutcome = resolveLifeAction(state, action, presentedAction);
+        if (lifeOutcome) outcomes.push(lifeOutcome);
       }
     });
 
@@ -967,6 +1790,7 @@
   function buildLifeChapters(state) {
     var route = C.routes[state.routeKey];
     var postPath = C.post1949Paths && C.post1949Paths[state.post1949Choice];
+    var portrait = buildLifePortrait(state);
     var employment = state.post1949 && state.post1949.employment;
     var employmentText = employment && employment.role
       ? '明确谋生记录为「' + employment.role + '」，地点是' + employment.workplace + '，最后状态为「' + employmentStatusLabel(employment.status) + '」。'
@@ -974,12 +1798,12 @@
     var death = state.life || {};
     var warDecision = state.familyKey === 'subeipoor' ? 'subei-war' : (state.familyKey === 'jiangnanshen' ? 'shen-war' : 'shanghai-war');
     return [
-      { key: 'birth-family', title: '出生与成长', text: state.identity.name + '于 ' + state.identity.born + ' 年出生在' + state.identity.place + '，成长于' + state.identity.familyName + '。' + (choiceLabel(state, 'education') ? '六岁时，' + choiceLabel(state, 'education') + '。' : '') },
-      { key: 'livelihood', title: '成年谋生', text: route ? '成年后主要走入「' + route.name + '」：' + route.summary : '成年谋生路径没有留下完整记录。' },
+      { key: 'birth-family', title: '出生与成长', text: state.identity.name + '于 ' + state.identity.born + ' 年出生在' + state.identity.place + '，成长于' + state.identity.familyName + '。' + portrait.parents + (choiceLabel(state, 'education') ? '六岁时，选择了“' + choiceLabel(state, 'education') + '”。' : '') },
+      { key: 'livelihood', title: '成年谋生', text: (route ? '成年道路主要经过「' + route.name + '」。' : '') + portrait.career },
       { key: 'war', title: '战争转折', text: choiceLabel(state, warDecision) ? choiceLabel(state, warDecision) + '。' : '战争时期的具体去留没有留下完整记录。' },
       { key: 'postwar', title: '战后重接', text: choiceLabel(state, 'postwar-settlement') ? choiceLabel(state, 'postwar-settlement') + '。' : '战后的住处、工作与关系如何接回，记录仍不完整。' },
-      { key: 'post1949', title: '1949 与后半生', text: postPath ? '1949 年选择「' + postPath.name + '」。' + (state.post1949.arrival || '后来的抵达过程没有完整记录。') + '；' + employmentText : '1949 年后的去向没有留下完整记录。' },
-      { key: 'late-life', title: '中晚年', text: ([state.post1949.livelihoodLater, state.post1949.correspondence, state.post1949.care, state.post1949.legacy].filter(Boolean).join('；') || '中晚年具体生活安排没有留下完整记录').replace(/[。！？]?$/, '。') },
+      { key: 'post1949', title: '1949 与后半生', text: postPath ? '1949 年选择「' + postPath.name + '」。' + (state.post1949.arrival || '后来的抵达过程没有完整记录。') + '；' + employmentText + '家人与旧识并没有因此自动同行：' + portrait.relationship : '1949 年后的去向没有留下完整记录。' },
+      { key: 'late-life', title: '中晚年', text: ([state.post1949.livelihoodLater, state.post1949.correspondence, state.post1949.care, state.post1949.legacy].filter(Boolean).join('；') || '中晚年继续处理工作、住处和照料。').replace(/[。！？]?$/, '。') + portrait.children + portrait.health + '晚年最后留下的一段心事是：' + portrait.inner },
       { key: 'death', title: '死亡与确认', text: death.deathOccurredYear ? death.deathOccurredYear + ' 年，' + state.identity.name + '在' + death.deathPlace + '因' + death.cause + '去世，享年 ' + (death.deathOccurredYear - state.identity.born) + ' 岁。' + (death.deathConfirmedYear === death.deathOccurredYear ? '死亡在当年由身边人确认。' : '到 ' + death.deathConfirmedYear + ' 年，消息才完成确认。') : '主人公仍然在世，尚不能生成一生结局。' },
     ];
   }
@@ -1008,24 +1832,20 @@
     if (state.post1949.livelihood) facts.push('1949 年后谋生：' + state.post1949.livelihood + '。');
     var employment = state.post1949 && state.post1949.employment;
     if (employment && employment.role) facts.push('明确职业记录：在' + employment.workplace + '担任' + employment.role + '，最后状态为「' + employmentStatusLabel(employment.status) + '」，累计记录 ' + employment.yearsWorked + ' 个续工年份。');
+    var portrait = buildLifePortrait(state);
+    facts.push('具体工作与经营：' + portrait.career);
+    facts.push('父母各自的人生：' + portrait.parents);
+    facts.push('婚姻与亲密关系：' + portrait.relationship);
+    facts.push('子女或晚辈：' + portrait.children);
+    facts.push('朋友、同事、雇主与客户：' + portrait.friends + '。');
+    facts.push('疾病与身体：' + portrait.health);
+    facts.push('最后留下的心理记录：' + portrait.inner);
     if (state.post1949.livelihoodLater) facts.push('中年以后：' + state.post1949.livelihoodLater + '。');
     if (state.post1949.companions) facts.push('共同生活与同行关系：' + state.post1949.companions + '。');
     if (state.post1949.leftBehind) facts.push('留在别处的人与未完成团聚：' + state.post1949.leftBehind + '。');
     if (state.post1949.correspondence) facts.push('晚年联系：' + state.post1949.correspondence + '。');
     if (state.post1949.care) facts.push('晚年照料：' + state.post1949.care + '。');
     if (state.post1949.legacy) facts.push('留下的记录：' + state.post1949.legacy + '。');
-    var mother = state.subjects.mother;
-    if (mother) {
-      if (mother.status === 'dead-confirmed') facts.push('母亲的死亡已经经过消息确认。');
-      else if (mother.status === 'dead-unconfirmed') facts.push('母亲的死亡已经发生，但仍缺完整确认。');
-      else facts.push('主人公死亡时，母亲最后已知状态为「' + subjectStatusLabel(mother.status) + '」。');
-    }
-    var spouse = state.subjects.spouse;
-    if (spouse && spouse.status !== 'not-met') facts.push('配偶最后已知状态为「' + subjectStatusLabel(spouse.status) + '」，去向没有被主人公的选择代替。');
-    var children = state.subjects.children;
-    if (children && children.status !== 'none') facts.push('子女与晚辈的长期安排为「' + subjectStatusLabel(children.status) + '」。');
-    var contacts = Object.keys(state.contacts || {}).map(function (key) { return state.contacts[key]; }).filter(function (contact) { return Number(contact.relation || 0) > 0; }).sort(function (a, b) { return Number(b.relation || 0) - Number(a.relation || 0); });
-    if (contacts.length) facts.push('最后记录中联系较深的具体人物是' + contacts.slice(0, 2).map(function (contact) { return contact.label; }).join('、') + '；这只表示有过持续往来，不替他们补写终局。');
     if (state.annualNarratives.length) facts.push('人生账本记录了 ' + state.annualNarratives.length + ' 个生活年份。');
     if (state.knownEvents.length) facts.push('明确获知的时代事件有 ' + state.knownEvents.length + ' 项。');
     if (state.unknownImpacts.length) facts.push('另有 ' + state.unknownImpacts.length + ' 项时代冲击先进入生活，其完整来由在当时未知。');
@@ -1044,11 +1864,13 @@
   }
 
   function deathCause(state) {
+    var health = state.lived && state.lived.health;
+    var lastCondition = health && health.lastEpisode && health.lastEpisode.condition;
     if (state.res.health <= 0 && state.routeKey === 'subei-soldier') return '战争伤病与长期劳损';
     if (state.res.health <= 0 && (state.routeKey === 'subei-refugee' || state.routeKey === 'shen-refugee' || state.post1949Choice === 'in-motion')) return '迁徙劳损与疾病';
-    if (state.res.health <= 0) return '长期疾病与身体耗损';
-    if (state.age >= 88) return '高龄后的自然衰老';
-    return '晚年疾病与身体衰弱';
+    if (state.res.health <= 0) return lastCondition ? lastCondition + '与长期身体耗损' : '长期疾病与身体耗损';
+    if (state.age >= 88) return lastCondition ? '高龄自然衰老，晚年伴有' + lastCondition : '高龄后的自然衰老';
+    return lastCondition ? '晚年' + lastCondition + '反复发作后的身体衰弱' : '晚年疾病与身体衰弱';
   }
 
   function deathPlace(state) {
@@ -1110,6 +1932,7 @@
     processActions(state, actionIds || []);
     processOrdinaryLife(state);
     processEvents(state);
+    processLivedLife(state);
     collectDecisions(state);
     if (!state.pendingDecision) finishYear(state);
     return state;
@@ -1138,13 +1961,28 @@
       state.post1949.region = C.post1949Paths && C.post1949Paths[option.post1949Choice]
         ? C.post1949Paths[option.post1949Choice].name
         : option.post1949Choice;
+      installPost1949Contacts(state);
       state.milestones.push({ year: state.year, id: 'milestone-1949', text: '民国阶段结束，人生继续进入后半生。' });
     }
     if (option.postProfile) {
       Object.keys(option.postProfile).forEach(function (key) { state.post1949[key] = option.postProfile[key]; });
     }
-    if (option.employmentEntry) resolveEmployment(state, decision.id + ':' + option.id, option.employmentEntry);
+    if (decision.id === 'post49-arrival') resolvePost1949Relationship(state, option);
+    if (option.employmentEntry && !(decision.id === 'post49-arrival' && ensureEmployment(state).lastResultYear === state.year && ensureEmployment(state).role)) {
+      resolveEmployment(state, decision.id + ':' + option.id, option.employmentEntry);
+    }
     if (decision.id === 'later-life-livelihood') resolveLaterLifeEmployment(state, option.id);
+    if (option.relationshipEntry) applyRelationshipEntry(state, option.relationshipEntry);
+    if (option.relationshipResolution) applyRelationshipResolution(state, option.relationshipResolution);
+    if (decision.id === 'family-future') applyFamilyFuture(state, option.id);
+    if (option.healthResolution && state.lived && state.lived.health.current) {
+      state.lived.health.current.status = option.healthResolution;
+      state.lived.health.current.result = option.fact;
+    }
+    if (option.businessResolution && state.lived && state.lived.career.business) {
+      state.lived.career.business.ordersHandled += 1;
+      state.lived.career.business.lastProblem = option.fact;
+    }
     if (option.spouseStatus) {
       state.subjects.spouse.status = option.spouseStatus;
       addFact(state, {
@@ -1165,6 +2003,7 @@
     if (option.endingChoice) state.finalChoice = option.endingChoice;
     addLog(state, '【抉择·' + decision.title + '】' + option.label + '。', 'choice', 'choice');
     state.decisionHistory.push({ year: state.year, decisionId: decision.id, optionId: option.id });
+    attachDecisionToLivedYear(state, decision, option);
     addUnique(state.firedDecisions, decision.id);
     state.pendingDecision = state.pendingDecisionQueue.shift() || null;
     if (!state.pendingDecision) finishYear(state);
@@ -1175,7 +2014,7 @@
     if (!state || !state.identity || !state.familyKey) throw new Error('A valid game state is required');
     return JSON.stringify({
       format: 'minguo-life-save',
-      schemaVersion: 2,
+      schemaVersion: 3,
       gameVersion: C.version,
       state: state,
     }, null, 2);
@@ -1228,6 +2067,13 @@
     state.post1949.employment = Object.assign(clone(base.post1949.employment), state.post1949.employment || {});
     if (!Array.isArray(state.post1949.employment.history)) state.post1949.employment.history = [];
     state.life = Object.assign(clone(base.life), state.life || {});
+    state.lived = Object.assign(clone(base.lived), state.lived || {});
+    state.lived.parents = Object.assign(clone(base.lived.parents), state.lived.parents || {});
+    state.lived.relationship = Object.assign(clone(base.lived.relationship), state.lived.relationship || {});
+    state.lived.career = Object.assign(clone(base.lived.career), state.lived.career || {});
+    state.lived.health = Object.assign(clone(base.lived.health), state.lived.health || {});
+    state.lived.social = Object.assign(clone(base.lived.social), state.lived.social || {});
+    state.lived.inner = Object.assign(clone(base.lived.inner), state.lived.inner || {});
     ['routeHistory', 'knownEvents', 'unknownImpacts', 'echoes', 'facts', 'log', 'curve', 'actionHistory', 'annualNarratives', 'firedOrdinaryEvents', 'eraHistory', 'currentEraUpdates', 'contactHistory', 'firedEvents', 'firedDecisions', 'decisionHistory', 'pendingDecisionQueue', 'endingFacts'].forEach(function (key) {
       if (!Array.isArray(state[key])) state[key] = [];
     });
@@ -1236,6 +2082,9 @@
     state.age = state.year - state.identity.born;
     state.spirit = clamp(Number(state.spirit) || 0, 0, state.spiritMax || C.spiritMax);
     state.randomState = Number(state.randomState) >>> 0;
+    ensureLivedLife(state);
+    if (state.routeKey && !state.lived.career.role) enterRouteCareer(state, state.routeKey);
+    if (state.post1949Choice && state.post1949 && state.post1949.employment && state.post1949.employment.role) syncCareerFromEmployment(state);
     if (!state.life.deathOccurredYear && state.over && state.year <= (C.milestoneYear || 1949)) {
       var legacyMap = { mainland: 'mainland', hktw: 'hong-kong', overseas: 'overseas', 'in-motion': 'in-motion' };
       state.post1949Choice = state.post1949Choice || legacyMap[state.finalChoice] || 'mainland';
@@ -1369,6 +2218,34 @@
       familyLifecycleCount: states.filter(function (state) {
         return state.facts.some(function (fact) { return fact.source === 'family-future'; });
       }).length,
+      concreteCareerCount: states.filter(function (state) {
+        var career = state.lived && state.lived.career;
+        return career && career.role && career.workplace && career.employer && career.history.length > 0;
+      }).length,
+      parentLifecycleDetailCount: states.filter(function (state) {
+        var parents = state.lived && state.lived.parents;
+        return parents && Object.keys(parents).length === 2 && Object.keys(parents).every(function (key) {
+          return parents[key].name && parents[key].occupation && parents[key].deathYear;
+        });
+      }).length,
+      relationshipDetailCount: states.filter(function (state) {
+        var relationship = state.lived && state.lived.relationship;
+        return relationship && relationship.history && relationship.history.length > 0;
+      }).length,
+      healthHistoryCount: states.filter(function (state) {
+        return state.lived && state.lived.health && state.lived.health.history.filter(function (entry) {
+          return entry.type === 'episode' || (entry.condition && entry.type !== 'treatment');
+        }).length >= 4;
+      }).length,
+      socialWorldCount: states.filter(function (state) {
+        return Object.keys(state.contacts || {}).length >= 6 && state.lived && state.lived.social;
+      }).length,
+      innerLifeCount: states.filter(function (state) {
+        return state.lived && state.lived.inner && state.lived.inner.history.length === state.annualNarratives.length;
+      }).length,
+      concreteYearCount: states.reduce(function (sum, state) {
+        return sum + ((state.lived && state.lived.yearHistory) || []).length;
+      }, 0),
       expectedNarrativeYears: expectedNarrativeYears,
       recordedNarrativeYears: recordedNarrativeYears,
       annualNarrativeRate: expectedNarrativeYears ? recordedNarrativeYears / expectedNarrativeYears : 0,
@@ -1396,6 +2273,8 @@
       }).length,
       persistentContactCount: Object.keys(C.families).reduce(function (sum, familyKey) {
         return sum + Object.keys(C.families[familyKey].contacts || {}).length;
+      }, 0) + Object.keys(C.routeContactProfiles || {}).reduce(function (sum, routeKey) {
+        return sum + (C.routeContactProfiles[routeKey] || []).length;
       }, 0),
     };
   }
@@ -1407,9 +2286,17 @@
       && coverage.authoredActionCount >= 66
       && coverage.keyDecisionCount >= 42
       && coverage.authoredOrdinaryEventCount >= 171;
+    var livedLifeReady = coverage.scenarioCount > 0
+      && coverage.concreteCareerCount === coverage.scenarioCount
+      && coverage.parentLifecycleDetailCount === coverage.scenarioCount
+      && coverage.relationshipDetailCount === coverage.scenarioCount
+      && coverage.healthHistoryCount === coverage.scenarioCount
+      && coverage.socialWorldCount === coverage.scenarioCount
+      && coverage.innerLifeCount === coverage.scenarioCount
+      && coverage.concreteYearCount === coverage.expectedNarrativeYears;
     return {
-      wholeGameStageLabel: coverage.familyCount === 3 && coverage.routeCount === 11 && coverage.post1949PathCount === 6 && coverage.deathEndingCount === coverage.scenarioCount && coverage.post1949EraEvidenceCount === coverage.scenarioCount && coverage.post1949EmploymentEvidenceCount === coverage.scenarioCount && coverage.annualNarrativeRate === 1 && lifeDensityReady
-        ? '出生到死亡的完整人生文字版已闭环'
+      wholeGameStageLabel: coverage.familyCount === 3 && coverage.routeCount === 11 && coverage.post1949PathCount === 6 && coverage.deathEndingCount === coverage.scenarioCount && coverage.post1949EraEvidenceCount === coverage.scenarioCount && coverage.post1949EmploymentEvidenceCount === coverage.scenarioCount && coverage.annualNarrativeRate === 1 && lifeDensityReady && livedLifeReady
+        ? '出生到死亡的具体生活文字版已闭环'
         : '仍在补代表态',
       version: C.version,
       coverage: coverage,
@@ -1427,6 +2314,13 @@
         familyLifecycle: true,
         annualNarrative: coverage.annualNarrativeRate === 1,
         lifeDensity: lifeDensityReady,
+        concreteCareer: coverage.concreteCareerCount === coverage.scenarioCount,
+        parentLives: coverage.parentLifecycleDetailCount === coverage.scenarioCount,
+        relationshipConsequences: coverage.relationshipDetailCount === coverage.scenarioCount,
+        illnessHistory: coverage.healthHistoryCount === coverage.scenarioCount,
+        socialWorld: coverage.socialWorldCount === coverage.scenarioCount,
+        innerLife: coverage.innerLifeCount === coverage.scenarioCount,
+        concreteYearRecord: coverage.concreteYearCount === coverage.expectedNarrativeYears,
         portableSave: true,
       },
     };
@@ -1451,5 +2345,6 @@
     saveSummary: saveSummary,
     inspectCoverage: inspectCoverage,
     inspectWholeGameProgressBundle: inspectWholeGameProgressBundle,
+    buildLifePortrait: buildLifePortrait,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -6,6 +6,7 @@ await import('../assets/game-content.js');
 await import('../assets/life-expansion.js');
 await import('../assets/complete-life.js');
 await import('../assets/postwar-era.js');
+await import('../assets/lived-life.js');
 await import('../assets/demo-engine.js');
 
 const Game = globalThis.MINGUO_GAME;
@@ -319,7 +320,7 @@ test('a death ending exposes seven coherent life chapters', () => {
   assert.match(Game.buildEndingNarrative(state), /出生与成长.*成年谋生.*战争转折.*1949 与后半生.*死亡与确认/);
 });
 
-test('persistent contacts keep their own status and relationship history', () => {
+test('persistent contacts keep their own history and can age or die independently', () => {
   const state = playScenario({
     familyKey: 'shanghaigongshang',
     gender: '女',
@@ -333,7 +334,8 @@ test('persistent contacts keep their own status and relationship history', () =>
   });
 
   assert.ok(state.contacts.tang_huizhen.relation > 26);
-  assert.equal(state.contacts.tang_huizhen.status, 'colleague');
+  assert.ok(['colleague', 'deceased'].includes(state.contacts.tang_huizhen.status));
+  assert.ok(state.contacts.tang_huizhen.history.length > 0);
   assert.ok(state.contactHistory.some((entry) => entry.contactKey === 'tang_huizhen'));
 });
 
@@ -349,11 +351,11 @@ test('family lifecycle allows care without forcing marriage or children', () => 
   assert.ok(unmarried.facts.some((fact) => fact.source === 'family-future'));
 });
 
-test('portable v0.5 saves round-trip without changing the life ledger', () => {
+test('portable v0.6 saves round-trip without changing the life ledger', () => {
   const state = playScenario({ familyKey: 'subeipoor', decisions: { 'subei-war': 'join-army' } });
   const restored = Game.importGame(Game.exportGame(state));
 
-  assert.equal(restored.version, '0.5.2');
+  assert.equal(restored.version, '0.6.0');
   assert.deepEqual(restored.identity, state.identity);
   assert.deepEqual(restored.facts, state.facts);
   assert.deepEqual(restored.annualNarratives, state.annualNarratives);
@@ -378,7 +380,7 @@ test('abilities and resources stay inside the published 0 to 100 domain', () => 
   }
 });
 
-test('v0.2 states receive v0.5 complete-life defaults on import', () => {
+test('v0.2 states receive v0.6 complete-life defaults on import', () => {
   const legacy = Game.createGame({ familyKey: 'subeipoor', gender: '男', name: '旧存档', seed: 19 });
   legacy.version = '0.2.0';
   delete legacy.contacts;
@@ -387,7 +389,7 @@ test('v0.2 states receive v0.5 complete-life defaults on import', () => {
   delete legacy.contactHistory;
 
   const restored = Game.importGame(legacy);
-  assert.equal(restored.version, '0.5.2');
+  assert.equal(restored.version, '0.6.0');
   assert.equal(Object.keys(restored.contacts).length, 3);
   assert.deepEqual(restored.annualNarratives, []);
   assert.deepEqual(restored.contactHistory, []);
@@ -409,7 +411,7 @@ test('v0.4 endings at 1949 resume as an unfinished life in 1950', () => {
   delete legacy.life;
 
   const restored = Game.importGame(legacy);
-  assert.equal(restored.version, '0.5.2');
+  assert.equal(restored.version, '0.6.0');
   assert.equal(restored.over, false);
   assert.equal(restored.year, 1950);
   assert.equal(restored.chapter, 'post1949');
@@ -649,9 +651,9 @@ test('each route owns at least nine authored ordinary-life scenes', () => {
 
 test('the birth-to-death pack reaches the published content-density baseline', () => {
   const content = Game.content;
-  assert.equal(content.actions.length, 66);
-  assert.equal(content.decisions.length, 42);
-  assert.equal(content.decisions.reduce((sum, decision) => sum + decision.options.length, 0), 143);
+  assert.equal(content.actions.length, 70);
+  assert.equal(content.decisions.length, 46);
+  assert.equal(content.decisions.reduce((sum, decision) => sum + decision.options.length, 0), 155);
   assert.equal(content.ordinaryEvents.length, 171);
   assert.equal(content.ordinaryEvents.filter((event) => event.requiresEchoes).length, 105);
   assert.equal(new Set(content.actions.map((action) => action.id)).size, content.actions.length);
@@ -690,7 +692,7 @@ test('route choices produce guaranteed next-year echoes and ending facts', () =>
   assert.match(Game.buildEndingNarrative(state), /1942 年/);
 });
 
-test('all 143 key-decision options are reachable in a compatible life', () => {
+test('all 155 key-decision options are reachable in a compatible life', () => {
   for (const decision of Game.content.decisions) {
     for (const target of decision.options) {
       const routeKey = decision.routes?.[0] || target.routes?.[0];
@@ -698,6 +700,7 @@ test('all 143 key-decision options are reachable in a compatible life', () => {
         ? cloneSetup(ROUTE_SETUPS[routeKey])
         : setupForFamily(decision.families?.[0] || 'shanghaigongshang');
       if (target.genders?.includes('女')) setup.gender = '女';
+      if (decision.id === 'adult-partnership') setup.decisions.marriage = 'delay-marriage';
       setup.decisions[decision.id] = target.id;
       const postPath = target.post1949Choices?.[0] || decision.post1949Choices?.[0];
       if (postPath) setup.decisions['final-1949'] = POST1949_OPTIONS[postPath];
@@ -722,7 +725,7 @@ test('all 143 key-decision options are reachable in a compatible life', () => {
   }
 });
 
-test('all 66 annual actions can be performed in a compatible life', () => {
+test('all 70 annual actions can be performed in a compatible life', () => {
   for (const target of Game.content.actions) {
     const routeKey = target.routes?.[0];
     const setup = routeKey
@@ -768,5 +771,101 @@ test('coverage inspection reports family, route, subject and ending evidence', (
   assert.equal(report.subjectEvidenceCount, scenarios.length);
   assert.equal(report.post1949EmploymentEvidenceCount, scenarios.length);
   assert.equal(report.annualNarrativeRate, 1);
-  assert.equal(report.persistentContactCount, 9);
+  assert.equal(report.persistentContactCount, 42);
+});
+
+test('a career is a concrete workplace with bosses, coworkers, customers and work records', () => {
+  const state = playScenario({
+    familyKey: 'shanghaigongshang',
+    decisions: { 'shanghai-path': 'business-heir' },
+    actionPicker(current, available) {
+      return available.some((action) => action.id === 'run-business') ? ['run-business'] : [];
+    },
+  });
+  const career = state.lived.career;
+  assert.ok(career.role);
+  assert.ok(career.workplace);
+  assert.ok(career.employer);
+  assert.ok(career.supervisor);
+  assert.ok(career.colleague);
+  assert.ok(career.publicPerson);
+  assert.ok(career.history.length > 20);
+  assert.match(Game.buildLifePortrait(state).career, /具体工作记录|经营过/);
+  assert.ok(state.facts.some((fact) => fact.id === 'career-start:shanghai-heir'));
+});
+
+test('marriage creates a named spouse, a real argument and visible consequences', () => {
+  const state = playScenario({ familyKey: 'jiangnanshen' });
+  const relationship = state.lived.relationship;
+  assert.ok(relationship.spouse?.name);
+  assert.ok(relationship.spouse?.occupation);
+  assert.ok(relationship.history.some((entry) => ['reconcile-budget', 'reconcile-labor', 'separate'].includes(entry.type)));
+  assert.ok(relationship.conflictCount >= 1);
+  assert.match(Game.buildLifePortrait(state).relationship, /争执|共同安排生活/);
+});
+
+test('parents have names, work, conversations, deaths and confirmation instead of living forever', () => {
+  const state = playScenario({ familyKey: 'shanghaigongshang' });
+  const parents = state.lived.parents;
+  assert.equal(Object.keys(parents).length, 2);
+  for (const parent of Object.values(parents)) {
+    assert.ok(parent.name);
+    assert.ok(parent.occupation);
+    assert.ok(parent.lastWords);
+    assert.ok(parent.deathYear);
+    assert.equal(parent.status, 'dead-confirmed');
+    assert.ok(parent.history.length > 0);
+  }
+});
+
+test('a life records recurring named illnesses, care and inner thoughts every year', () => {
+  const state = playScenario({ familyKey: 'subeipoor', decisions: { 'subei-war': 'join-army' } });
+  const illnessEpisodes = state.lived.health.history.filter((entry) => entry.type === 'episode');
+  assert.ok(illnessEpisodes.length >= 4);
+  assert.ok(illnessEpisodes.every((entry) => entry.text.includes(entry.condition)));
+  assert.equal(state.lived.yearHistory.length, state.annualNarratives.length);
+  assert.equal(state.lived.inner.history.length, state.annualNarratives.length);
+  assert.ok(state.lived.inner.history.every((entry) => entry.text.startsWith('我')));
+  assert.match(Game.buildLifePortrait(state).health, /身体发作|求医/);
+});
+
+test('adult lives know more than two people and preserve their independent occupations', () => {
+  const state = playScenario({ familyKey: 'jiangnanshen', gender: '女', decisions: { 'shen-path': 'professional-service' } });
+  assert.ok(Object.keys(state.contacts).length >= 9);
+  assert.ok(Object.values(state.contacts).filter((contact) => contact.role && contact.label).length >= 9);
+  assert.match(Game.buildLifePortrait(state).friends, /等|、/);
+});
+
+test('a preventive check-up is not misreported as a diagnosed illness', () => {
+  const state = Game.createGame({ familyKey: 'jiangnanshen', gender: '女', name: '沈清和', seed: 12 });
+  for (let turn = 0; turn < 5; turn += 1) Game.advanceYear(state, []);
+  assert.equal(state.age, 5);
+  Game.advanceYear(state, ['seek-treatment']);
+  assert.ok(state.lived.health.history.some((entry) => entry.type === 'check-up' && entry.condition === null));
+  assert.equal(state.lived.health.history.filter((entry) => entry.type === 'episode').length, 0);
+  assert.match(Game.buildLifePortrait(state).health, /没有留下具体疾病记录/);
+});
+
+test('postwar migration resolves whether a spouse reunites or lives elsewhere without reverting next year', () => {
+  const state = playScenario({
+    familyKey: 'shanghaigongshang',
+    decisions: { 'final-1949': 'move-hong-kong', 'post49-arrival': 'hongkong-use-contact' },
+  });
+  const migration = state.lived.relationship.history.find((entry) => entry.type === 'postwar-living-apart');
+  assert.ok(migration);
+  assert.match(migration.text, /没有自动带走|保持联系/);
+  assert.equal(state.lived.relationship.history.filter((entry) => entry.type === 'war-separation' && entry.year > 1950).length, 0);
+  assert.ok(state.facts.some((fact) => fact.id === 'post1949-spouse-arrangement'));
+});
+
+test('later life stops fixed work and does not keep offering the same job until death', () => {
+  const state = playScenario({ familyKey: 'shanghaigongshang', seed: 27 });
+  assert.ok(state.lived.career.retiredYear >= state.identity.born + 68);
+  assert.equal(state.post1949.employment.status, 'retired');
+  assert.ok(state.lived.career.history.every((entry) => entry.year <= state.lived.career.retiredYear));
+  assert.match(state.post1949.livelihood, /已经停止固定工作/);
+  assert.ok(state.lived.health.history
+    .filter((entry) => entry.type === 'episode' && entry.year > state.lived.career.retiredYear)
+    .every((entry) => !/账房熬夜|作场粉尘/.test(entry.condition)));
+  assert.match(Game.buildLifePortrait(state).career, /停止固定工作/);
 });
