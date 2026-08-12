@@ -15,6 +15,7 @@ await import('../assets/family-expansion-f05.js');
 await import('../assets/family-expansion-f10.js');
 await import('../assets/family-expansion-f13.js');
 await import('../assets/family-expansion-f14.js');
+await import('../assets/family-expansion-f11.js');
 await import('../assets/demo-engine.js');
 
 const Game = globalThis.MINGUO_GAME;
@@ -44,6 +45,9 @@ const DEFAULT_DECISIONS = {
   'qiaoxiang-war': 'split-address-and-accounts',
   'coastal-path': 'ship-ticket-trial',
   'coastal-war': 'coastal-split-addresses',
+  'hankou-port-path': 'dock-cargo-trial',
+  'hankou-flood-1931': 'flood-move-people-tools-first',
+  'hankou-port-war': 'hankou-split-addresses-reserves',
   'postwar-settlement': 'rebuild-local',
   'final-1949': 'stay-mainland',
   'later-life-livelihood': 'change-work',
@@ -91,6 +95,9 @@ const ROUTE_SETUPS = {
   'coastal-passenger-cargo-operator': { familyKey: 'guangdongcoastal', gender: '男', decisions: { 'coastal-path': 'ship-ticket-trial', 'coastal-war': 'coastal-split-addresses' } },
   'port-guesthouse-caterer': { familyKey: 'guangdongcoastal', gender: '女', decisions: { 'coastal-path': 'guesthouse-trial', 'coastal-war': 'coastal-split-addresses' } },
   'recorded-coastal-small-trader': { familyKey: 'guangdongcoastal', gender: '女', decisions: { 'coastal-path': 'recorded-trade-trial', 'coastal-war': 'coastal-split-addresses' } },
+  'hankou-dock-cargo-worker': { familyKey: 'hankouport', gender: '男', decisions: { 'hankou-port-path': 'dock-cargo-trial', 'hankou-flood-1931': 'flood-move-people-tools-first', 'hankou-port-war': 'hankou-split-addresses-reserves' } },
+  'hankou-rickshaw-worker': { familyKey: 'hankouport', gender: '男', decisions: { 'hankou-port-path': 'rickshaw-trial', 'hankou-flood-1931': 'flood-close-work-preserve-health', 'hankou-port-war': 'hankou-local-civilian-life' } },
+  'hankou-river-street-food-stall': { familyKey: 'hankouport', gender: '女', decisions: { 'hankou-port-path': 'river-food-trial', 'hankou-flood-1931': 'flood-split-work-and-shelter', 'hankou-port-war': 'hankou-verified-work-move' } },
 };
 
 const POST1949_OPTIONS = {
@@ -118,6 +125,7 @@ function setupForFamily(familyKey) {
   if (familyKey === 'northeastrailworkers') return cloneSetup(ROUTE_SETUPS['northeast-railway-worker']);
   if (familyKey === 'guangdongqiaoxiang') return cloneSetup(ROUTE_SETUPS['qiaoxiang-local-shop']);
   if (familyKey === 'guangdongcoastal') return cloneSetup(ROUTE_SETUPS['coastal-passenger-cargo-operator']);
+  if (familyKey === 'hankouport') return cloneSetup(ROUTE_SETUPS['hankou-dock-cargo-worker']);
   return cloneSetup(ROUTE_SETUPS['xian-repair']);
 }
 
@@ -244,7 +252,7 @@ test('information channels change what the player can name about an era shock', 
   assert.ok(informed.information.channels.includes('newspaper'));
 });
 
-test('all ten playable families continue beyond 1949 and end only after a confirmed death', () => {
+test('all eleven playable families continue beyond 1949 and end only after a confirmed death', () => {
   const scenarios = [
     playScenario({ familyKey: 'subeipoor' }),
     playScenario({ familyKey: 'jiangnanshen' }),
@@ -256,6 +264,7 @@ test('all ten playable families continue beyond 1949 and end only after a confir
     playScenario({ familyKey: 'northeastrailworkers' }),
     playScenario({ familyKey: 'guangdongqiaoxiang' }),
     playScenario({ familyKey: 'guangdongcoastal' }),
+    playScenario({ familyKey: 'hankouport' }),
   ];
   const bannedRanks = /成功|失败|安稳|挣扎|爬得很高|万幸/;
 
@@ -426,11 +435,11 @@ test('family lifecycle allows care without forcing marriage or children', () => 
   assert.ok(unmarried.facts.some((fact) => fact.source === 'family-future'));
 });
 
-test('portable v0.7.9 saves round-trip without changing the life ledger', () => {
+test('portable v0.7.10 saves round-trip without changing the life ledger', () => {
   const state = playScenario({ familyKey: 'subeipoor', decisions: { 'subei-war': 'join-army' } });
   const restored = Game.importGame(Game.exportGame(state));
 
-  assert.equal(restored.version, '0.7.9');
+  assert.equal(restored.version, '0.7.10');
   assert.equal(JSON.parse(Game.exportGame(restored)).schemaVersion, 6);
   assert.deepEqual(restored.identity, state.identity);
   assert.deepEqual(restored.facts, state.facts);
@@ -465,7 +474,7 @@ test('v0.2 states receive v0.7 complete-life and public-life defaults on import'
   delete legacy.contactHistory;
 
   const restored = Game.importGame(legacy);
-  assert.equal(restored.version, '0.7.9');
+  assert.equal(restored.version, '0.7.10');
   assert.equal(restored.publicLife.status, 'unaffiliated');
   assert.equal(Object.keys(restored.contacts).length, 3);
   assert.deepEqual(restored.annualNarratives, []);
@@ -488,7 +497,7 @@ test('v0.4 endings at 1949 resume as an unfinished life in 1950', () => {
   delete legacy.life;
 
   const restored = Game.importGame(legacy);
-  assert.equal(restored.version, '0.7.9');
+  assert.equal(restored.version, '0.7.10');
   assert.equal(restored.over, false);
   assert.equal(restored.year, 1950);
   assert.equal(restored.chapter, 'post1949');
@@ -778,11 +787,11 @@ test('keeping distance or staying nonparty remains a complete playable public-li
 
 test('the birth-to-death pack reaches the published content-density baseline', () => {
   const content = Game.content;
-  assert.equal(content.actions.length, 143);
-  assert.equal(content.decisions.length, 110);
-  assert.equal(content.decisions.reduce((sum, decision) => sum + decision.options.length, 0), 357);
-  assert.equal(content.ordinaryEvents.length, 515);
-  assert.equal(content.ordinaryEvents.filter((event) => event.requiresEchoes).length, 302);
+  assert.equal(content.actions.length, 152);
+  assert.equal(content.decisions.length, 119);
+  assert.equal(content.decisions.reduce((sum, decision) => sum + decision.options.length, 0), 384);
+  assert.equal(content.ordinaryEvents.length, 566);
+  assert.equal(content.ordinaryEvents.filter((event) => event.requiresEchoes).length, 329);
   assert.equal(new Set(content.actions.map((action) => action.id)).size, content.actions.length);
   assert.equal(new Set(content.decisions.map((decision) => decision.id)).size, content.decisions.length);
   assert.equal(new Set(content.ordinaryEvents.map((event) => event.id)).size, content.ordinaryEvents.length);
@@ -819,7 +828,7 @@ test('route choices produce guaranteed next-year echoes and ending facts', () =>
   assert.match(Game.buildEndingNarrative(state), /1942 年/);
 });
 
-test('all 357 key-decision options are reachable in a compatible life', () => {
+test('all 384 key-decision options are reachable in a compatible life', () => {
   for (const decision of Game.content.decisions) {
     for (const target of decision.options) {
       const routeKey = decision.routes?.[0] || target.routes?.[0];
@@ -868,7 +877,7 @@ test('all 357 key-decision options are reachable in a compatible life', () => {
   }
 });
 
-test('all 143 annual actions can be performed in a compatible life', () => {
+test('all 152 annual actions can be performed in a compatible life', () => {
   for (const target of Game.content.actions) {
     const routeKey = target.routes?.[0];
     const setup = routeKey
@@ -925,7 +934,7 @@ test('coverage inspection reports family, route, subject and ending evidence', (
   assert.equal(report.subjectEvidenceCount, scenarios.length);
   assert.equal(report.post1949EmploymentEvidenceCount, scenarios.length);
   assert.equal(report.annualNarrativeRate, 1);
-  assert.equal(report.persistentContactCount, 147);
+  assert.equal(report.persistentContactCount, 162);
 });
 
 test('a career is a concrete workplace with bosses, coworkers, customers and work records', () => {
