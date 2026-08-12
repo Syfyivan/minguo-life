@@ -6,7 +6,7 @@
   var C = root.MINGUO_GAME_CONTENT;
   if (!C) throw new Error('MINGUO_GAME_CONTENT is required before public-life.js');
 
-  C.version = '0.7.0';
+  C.version = '0.7.1';
   C.publicLifeStandard = {
     optional: true,
     contactBeforeMembership: true,

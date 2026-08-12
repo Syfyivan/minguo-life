@@ -362,7 +362,7 @@ test('portable v0.7 saves round-trip without changing the life ledger', () => {
   const state = playScenario({ familyKey: 'subeipoor', decisions: { 'subei-war': 'join-army' } });
   const restored = Game.importGame(Game.exportGame(state));
 
-  assert.equal(restored.version, '0.7.0');
+  assert.equal(restored.version, '0.7.1');
   assert.equal(JSON.parse(Game.exportGame(restored)).schemaVersion, 4);
   assert.deepEqual(restored.identity, state.identity);
   assert.deepEqual(restored.facts, state.facts);
@@ -397,7 +397,7 @@ test('v0.2 states receive v0.7 complete-life and public-life defaults on import'
   delete legacy.contactHistory;
 
   const restored = Game.importGame(legacy);
-  assert.equal(restored.version, '0.7.0');
+  assert.equal(restored.version, '0.7.1');
   assert.equal(restored.publicLife.status, 'unaffiliated');
   assert.equal(Object.keys(restored.contacts).length, 3);
   assert.deepEqual(restored.annualNarratives, []);
@@ -420,7 +420,7 @@ test('v0.4 endings at 1949 resume as an unfinished life in 1950', () => {
   delete legacy.life;
 
   const restored = Game.importGame(legacy);
-  assert.equal(restored.version, '0.7.0');
+  assert.equal(restored.version, '0.7.1');
   assert.equal(restored.over, false);
   assert.equal(restored.year, 1950);
   assert.equal(restored.chapter, 'post1949');
