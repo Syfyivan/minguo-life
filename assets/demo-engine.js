@@ -1,4 +1,4 @@
-// 民国人生 · 可测试文字版引擎 v0.7.3／schema 6
+// 民国人生 · 可测试文字版引擎 v0.7.4／schema 6
 // 运行时只负责规则与状态，不直接操作 DOM；浏览器 UI 与 Node 回归共用这一份实现。
 (function (root) {
   'use strict';

@@ -10,6 +10,12 @@ function loadShowScreen() {
   return new Function('el', 'window', `${match[0]}; return showScreen;`);
 }
 
+function loadKeepReadingPosition() {
+  const match = demoSource.match(/function keepReadingPosition\(work\) \{[\s\S]*?\n  \}/);
+  assert.ok(match, 'demo.html should define keepReadingPosition(work)');
+  return new Function('window', `${match[0]}; return keepReadingPosition;`);
+}
+
 test('redrawing the active play screen does not scroll the player back to the top', () => {
   const active = new Set(['play']);
   const screens = Object.fromEntries(['pick', 'play', 'end'].map((key) => [key, {
@@ -32,4 +38,21 @@ test('redrawing the active play screen does not scroll the player back to the to
   showScreen('end');
   assert.equal(scrolls.length, 1, 'a real screen transition should still begin at the top');
   assert.deepEqual([...active], ['end']);
+});
+
+test('year advancement restores the exact reading position after layout changes', () => {
+  const scrolls = [];
+  const window = {
+    scrollX: 12,
+    scrollY: 1200,
+    scrollTo(options) { scrolls.push(options); },
+  };
+  const keepReadingPosition = loadKeepReadingPosition()(window);
+  const result = keepReadingPosition(() => {
+    window.scrollY = 1752;
+    return 'rendered';
+  });
+
+  assert.equal(result, 'rendered');
+  assert.deepEqual(scrolls, [{ left: 12, top: 1200, behavior: 'auto' }]);
 });

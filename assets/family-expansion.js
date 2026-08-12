@@ -358,4 +358,12 @@
       contact: { id: 'public_f16_sun_qiulan', label: '孙秋兰', role: '负责复查与迁入病家登记的护理员', status: 'colleague', relation: 18, born: 1903 },
     },
   });
+
+  function addRouteToTrack(track, routeKey) {
+    C.livelihoodTrackRoutes[track] = C.livelihoodTrackRoutes[track] || [];
+    if (C.livelihoodTrackRoutes[track].indexOf(routeKey) === -1) C.livelihoodTrackRoutes[track].push(routeKey);
+  }
+  addRouteToTrack('skilled', 'sichuan-pharmacy');
+  addRouteToTrack('skilled', 'sichuan-foodshop');
+  addRouteToTrack('care', 'sichuan-care');
 })(typeof window !== 'undefined' ? window : globalThis);
