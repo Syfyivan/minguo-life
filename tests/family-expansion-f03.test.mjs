@@ -22,6 +22,7 @@ await import('../assets/family-expansion-f09.js');
 await import('../assets/family-expansion-f15.js');
 await import('../assets/family-expansion-f02.js');
 await import('../assets/family-expansion-f03.js');
+await import('../assets/family-expansion-f07.js');
 await import('../assets/demo-engine.js');
 
 const Content = globalThis.MINGUO_GAME_CONTENT;
@@ -55,12 +56,12 @@ function play(decisions, gender = '女', seed = 310) {
   return state;
 }
 
-test('F03 is the seventeenth playable family and reuses three honest canonical domains', () => {
-  assert.equal(Content.version, '0.7.16');
+test('F03 remains the seventeenth expansion family and reuses three honest canonical domains', () => {
+  assert.equal(Content.version, '0.7.17');
   assert.equal(Content.designRegistry.families.F03.runtimeStatus, 'playable-verified');
   assert.equal(Content.runtimeFamilyDesignMap.jiangnansilkwater, 'F03');
-  assert.equal(Object.keys(Content.families).length, 17);
-  assert.equal(Object.keys(Content.routes).length, 53);
+  assert.equal(Object.keys(Content.families).length, 18);
+  assert.equal(Object.keys(Content.routes).length, 56);
   assert.equal(new Set(Object.values(Content.legacyRouteDomainMap)).size, 33);
   assert.deepEqual([
     Content.legacyRouteDomainMap['jiangnan-tenant-water-farmer'],

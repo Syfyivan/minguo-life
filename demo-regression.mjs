@@ -21,6 +21,7 @@ await import('./assets/family-expansion-f09.js');
 await import('./assets/family-expansion-f15.js');
 await import('./assets/family-expansion-f02.js');
 await import('./assets/family-expansion-f03.js');
+await import('./assets/family-expansion-f07.js');
 await import('./assets/demo-engine.js');
 
 const Game = globalThis.MINGUO_GAME;
@@ -82,6 +83,10 @@ const baseDecisions = {
   'jiangnan-silk-credit-1928': 'f03-credit-formal-check',
   'jiangnan-silk-path': 'f03-path-tenant',
   'jiangnan-silk-war-break-1937': 'f03-war-stay-water-farm',
+  'northchina-farm-child-work-1918': 'f07-child-farm',
+  'northchina-famine-1921': 'f07-famine-ration-seed',
+  'northchina-farm-path': 'f07-path-seasonal',
+  'northchina-farm-war-1937': 'f07-war-stay-village',
   'postwar-settlement': 'rebuild-local',
   'final-1949': 'stay-mainland',
   'later-life-livelihood': 'change-work',
@@ -215,12 +220,15 @@ const definitions = [
   { id: 'jiangnan-tenant-water-farmer', familyKey: 'jiangnansilkwater', gender: '男', name: '顾守田', expectedRoute: 'jiangnan-tenant-water-farmer', expectedPost1949: 'mainland', decisions: { 'jiangnan-silk-path': 'f03-path-tenant', 'route-jiangnan-tenant-water-farmer-1946': 'f03-tenant-seasonal-team' } },
   { id: 'jiangnan-sericulture-silk-household', familyKey: 'jiangnansilkwater', gender: '女', name: '顾春兰', expectedRoute: 'jiangnan-sericulture-silk-household', expectedPost1949: 'mainland', decisions: { 'jiangnan-silk-path': 'f03-path-sericulture', 'route-jiangnan-sericulture-silk-household-1946': 'f03-silk-limited-coop' } },
   { id: 'jiangnan-silk-reeling-mill-worker', familyKey: 'jiangnansilkwater', gender: '女', name: '顾春兰', expectedRoute: 'jiangnan-silk-reeling-mill-worker', expectedPost1949: 'mainland', decisions: { 'jiangnan-silk-path': 'f03-path-mill', 'route-jiangnan-silk-reeling-mill-worker-1946': 'f03-mill-finishing-group' } },
+  { id: 'northchina-seasonal-farm-laborer', familyKey: 'northchinadroughtfarm', gender: '男', name: '赵守田', expectedRoute: 'northchina-seasonal-farm-laborer', expectedPost1949: 'mainland', decisions: { 'northchina-farm-path': 'f07-path-seasonal', 'route-northchina-seasonal-farm-laborer-1946': 'f07-seasonal-limited-team' } },
+  { id: 'northchina-temple-fair-vendor', familyKey: 'northchinadroughtfarm', gender: '女', name: '赵春苗', expectedRoute: 'northchina-temple-fair-vendor', expectedPost1949: 'mainland', decisions: { 'northchina-farm-path': 'f07-path-vendor', 'route-northchina-temple-fair-vendor-1946': 'f07-vendor-limited-haul' } },
+  { id: 'northchina-railway-maintenance-worker', familyKey: 'northchinadroughtfarm', gender: '女', name: '赵春苗', expectedRoute: 'northchina-railway-maintenance-worker', expectedPost1949: 'mainland', decisions: { 'northchina-farm-path': 'f07-path-rail', 'route-northchina-railway-maintenance-worker-1946': 'f07-rail-limited-repair' } },
 ];
 
 const states = definitions.map(runScenario);
 const report = Game.inspectCoverage(states);
-assert.equal(report.familyCount, 17);
-assert.equal(report.routeCount, 53);
+assert.equal(report.familyCount, 18);
+assert.equal(report.routeCount, 56);
 assert.equal(report.post1949PathCount, 8);
 assert.equal(report.factEndingCount, states.length);
 assert.equal(report.deathEndingCount, states.length);
@@ -232,13 +240,13 @@ assert.equal(report.informationEvidenceCount, states.length);
 assert.equal(report.contactEvidenceCount, states.length);
 assert.equal(report.familyLifecycleCount, states.length);
 assert.equal(report.annualNarrativeRate, 1);
-assert.equal(report.authoredActionCount, 206);
-assert.equal(report.keyDecisionCount, 184);
-assert.equal(report.decisionOptionCount, 580);
-assert.equal(report.authoredOrdinaryEventCount, 906);
-assert.equal(report.choiceEchoEventCount, 526);
+assert.equal(report.authoredActionCount, 215);
+assert.equal(report.keyDecisionCount, 194);
+assert.equal(report.decisionOptionCount, 610);
+assert.equal(report.authoredOrdinaryEventCount, 960);
+assert.equal(report.choiceEchoEventCount, 556);
 assert.equal(report.denseLifeCount, states.length);
-assert.equal(report.persistentContactCount, 252);
+assert.equal(report.persistentContactCount, 267);
 assert.equal(report.concreteCareerCount, states.length);
 assert.equal(report.parentLifecycleDetailCount, states.length);
 assert.equal(report.relationshipDetailCount, states.length);
@@ -252,7 +260,7 @@ assert.equal(report.publicActionCount, 6);
 assert.equal(report.publicDecisionCount, 12);
 assert.equal(report.publicOrdinarySceneCount, 21);
 assert.equal(report.publicEraEventCount, 11);
-assert.equal(report.publicContactProfileCount, 53);
+assert.equal(report.publicContactProfileCount, 56);
 
 const bundle = Game.inspectWholeGameProgressBundle(states);
 assert.equal(bundle.wholeGameStageLabel, '当前已实装内容通过出生到死亡验证；完整设计仍在扩建');
@@ -260,8 +268,8 @@ assert.equal(bundle.hardGates.publicLife, true);
 
 console.log(`[minguo-life] engine ${Game.VERSION}`);
 console.log(`[scenarios] ${states.length}/${definitions.length} complete`);
-console.log(`[families] ${report.familyCount}/17`);
-console.log(`[routes] ${report.routeCount}/53 ${report.routeKeys.join(', ')}`);
+console.log(`[families] ${report.familyCount}/18`);
+console.log(`[routes] ${report.routeCount}/56 ${report.routeKeys.join(', ')}`);
 console.log(`[post-1949] ${report.post1949PathCount}/8 ${report.post1949PathKeys.join(', ')}`);
 console.log(`[post-1949-era] ${report.post1949EraEvidenceCount}/${states.length} lives, ${report.authoredEraEventCount} authored era events`);
 console.log(`[post-1949-employment] ${report.post1949EmploymentEvidenceCount}/${states.length} lives with role, result and next step`);
