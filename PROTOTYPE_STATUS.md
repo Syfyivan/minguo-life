@@ -196,6 +196,8 @@
 
 ### 2026-08-13 当前验证证据
 
+- v0.7.23 公开页面：功能提交 `50a116b9061456881918a8617a53ac2b37729eda` 已推送，GitHub Pages 任务 `31711726029` 成功；公开 `demo.html`、`assets/demo-engine.js`、`assets/density-expansion-family-life.js` 的 SHA-256 分别为 `24ce70c299f6e2e2d6cbc869fe33f7953069cf2253d7f2ab7d1c8fffe83f7815`、`699580442ffe6bc2fb5a95e4e7270656baf24a9822bd1397f372ac9e17d445db`、`e65fd00f80cec612220ceb7802297242b84c216342f919d275690b332bd21481`，与本地完全一致
+- v0.7.23 公网浏览器实玩：公开页实际显示 v0.7.23、18 个家庭入口与 1,896/5,000 场景；从苏北贫农家出生，自动推进至 1916 年并实际读到张桂枝把个人营生与家用分账，选择新式学堂后继续到 1918 年，阅读位置 `1200 → 1883`，没有回到顶部；桌面宽度 `documentElement.scrollWidth = documentElement.clientWidth = body.scrollWidth = 1280`，无横向溢出
 - v0.7.22 公开页面：功能提交 `ceb9f340618043db045619c9f600fb82eea75be0` 已推送，GitHub Pages 任务 `31702259930` 成功；公开 `demo.html`、`assets/demo-engine.js`、`assets/public-life.js`、`assets/domain-expansion-identity-finance-concession.js` 的 SHA-256 分别为 `f618df447789572f641ac48a3779af52f75e3b348cc3517e7fb98e1e6ef59917`、`c28f3d129a68ff9c25df9056ca3e8c390a251c6ade20f28b5db35b579d0d108a`、`5b73aa8a6f5295f0e1e1e400206d275efb17faf74089f6ca27e70ceaa11ef0ed`、`3465e110f6302ee82000b2b988c93a4fc9f4dc7db5e371dab81e53c74015b8f6`，与本地完全一致
 - v0.7.22 公网浏览器实玩：公开页实际显示 v0.7.22、71 路径与 1,680 场景；从苏北贫农家出生，以页面按钮自动安排并从 1910 翻到 1911，阅读位置从人工设定 `1200` 调整到新增叙事附近的 `1653`，没有回到顶部；父母营生、健康、心理、往来人物、公共生活与时代近况均进入页面
 - v0.7.22 公网移动验收：390×844 视口中 `documentElement.scrollWidth = documentElement.clientWidth = body.scrollWidth = 390`，无横向溢出；桌面与移动检查期间控制台无警告或错误，移动视口验证后已恢复默认尺寸
