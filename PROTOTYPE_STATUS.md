@@ -252,6 +252,9 @@
 - v0.7.18 公开页面：功能提交 `5b07d06471327116a930ada71d9c6806b42cac09` 已推送，GitHub Pages 任务 `31675643495` 成功；公开 `demo.html`、`assets/domain-expansion-education-knowledge.js`、`assets/demo-engine.js` 的 SHA-256 分别为 `9aa054da92dc2f601ac362e95a8fc190080d3e9da752dae61a01800c7ec4701d`、`963ed6ab5c8620cd6cb4090cff5852b24c32c86f042b7ae31e3a7e1f8efd65ce`、`e5958c3d53aada76c7b4a60aa047aa974f5e5fd9fd03e027382ee237a76c1ec8`，与本地完全一致；公网页面实际显示 v0.7.18、18 家庭、59 路径、721 选项与 1,104 场景
 - v0.7.18 公网浏览器实玩：公开页以江南沈家女性种子 718 正常开局，自动安排并点击“过完这一年”后进入 1909 年；阅读位置从 `1167.5` 调整到上方新增年度叙事后的同一阅读区域 `1671`，没有回到顶部，1280px 页面无横向溢出或控制台警告／错误
 - v0.7.18 公网移动验收：390×844 视口实际加载 18 张家庭卡并从 1908 推进到 1909 年，阅读位置从 `1115.5` 保持在同一阅读区域 `2609.5`；`documentElement` 与 `body` 的 `scrollWidth = clientWidth = 390`，没有横向溢出或控制台警告／错误；验证后已恢复浏览器默认尺寸
+- v0.7.19 公开页面：功能提交 `b591d1d66e4ccf0e55847b27363edfb69b595956` 已推送，GitHub Pages 任务 `31680973475` 成功；公开 `demo.html`、`assets/domain-expansion-medical-public-health.js`、`assets/demo-engine.js` 的 SHA-256 分别为 `45763b5247046abad24fd8e8550dcf4c459f62e81d946b4b37ce6d096a53bc46`、`04433cb3d0084716ffeb91371e1385318fdf46fef0922c879f7535046da4fa35`、`e5958c3d53aada76c7b4a60aa047aa974f5e5fd9fd03e027382ee237a76c1ec8`，与本地完全一致；公网页面实际显示 v0.7.19、18 家庭、62 路径、832 个选项与 1,248 个场景
+- v0.7.19 公网浏览器实玩：公开页以川西医药饮食家女性种子 719 正常开局，自动安排并点击“过完这一年”后进入下一年；阅读位置从 `1200` 调整到上方新增年度叙事后的同一阅读区域 `1774.5`，没有回到顶部，1280px 页面 `scrollWidth = clientWidth = 1280`
+- v0.7.19 公网移动验收：390×844 视口实际加载 18 张家庭卡并正常开局翻年，阅读位置从 `1100` 调整到同一阅读区域 `2985.5`；`documentElement` 与 `body` 的 `scrollWidth = clientWidth = 390`，没有横向溢出；验证后已恢复浏览器默认尺寸
 
 ## 权威文件
 
