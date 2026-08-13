@@ -794,10 +794,14 @@
     var employment = state.post1949 && state.post1949.employment;
     if (!employment || !employment.role) return null;
     var people = (C.post1949People && C.post1949People[state.post1949Choice]) || {};
+    var selected = employmentProfile(state);
+    var routeProfile = selected && selected.profile;
     return {
       kind: 'employment', role: employment.role, workplace: employment.workplace,
-      employer: people.employer || '当前工作地点的负责人', supervisor: people.employer || '当前负责人',
-      colleague: people.coworker || '同班同事', publicPerson: people.neighbor || '住处邻人',
+      employer: (routeProfile && routeProfile.supervisor) || people.employer || '当前工作地点的负责人',
+      supervisor: (routeProfile && routeProfile.supervisor) || people.employer || '当前负责人',
+      colleague: (routeProfile && routeProfile.colleague) || people.coworker || '同班同事',
+      publicPerson: (routeProfile && routeProfile.publicPerson) || people.neighbor || '住处邻人',
       duties: employment.duties, terms: employment.terms,
       scenes: [],
     };
@@ -806,10 +810,14 @@
   function installPost1949Contacts(state) {
     var people = C.post1949People && C.post1949People[state.post1949Choice];
     if (!people) return;
+    var selected = employmentProfile(state);
+    var routeProfile = selected && selected.profile;
+    var contactSuffix = routeProfile && C.post1949RouteJobs && C.post1949RouteJobs[state.routeKey]
+      ? '_' + state.routeKey : '';
     [
-      { id: 'post_employer_' + state.post1949Choice, label: people.employer, role: '负责说明岗位、工钱与是否留用的人', status: 'coworker', relation: 12, born: state.identity.born - 12 },
-      { id: 'post_coworker_' + state.post1949Choice, label: people.coworker, role: '与你在同一地点做工、也有自己家计的同事', status: 'coworker', relation: 18, born: state.identity.born + 1 },
-      { id: 'post_neighbor_' + state.post1949Choice, label: people.neighbor, role: '与你共享地方消息但不共享全部家计的邻人', status: 'nearby', relation: 16, born: state.identity.born - 3 },
+      { id: 'post_employer_' + state.post1949Choice + contactSuffix, label: (routeProfile && routeProfile.supervisor) || people.employer, role: (routeProfile && routeProfile.supervisorRole) || '负责说明岗位、工钱与是否留用的人', status: 'coworker', relation: 12, born: state.identity.born - 12 },
+      { id: 'post_coworker_' + state.post1949Choice + contactSuffix, label: (routeProfile && routeProfile.colleague) || people.coworker, role: (routeProfile && routeProfile.colleagueRole) || '与你在同一地点做工、也有自己家计的同事', status: 'coworker', relation: 18, born: state.identity.born + 1 },
+      { id: 'post_' + (contactSuffix ? 'public_' : 'neighbor_') + state.post1949Choice + contactSuffix, label: (routeProfile && routeProfile.publicPerson) || people.neighbor, role: (routeProfile && routeProfile.publicRole) || '与你共享地方消息但不共享全部家计的邻人', status: 'nearby', relation: 16, born: state.identity.born - 3 },
     ].forEach(function (contact) { addDetailedContact(state, contact); });
   }
 
@@ -1533,7 +1541,9 @@
     var pathProfiles = C.post1949Jobs && C.post1949Jobs[state.post1949Choice];
     if (!pathProfiles) return null;
     var track = livelihoodTrack(state);
-    return { track: track, profile: pathProfiles[track] || pathProfiles.manual };
+    var routeProfiles = C.post1949RouteJobs && C.post1949RouteJobs[state.routeKey];
+    var routeProfile = routeProfiles && routeProfiles[state.post1949Choice];
+    return { track: routeProfile ? (routeProfile.track || track) : track, profile: routeProfile || pathProfiles[track] || pathProfiles.manual };
   }
 
   function employmentScore(state, track) {
@@ -1709,6 +1719,8 @@
     var formerRole = current.role;
     var result;
     if (optionId === 'change-work') {
+      var selectedLaterProfile = employmentProfile(state);
+      var routeLaterProfile = selectedLaterProfile && selectedLaterProfile.profile;
       var lighterRoles = {
         manual: '货物清点与工段看守',
         skilled: '检修记录与带徒工',
@@ -1716,11 +1728,11 @@
         care: '诊所登记与复诊联络员',
       };
       current.status = 'employed';
-      current.role = lighterRoles[current.track] || '较轻的受薪工作';
-      current.duties = current.track === 'care' ? '整理复诊名册、交代用药记录并联络病家'
+      current.role = (routeLaterProfile && routeLaterProfile.lighterRole) || lighterRoles[current.track] || '较轻的受薪工作';
+      current.duties = (routeLaterProfile && routeLaterProfile.lighterDuties) || (current.track === 'care' ? '整理复诊名册、交代用药记录并联络病家'
         : current.track === 'literate' ? '整理文书、核对旧账并带新人熟悉格式'
           : current.track === 'skilled' ? '记录故障、验收修理并把旧经验教给年轻工人'
-            : '清点到货、登记工段并承担较少的重体力搬运';
+            : '清点到货、登记工段并承担较少的重体力搬运');
       current.terms = '按较轻职责重新核定工钱和工时';
       current.nextStep = '按新的职责继续工作，并观察收入与身体是否能够长期接住。';
       result = '五十岁时，你离开原来的“' + formerRole + '”职责，在' + current.workplace + '改做' + current.role + '。新职责是' + current.duties + '；' + current.terms + '。';

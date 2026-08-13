@@ -23,6 +23,7 @@ await import('../assets/family-expansion-f15.js');
 await import('../assets/family-expansion-f02.js');
 await import('../assets/family-expansion-f03.js');
 await import('../assets/family-expansion-f07.js');
+await import('../assets/domain-expansion-education-knowledge.js');
 await import('../assets/demo-engine.js');
 
 const Game = globalThis.MINGUO_GAME;
@@ -111,6 +112,9 @@ const ROUTE_SETUPS = {
   'shen-newwoman': { familyKey: 'jiangnanshen', gender: '女', decisions: { 'shen-path': 'new-woman', 'shen-war': 'stay-public-work' } },
   'shen-refugee': { familyKey: 'jiangnanshen', gender: '女', decisions: { 'shen-path': 'new-woman', 'shen-war': 'move-with-family' } },
   'shen-professional': { familyKey: 'jiangnanshen', gender: '女', decisions: { 'shen-path': 'professional-service', 'shen-war': 'stay-public-work' } },
+  'shen-higher-study': { familyKey: 'jiangnanshen', gender: '女', decisions: { 'shen-path': 'higher-study', 'shen-war': 'stay-public-work' } },
+  'shen-news-publishing': { familyKey: 'jiangnanshen', gender: '女', decisions: { 'shen-path': 'news-publishing', 'shen-war': 'stay-public-work' } },
+  'shen-library-research': { familyKey: 'jiangnanshen', gender: '男', decisions: { 'shen-path': 'library-research', 'shen-war': 'stay-public-work' } },
   'shanghai-heir': { familyKey: 'shanghaigongshang', gender: '男', decisions: { 'shanghai-path': 'business-heir', 'shanghai-war': 'protect-workers' } },
   'shanghai-newwoman': { familyKey: 'shanghaigongshang', gender: '女', decisions: { 'shanghai-path': 'urban-new-woman', 'shanghai-war': 'protect-workers' } },
   'shanghai-professional': { familyKey: 'shanghaigongshang', gender: '女', decisions: { 'shanghai-path': 'salaried-professional', 'shanghai-war': 'relocate-own-work' } },
@@ -491,11 +495,11 @@ test('family lifecycle allows care without forcing marriage or children', () => 
   assert.ok(unmarried.facts.some((fact) => fact.source === 'family-future'));
 });
 
-test('portable v0.7.17 saves round-trip without changing the life ledger', () => {
+test('portable v0.7.18 saves round-trip without changing the life ledger', () => {
   const state = playScenario({ familyKey: 'subeipoor', decisions: { 'subei-war': 'join-army' } });
   const restored = Game.importGame(Game.exportGame(state));
 
-  assert.equal(restored.version, '0.7.17');
+  assert.equal(restored.version, '0.7.18');
   assert.equal(JSON.parse(Game.exportGame(restored)).schemaVersion, 6);
   assert.deepEqual(restored.identity, state.identity);
   assert.deepEqual(restored.facts, state.facts);
@@ -530,7 +534,7 @@ test('v0.2 states receive v0.7 complete-life and public-life defaults on import'
   delete legacy.contactHistory;
 
   const restored = Game.importGame(legacy);
-  assert.equal(restored.version, '0.7.17');
+  assert.equal(restored.version, '0.7.18');
   assert.equal(restored.publicLife.status, 'unaffiliated');
   assert.equal(Object.keys(restored.contacts).length, 3);
   assert.deepEqual(restored.annualNarratives, []);
@@ -553,7 +557,7 @@ test('v0.4 endings at 1949 resume as an unfinished life in 1950', () => {
   delete legacy.life;
 
   const restored = Game.importGame(legacy);
-  assert.equal(restored.version, '0.7.17');
+  assert.equal(restored.version, '0.7.18');
   assert.equal(restored.over, false);
   assert.equal(restored.year, 1950);
   assert.equal(restored.chapter, 'post1949');
@@ -843,11 +847,11 @@ test('keeping distance or staying nonparty remains a complete playable public-li
 
 test('the birth-to-death pack reaches the published content-density baseline', () => {
   const content = Game.content;
-  assert.equal(content.actions.length, 215);
-  assert.equal(content.decisions.length, 194);
-  assert.equal(content.decisions.reduce((sum, decision) => sum + decision.options.length, 0), 610);
-  assert.equal(content.ordinaryEvents.length, 960);
-  assert.equal(content.ordinaryEvents.filter((event) => event.requiresEchoes).length, 555);
+  assert.equal(content.actions.length, 239);
+  assert.equal(content.decisions.length, 230);
+  assert.equal(content.decisions.reduce((sum, decision) => sum + decision.options.length, 0), 721);
+  assert.equal(content.ordinaryEvents.length, 1104);
+  assert.equal(content.ordinaryEvents.filter((event) => event.requiresEchoes).length, 663);
   assert.equal(new Set(content.actions.map((action) => action.id)).size, content.actions.length);
   assert.equal(new Set(content.decisions.map((decision) => decision.id)).size, content.decisions.length);
   assert.equal(new Set(content.ordinaryEvents.map((event) => event.id)).size, content.ordinaryEvents.length);
@@ -868,7 +872,7 @@ test('the birth-to-death pack reaches the published content-density baseline', (
 
   for (const routeKey of Object.keys(content.routes)) {
     assert.ok(content.actions.filter((action) => action.routes?.includes(routeKey)).length >= 2, `${routeKey} needs two route actions`);
-    assert.equal(content.decisions.filter((decision) => decision.id.startsWith('route-') && decision.routes?.includes(routeKey)).length, 2, `${routeKey} needs two route decisions`);
+    assert.ok(content.decisions.filter((decision) => decision.id.startsWith('route-') && decision.routes?.includes(routeKey)).length >= 2, `${routeKey} needs at least two route decisions`);
   }
 });
 
@@ -884,7 +888,7 @@ test('route choices produce guaranteed next-year echoes and ending facts', () =>
   assert.match(Game.buildEndingNarrative(state), /1942 年/);
 });
 
-test('all 610 key-decision options are reachable in a compatible life', () => {
+test('all 721 key-decision options are reachable in a compatible life', () => {
   for (const decision of Game.content.decisions) {
     for (const target of decision.options) {
       const routeKey = decision.routes?.[0] || target.routes?.[0];
@@ -933,7 +937,7 @@ test('all 610 key-decision options are reachable in a compatible life', () => {
   }
 });
 
-test('all 215 annual actions can be performed in a compatible life', () => {
+test('all 239 annual actions can be performed in a compatible life', () => {
   for (const target of Game.content.actions) {
     const routeKey = target.routes?.[0];
     const setup = routeKey
@@ -990,7 +994,7 @@ test('coverage inspection reports family, route, subject and ending evidence', (
   assert.equal(report.subjectEvidenceCount, scenarios.length);
   assert.equal(report.post1949EmploymentEvidenceCount, scenarios.length);
   assert.equal(report.annualNarrativeRate, 1);
-  assert.equal(report.persistentContactCount, 267);
+  assert.equal(report.persistentContactCount, 285);
 });
 
 test('a career is a concrete workplace with bosses, coworkers, customers and work records', () => {

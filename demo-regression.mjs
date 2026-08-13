@@ -22,6 +22,7 @@ await import('./assets/family-expansion-f15.js');
 await import('./assets/family-expansion-f02.js');
 await import('./assets/family-expansion-f03.js');
 await import('./assets/family-expansion-f07.js');
+await import('./assets/domain-expansion-education-knowledge.js');
 await import('./assets/demo-engine.js');
 
 const Game = globalThis.MINGUO_GAME;
@@ -175,6 +176,9 @@ const definitions = [
   { id: 'shen-newwoman', familyKey: 'jiangnanshen', gender: '女', name: '沈毓宁', expectedRoute: 'shen-newwoman', expectedPost1949: 'mainland', decisions: { 'shen-path': 'new-woman' } },
   { id: 'shen-refugee', familyKey: 'jiangnanshen', gender: '女', name: '沈清和', expectedRoute: 'shen-refugee', expectedPost1949: 'in-motion', decisions: { 'shen-path': 'new-woman', 'shen-war': 'move-with-family', 'final-1949': 'remain-in-motion' } },
   { id: 'shen-professional', familyKey: 'jiangnanshen', gender: '男', name: '沈济安', expectedRoute: 'shen-professional', expectedPost1949: 'hong-kong', decisions: { 'shen-path': 'professional-service', 'final-1949': 'move-hong-kong' } },
+  { id: 'shen-higher-study', familyKey: 'jiangnanshen', gender: '女', name: '沈映秋', expectedRoute: 'shen-scholar', expectedPost1949: 'mainland', decisions: { 'shen-path': 'higher-study', 'route-d19-1933': 'd19-33-teach' } },
+  { id: 'shen-news-publishing', familyKey: 'jiangnanshen', gender: '女', name: '沈曼贞', expectedRoute: 'shen-news-publishing', expectedPost1949: 'mainland', decisions: { 'shen-path': 'news-publishing' } },
+  { id: 'shen-library-research', familyKey: 'jiangnanshen', gender: '男', name: '沈文清', expectedRoute: 'shen-library-research', expectedPost1949: 'mainland', decisions: { 'shen-path': 'library-research' } },
   { id: 'shanghai-heir', familyKey: 'shanghaigongshang', gender: '男', name: '顾承安', expectedRoute: 'shanghai-heir', expectedPost1949: 'taiwan', decisions: { 'final-1949': 'move-taiwan' } },
   { id: 'shanghai-newwoman', familyKey: 'shanghaigongshang', gender: '女', name: '顾明仪', expectedRoute: 'shanghai-newwoman', expectedPost1949: 'overseas', decisions: { 'shanghai-path': 'urban-new-woman', 'final-1949': 'move-overseas' } },
   { id: 'shanghai-professional', familyKey: 'shanghaigongshang', gender: '女', name: '顾衡仪', expectedRoute: 'shanghai-professional', expectedPost1949: 'unsettled', decisions: { 'shanghai-path': 'salaried-professional', 'shanghai-war': 'relocate-own-work', 'final-1949': 'leave-unsettled' } },
@@ -228,7 +232,7 @@ const definitions = [
 const states = definitions.map(runScenario);
 const report = Game.inspectCoverage(states);
 assert.equal(report.familyCount, 18);
-assert.equal(report.routeCount, 56);
+assert.equal(report.routeCount, 59);
 assert.equal(report.post1949PathCount, 8);
 assert.equal(report.factEndingCount, states.length);
 assert.equal(report.deathEndingCount, states.length);
@@ -240,13 +244,13 @@ assert.equal(report.informationEvidenceCount, states.length);
 assert.equal(report.contactEvidenceCount, states.length);
 assert.equal(report.familyLifecycleCount, states.length);
 assert.equal(report.annualNarrativeRate, 1);
-assert.equal(report.authoredActionCount, 215);
-assert.equal(report.keyDecisionCount, 194);
-assert.equal(report.decisionOptionCount, 610);
-assert.equal(report.authoredOrdinaryEventCount, 960);
-assert.equal(report.choiceEchoEventCount, 556);
+assert.equal(report.authoredActionCount, 239);
+assert.equal(report.keyDecisionCount, 230);
+assert.equal(report.decisionOptionCount, 721);
+assert.equal(report.authoredOrdinaryEventCount, 1104);
+assert.equal(report.choiceEchoEventCount, 664);
 assert.equal(report.denseLifeCount, states.length);
-assert.equal(report.persistentContactCount, 267);
+assert.equal(report.persistentContactCount, 285);
 assert.equal(report.concreteCareerCount, states.length);
 assert.equal(report.parentLifecycleDetailCount, states.length);
 assert.equal(report.relationshipDetailCount, states.length);
@@ -260,7 +264,7 @@ assert.equal(report.publicActionCount, 6);
 assert.equal(report.publicDecisionCount, 12);
 assert.equal(report.publicOrdinarySceneCount, 21);
 assert.equal(report.publicEraEventCount, 11);
-assert.equal(report.publicContactProfileCount, 56);
+assert.equal(report.publicContactProfileCount, 59);
 
 const bundle = Game.inspectWholeGameProgressBundle(states);
 assert.equal(bundle.wholeGameStageLabel, '当前已实装内容通过出生到死亡验证；完整设计仍在扩建');
@@ -269,7 +273,7 @@ assert.equal(bundle.hardGates.publicLife, true);
 console.log(`[minguo-life] engine ${Game.VERSION}`);
 console.log(`[scenarios] ${states.length}/${definitions.length} complete`);
 console.log(`[families] ${report.familyCount}/18`);
-console.log(`[routes] ${report.routeCount}/56 ${report.routeKeys.join(', ')}`);
+console.log(`[routes] ${report.routeCount}/59 ${report.routeKeys.join(', ')}`);
 console.log(`[post-1949] ${report.post1949PathCount}/8 ${report.post1949PathKeys.join(', ')}`);
 console.log(`[post-1949-era] ${report.post1949EraEvidenceCount}/${states.length} lives, ${report.authoredEraEventCount} authored era events`);
 console.log(`[post-1949-employment] ${report.post1949EmploymentEvidenceCount}/${states.length} lives with role, result and next step`);

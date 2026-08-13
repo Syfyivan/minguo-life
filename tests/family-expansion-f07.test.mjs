@@ -23,6 +23,7 @@ await import('../assets/family-expansion-f15.js');
 await import('../assets/family-expansion-f02.js');
 await import('../assets/family-expansion-f03.js');
 await import('../assets/family-expansion-f07.js');
+await import('../assets/domain-expansion-education-knowledge.js');
 await import('../assets/demo-engine.js');
 
 const Content = globalThis.MINGUO_GAME_CONTENT;
@@ -57,12 +58,12 @@ function play(decisions, gender = '女', seed = 710) {
 }
 
 test('F07 completes all eighteen playable families while reusing honest canonical domains', () => {
-  assert.equal(Content.version, '0.7.17');
+  assert.equal(Content.version, '0.7.18');
   assert.equal(Content.designRegistry.families.F07.runtimeStatus, 'playable-verified');
   assert.equal(Content.runtimeFamilyDesignMap.northchinadroughtfarm, 'F07');
   assert.equal(Object.keys(Content.families).length, 18);
-  assert.equal(Object.keys(Content.routes).length, 56);
-  assert.equal(new Set(Object.values(Content.legacyRouteDomainMap)).size, 33);
+  assert.equal(Object.keys(Content.routes).length, 59);
+  assert.equal(new Set(Object.values(Content.legacyRouteDomainMap)).size, 36);
   assert.deepEqual([
     Content.legacyRouteDomainMap['northchina-seasonal-farm-laborer'],
     Content.legacyRouteDomainMap['northchina-temple-fair-vendor'],
