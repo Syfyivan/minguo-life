@@ -19,6 +19,7 @@ await import('../assets/family-expansion-f11.js');
 await import('../assets/family-expansion-f08.js');
 await import('../assets/family-expansion-f12.js');
 await import('../assets/family-expansion-f09.js');
+await import('../assets/family-expansion-f15.js');
 await import('../assets/demo-engine.js');
 
 const Game = globalThis.MINGUO_GAME;
@@ -63,6 +64,15 @@ const DEFAULT_DECISIONS = {
   'northeast-settler-winter-debt-1921': 'winter-keep-seed-food',
   'northeast-settler-occupation': 'settler-split-addresses-records',
   'northeast-settler-transition-1948': 'settler-keep-current-records',
+  'southwest-housing-ration-1937': 'f15-renew-rented-courtyard',
+  'southwest-air-raid-1939': 'f15-air-raid-people-first',
+  'southwest-warworker-path': 'f15-warehouse-trial',
+  'southwest-transition-1948': 'f15-transition-stay-southwest',
+  'f15-public-contact-1945': 'f15-public-open-work',
+  'f15-public-family-boundary-1946': 'f15-public-explain-scope',
+  'f15-political-application-1947': 'f15-apply-ccp',
+  'f15-public-role-1948': 'f15-public-continue-open',
+  'f15-political-answer-1949': 'f15-accept-membership',
   'postwar-settlement': 'rebuild-local',
   'final-1949': 'stay-mainland',
   'later-life-livelihood': 'change-work',
@@ -122,6 +132,9 @@ const ROUTE_SETUPS = {
   'northeast-seasonal-farm-worker': { familyKey: 'northeastsettlers', gender: '男', decisions: { 'northeast-settler-path': 'seasonal-farm-trial', 'northeast-settler-occupation': 'settler-split-addresses-records' } },
   'northeast-household-farm-sideline': { familyKey: 'northeastsettlers', gender: '女', decisions: { 'northeast-settler-path': 'household-sideline-trial', 'northeast-settler-occupation': 'settler-remain-confirmed-livelihood' } },
   'northeast-rural-tool-repairer': { familyKey: 'northeastsettlers', gender: '女', decisions: { 'northeast-settler-path': 'rural-repair-trial', 'northeast-settler-occupation': 'settler-verify-station-bed-work' } },
+  'southwest-wartime-warehouse-supply': { familyKey: 'southwestwarworkers', gender: '男', decisions: { 'southwest-warworker-path': 'f15-warehouse-trial' } },
+  'southwest-mechanical-drawing-repair': { familyKey: 'southwestwarworkers', gender: '女', decisions: { 'southwest-warworker-path': 'f15-repair-drawing-trial' } },
+  'southwest-clinic-records-clerk': { familyKey: 'southwestwarworkers', gender: '女', decisions: { 'southwest-warworker-path': 'f15-records-trial' } },
 };
 
 const POST1949_OPTIONS = {
@@ -153,6 +166,7 @@ function setupForFamily(familyKey) {
   if (familyKey === 'tianjinclerks') return cloneSetup(ROUTE_SETUPS['tianjin-commercial-clerk']);
   if (familyKey === 'hankoucommerce') return cloneSetup(ROUTE_SETUPS['hankou-trading-house-clerk']);
   if (familyKey === 'northeastsettlers') return cloneSetup(ROUTE_SETUPS['northeast-seasonal-farm-worker']);
+  if (familyKey === 'southwestwarworkers') return cloneSetup(ROUTE_SETUPS['southwest-wartime-warehouse-supply']);
   return cloneSetup(ROUTE_SETUPS['xian-repair']);
 }
 
@@ -279,21 +293,8 @@ test('information channels change what the player can name about an era shock', 
   assert.ok(informed.information.channels.includes('newspaper'));
 });
 
-test('all fourteen playable families continue beyond 1949 and end only after a confirmed death', () => {
-  const scenarios = [
-    playScenario({ familyKey: 'subeipoor' }),
-    playScenario({ familyKey: 'jiangnanshen' }),
-    playScenario({ familyKey: 'shanghaigongshang' }),
-    playScenario({ familyKey: 'sichuanmedicine' }),
-    playScenario({ familyKey: 'guanzhongirrigation' }),
-    playScenario({ familyKey: 'xianartisans' }),
-    playScenario({ familyKey: 'shanghailabor' }),
-    playScenario({ familyKey: 'northeastrailworkers' }),
-    playScenario({ familyKey: 'guangdongqiaoxiang' }),
-    playScenario({ familyKey: 'guangdongcoastal' }),
-    playScenario({ familyKey: 'hankouport' }),
-    playScenario({ familyKey: 'tianjinclerks' }),
-  ];
+test('all fifteen playable families continue beyond 1949 and end only after a confirmed death', () => {
+  const scenarios = Object.keys(Game.content.families).map((familyKey) => playScenario({ familyKey }));
   const bannedRanks = /成功|失败|安稳|挣扎|爬得很高|万幸/;
 
   for (const state of scenarios) {
@@ -463,11 +464,11 @@ test('family lifecycle allows care without forcing marriage or children', () => 
   assert.ok(unmarried.facts.some((fact) => fact.source === 'family-future'));
 });
 
-test('portable v0.7.13 saves round-trip without changing the life ledger', () => {
+test('portable v0.7.14 saves round-trip without changing the life ledger', () => {
   const state = playScenario({ familyKey: 'subeipoor', decisions: { 'subei-war': 'join-army' } });
   const restored = Game.importGame(Game.exportGame(state));
 
-  assert.equal(restored.version, '0.7.13');
+  assert.equal(restored.version, '0.7.14');
   assert.equal(JSON.parse(Game.exportGame(restored)).schemaVersion, 6);
   assert.deepEqual(restored.identity, state.identity);
   assert.deepEqual(restored.facts, state.facts);
@@ -502,7 +503,7 @@ test('v0.2 states receive v0.7 complete-life and public-life defaults on import'
   delete legacy.contactHistory;
 
   const restored = Game.importGame(legacy);
-  assert.equal(restored.version, '0.7.13');
+  assert.equal(restored.version, '0.7.14');
   assert.equal(restored.publicLife.status, 'unaffiliated');
   assert.equal(Object.keys(restored.contacts).length, 3);
   assert.deepEqual(restored.annualNarratives, []);
@@ -525,7 +526,7 @@ test('v0.4 endings at 1949 resume as an unfinished life in 1950', () => {
   delete legacy.life;
 
   const restored = Game.importGame(legacy);
-  assert.equal(restored.version, '0.7.13');
+  assert.equal(restored.version, '0.7.14');
   assert.equal(restored.over, false);
   assert.equal(restored.year, 1950);
   assert.equal(restored.chapter, 'post1949');
@@ -815,11 +816,11 @@ test('keeping distance or staying nonparty remains a complete playable public-li
 
 test('the birth-to-death pack reaches the published content-density baseline', () => {
   const content = Game.content;
-  assert.equal(content.actions.length, 179);
-  assert.equal(content.decisions.length, 149);
-  assert.equal(content.decisions.reduce((sum, decision) => sum + decision.options.length, 0), 474);
-  assert.equal(content.ordinaryEvents.length, 728);
-  assert.equal(content.ordinaryEvents.filter((event) => event.requiresEchoes).length, 419);
+  assert.equal(content.actions.length, 188);
+  assert.equal(content.decisions.length, 164);
+  assert.equal(content.decisions.reduce((sum, decision) => sum + decision.options.length, 0), 520);
+  assert.equal(content.ordinaryEvents.length, 798);
+  assert.equal(content.ordinaryEvents.filter((event) => event.requiresEchoes).length, 465);
   assert.equal(new Set(content.actions.map((action) => action.id)).size, content.actions.length);
   assert.equal(new Set(content.decisions.map((decision) => decision.id)).size, content.decisions.length);
   assert.equal(new Set(content.ordinaryEvents.map((event) => event.id)).size, content.ordinaryEvents.length);
@@ -856,7 +857,7 @@ test('route choices produce guaranteed next-year echoes and ending facts', () =>
   assert.match(Game.buildEndingNarrative(state), /1942 年/);
 });
 
-test('all 474 key-decision options are reachable in a compatible life', () => {
+test('all 520 key-decision options are reachable in a compatible life', () => {
   for (const decision of Game.content.decisions) {
     for (const target of decision.options) {
       const routeKey = decision.routes?.[0] || target.routes?.[0];
@@ -905,7 +906,7 @@ test('all 474 key-decision options are reachable in a compatible life', () => {
   }
 });
 
-test('all 179 annual actions can be performed in a compatible life', () => {
+test('all 188 annual actions can be performed in a compatible life', () => {
   for (const target of Game.content.actions) {
     const routeKey = target.routes?.[0];
     const setup = routeKey
@@ -962,7 +963,7 @@ test('coverage inspection reports family, route, subject and ending evidence', (
   assert.equal(report.subjectEvidenceCount, scenarios.length);
   assert.equal(report.post1949EmploymentEvidenceCount, scenarios.length);
   assert.equal(report.annualNarrativeRate, 1);
-  assert.equal(report.persistentContactCount, 207);
+  assert.equal(report.persistentContactCount, 222);
 });
 
 test('a career is a concrete workplace with bosses, coworkers, customers and work records', () => {

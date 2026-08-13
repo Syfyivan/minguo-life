@@ -18,6 +18,7 @@ await import('./assets/family-expansion-f11.js');
 await import('./assets/family-expansion-f08.js');
 await import('./assets/family-expansion-f12.js');
 await import('./assets/family-expansion-f09.js');
+await import('./assets/family-expansion-f15.js');
 await import('./assets/demo-engine.js');
 
 const Game = globalThis.MINGUO_GAME;
@@ -62,6 +63,15 @@ const baseDecisions = {
   'northeast-settler-winter-debt-1921': 'winter-keep-seed-food',
   'northeast-settler-occupation': 'settler-split-addresses-records',
   'northeast-settler-transition-1948': 'settler-keep-current-records',
+  'southwest-housing-ration-1937': 'f15-renew-rented-courtyard',
+  'southwest-air-raid-1939': 'f15-air-raid-people-first',
+  'southwest-warworker-path': 'f15-warehouse-trial',
+  'southwest-transition-1948': 'f15-transition-stay-southwest',
+  'f15-public-contact-1945': 'f15-public-open-work',
+  'f15-public-family-boundary-1946': 'f15-public-explain-scope',
+  'f15-political-application-1947': 'f15-apply-ccp',
+  'f15-public-role-1948': 'f15-public-continue-open',
+  'f15-political-answer-1949': 'f15-accept-membership',
   'postwar-settlement': 'rebuild-local',
   'final-1949': 'stay-mainland',
   'later-life-livelihood': 'change-work',
@@ -186,12 +196,15 @@ const definitions = [
   { id: 'northeast-seasonal-farm-worker', familyKey: 'northeastsettlers', gender: '男', name: '王守田', expectedRoute: 'northeast-seasonal-farm-worker', expectedPost1949: 'mainland', decisions: { 'northeast-settler-path': 'seasonal-farm-trial', 'route-northeast-seasonal-farm-worker-1946': 'seasonal-limited-work-team' } },
   { id: 'northeast-household-farm-sideline', familyKey: 'northeastsettlers', gender: '女', name: '王守兰', expectedRoute: 'northeast-household-farm-sideline', expectedPost1949: 'mainland', decisions: { 'northeast-settler-path': 'household-sideline-trial', 'route-northeast-household-farm-sideline-1946': 'sideline-limited-food-garden' } },
   { id: 'northeast-rural-tool-repairer', familyKey: 'northeastsettlers', gender: '女', name: '王守兰', expectedRoute: 'northeast-rural-tool-repairer', expectedPost1949: 'mainland', decisions: { 'northeast-settler-path': 'rural-repair-trial', 'route-northeast-rural-tool-repairer-1946': 'repair-limited-workshop', 'northeast-settler-occupation': 'settler-remain-confirmed-livelihood' } },
+  { id: 'southwest-wartime-warehouse-supply', familyKey: 'southwestwarworkers', gender: '男', name: '郭承安', expectedRoute: 'southwest-wartime-warehouse-supply', expectedPost1949: 'mainland', decisions: { 'southwest-warworker-path': 'f15-warehouse-trial', 'route-southwest-wartime-warehouse-supply-1946': 'f15-warehouse-limited-inventory-team' } },
+  { id: 'southwest-mechanical-drawing-repair', familyKey: 'southwestwarworkers', gender: '女', name: '郭承宁', expectedRoute: 'southwest-mechanical-drawing-repair', expectedPost1949: 'mainland', decisions: { 'southwest-warworker-path': 'f15-repair-drawing-trial', 'route-southwest-mechanical-drawing-repair-1946': 'f15-repair-limited-shop' } },
+  { id: 'southwest-clinic-records-clerk', familyKey: 'southwestwarworkers', gender: '女', name: '郭承宁', expectedRoute: 'southwest-clinic-records-clerk', expectedPost1949: 'mainland', decisions: { 'southwest-warworker-path': 'f15-records-trial', 'route-southwest-clinic-records-clerk-1946': 'f15-records-limited-service-coop' } },
 ];
 
 const states = definitions.map(runScenario);
 const report = Game.inspectCoverage(states);
-assert.equal(report.familyCount, 14);
-assert.equal(report.routeCount, 44);
+assert.equal(report.familyCount, 15);
+assert.equal(report.routeCount, 47);
 assert.equal(report.post1949PathCount, 8);
 assert.equal(report.factEndingCount, states.length);
 assert.equal(report.deathEndingCount, states.length);
@@ -203,13 +216,13 @@ assert.equal(report.informationEvidenceCount, states.length);
 assert.equal(report.contactEvidenceCount, states.length);
 assert.equal(report.familyLifecycleCount, states.length);
 assert.equal(report.annualNarrativeRate, 1);
-assert.equal(report.authoredActionCount, 179);
-assert.equal(report.keyDecisionCount, 149);
-assert.equal(report.decisionOptionCount, 474);
-assert.equal(report.authoredOrdinaryEventCount, 728);
-assert.equal(report.choiceEchoEventCount, 420);
+assert.equal(report.authoredActionCount, 188);
+assert.equal(report.keyDecisionCount, 164);
+assert.equal(report.decisionOptionCount, 520);
+assert.equal(report.authoredOrdinaryEventCount, 798);
+assert.equal(report.choiceEchoEventCount, 466);
 assert.equal(report.denseLifeCount, states.length);
-assert.equal(report.persistentContactCount, 207);
+assert.equal(report.persistentContactCount, 222);
 assert.equal(report.concreteCareerCount, states.length);
 assert.equal(report.parentLifecycleDetailCount, states.length);
 assert.equal(report.relationshipDetailCount, states.length);
@@ -220,10 +233,10 @@ assert.equal(report.concreteYearCount, report.expectedNarrativeYears);
 assert.equal(report.publicLifeEvidenceCount, states.length);
 assert.equal(report.politicalMembershipCount, states.length);
 assert.equal(report.publicActionCount, 6);
-assert.equal(report.publicDecisionCount, 7);
+assert.equal(report.publicDecisionCount, 12);
 assert.equal(report.publicOrdinarySceneCount, 21);
 assert.equal(report.publicEraEventCount, 11);
-assert.equal(report.publicContactProfileCount, 44);
+assert.equal(report.publicContactProfileCount, 47);
 
 const bundle = Game.inspectWholeGameProgressBundle(states);
 assert.equal(bundle.wholeGameStageLabel, '当前已实装内容通过出生到死亡验证；完整设计仍在扩建');
@@ -231,8 +244,8 @@ assert.equal(bundle.hardGates.publicLife, true);
 
 console.log(`[minguo-life] engine ${Game.VERSION}`);
 console.log(`[scenarios] ${states.length}/${definitions.length} complete`);
-console.log(`[families] ${report.familyCount}/14`);
-console.log(`[routes] ${report.routeCount}/44 ${report.routeKeys.join(', ')}`);
+console.log(`[families] ${report.familyCount}/15`);
+console.log(`[routes] ${report.routeCount}/47 ${report.routeKeys.join(', ')}`);
 console.log(`[post-1949] ${report.post1949PathCount}/8 ${report.post1949PathKeys.join(', ')}`);
 console.log(`[post-1949-era] ${report.post1949EraEvidenceCount}/${states.length} lives, ${report.authoredEraEventCount} authored era events`);
 console.log(`[post-1949-employment] ${report.post1949EmploymentEvidenceCount}/${states.length} lives with role, result and next step`);
