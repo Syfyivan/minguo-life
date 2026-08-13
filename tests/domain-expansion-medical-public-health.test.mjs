@@ -25,6 +25,7 @@ await import('../assets/family-expansion-f03.js');
 await import('../assets/family-expansion-f07.js');
 await import('../assets/domain-expansion-education-knowledge.js');
 await import('../assets/domain-expansion-medical-public-health.js');
+await import('../assets/domain-expansion-care-professional-associations.js');
 await import('../assets/demo-engine.js');
 
 const Content = globalThis.MINGUO_GAME_CONTENT;
@@ -64,9 +65,9 @@ function play(domainKey, gender = '女', seed = 2700) {
 }
 
 test('D27, D28 and D29 each meet the first complete-domain production gate', () => {
-  assert.equal(Content.version, '0.7.19');
-  assert.equal(Object.keys(Content.routes).length, 62);
-  assert.equal(new Set(Object.values(Content.legacyRouteDomainMap)).size, 39);
+  assert.equal(Content.version, '0.7.20');
+  assert.equal(Object.keys(Content.routes).length, 65);
+  assert.equal(new Set(Object.values(Content.legacyRouteDomainMap)).size, 42);
   for (const [domainKey, route] of Object.entries(ROUTES)) {
     const prefix = domainKey.toLowerCase();
     assert.equal(Content.actions.filter((item) => item.routes?.includes(route)).length, 8, `${domainKey} actions`);

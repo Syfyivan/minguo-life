@@ -1127,6 +1127,27 @@
     return '身体结果：' + text;
   }
 
+  function applyHealthDecisionResolution(state, decision, option) {
+    if (!option.healthResolution) return;
+    var health = ensureLivedLife(state).health;
+    var current = health.current;
+    if (current) {
+      current.status = option.healthResolution;
+      current.result = option.fact;
+    }
+    if (option.healthResolution !== 'treatment') return;
+    health.treatedCount += 1;
+    health.history.push({
+      year: state.year,
+      type: 'treatment',
+      condition: current ? current.condition : null,
+      severity: 'treated',
+      text: option.fact,
+      source: 'decision:' + decision.id + ':' + option.id,
+    });
+    addLog(state, '【求医与休养】' + option.fact, 'good', 'health');
+  }
+
   function decorateLifeAction(state, action) {
     var result = employmentActionForState(state, clone(action));
     var lived = ensureLivedLife(state);
@@ -2495,10 +2516,7 @@
     if (option.relationshipEntry) applyRelationshipEntry(state, option.relationshipEntry);
     if (option.relationshipResolution) applyRelationshipResolution(state, option.relationshipResolution);
     if (decision.id === 'family-future') applyFamilyFuture(state, option.id);
-    if (option.healthResolution && state.lived && state.lived.health.current) {
-      state.lived.health.current.status = option.healthResolution;
-      state.lived.health.current.result = option.fact;
-    }
+    applyHealthDecisionResolution(state, decision, option);
     if (option.businessResolution && state.lived && state.lived.career.business) {
       state.lived.career.business.ordersHandled += 1;
       state.lived.career.business.lastProblem = option.fact;

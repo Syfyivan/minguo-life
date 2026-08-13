@@ -25,6 +25,7 @@ await import('../assets/family-expansion-f03.js');
 await import('../assets/family-expansion-f07.js');
 await import('../assets/domain-expansion-education-knowledge.js');
 await import('../assets/domain-expansion-medical-public-health.js');
+await import('../assets/domain-expansion-care-professional-associations.js');
 await import('../assets/demo-engine.js');
 
 const Game = globalThis.MINGUO_GAME;
@@ -125,6 +126,7 @@ const ROUTE_SETUPS = {
   'sichuan-clinical-medicine': { familyKey: 'sichuanmedicine', gender: '女', decisions: { 'sichuan-path': 'clinical-training', 'sichuan-war': 'split-family-work' } },
   'sichuan-hospital-services': { familyKey: 'sichuanmedicine', gender: '男', decisions: { 'sichuan-path': 'hospital-services', 'sichuan-war': 'split-family-work' } },
   'sichuan-public-health': { familyKey: 'sichuanmedicine', gender: '女', decisions: { 'sichuan-path': 'public-health', 'sichuan-war': 'split-family-work' } },
+  'sichuan-long-term-care': { familyKey: 'sichuanmedicine', gender: '女', decisions: { 'sichuan-path': 'long-term-care', 'sichuan-war': 'split-family-work' } },
   'guanzhong-farmwater': { familyKey: 'guanzhongirrigation', gender: '男', decisions: { 'guanzhong-path': 'farm-water-work', 'guanzhong-war': 'keep-family-address-ledger' } },
   'guanzhong-market': { familyKey: 'guanzhongirrigation', gender: '女', decisions: { 'guanzhong-path': 'market-grain-work', 'guanzhong-war': 'split-work-with-addresses' } },
   'guanzhong-migration': { familyKey: 'guanzhongirrigation', gender: '男', decisions: { 'guanzhong-path': 'verified-migration-work', 'guanzhong-war': 'keep-family-address-ledger' } },
@@ -152,6 +154,8 @@ const ROUTE_SETUPS = {
   'hankou-trading-house-clerk': { familyKey: 'hankoucommerce', gender: '男', decisions: { 'hankou-commerce-path': 'trading-house-clerk-trial', 'hankou-commerce-war': 'hankou-commerce-split-addresses-stock' } },
   'hankou-warehouse-freight-clerk': { familyKey: 'hankoucommerce', gender: '女', decisions: { 'hankou-commerce-path': 'warehouse-freight-trial', 'hankou-commerce-war': 'hankou-commerce-verified-unit-move' } },
   'hankou-dry-goods-small-trader': { familyKey: 'hankoucommerce', gender: '女', decisions: { 'hankou-commerce-path': 'dry-goods-trader-trial', 'hankou-commerce-war': 'hankou-commerce-local-bounded-trade' } },
+  'hankou-legal-accounting': { familyKey: 'hankoucommerce', gender: '女', decisions: { 'hankou-commerce-path': 'legal-accounting-trial', 'hankou-commerce-war': 'hankou-commerce-split-addresses-stock' } },
+  'hankou-trade-associations': { familyKey: 'hankoucommerce', gender: '男', decisions: { 'hankou-commerce-path': 'trade-association-trial', 'hankou-commerce-war': 'hankou-commerce-split-addresses-stock' } },
   'northeast-seasonal-farm-worker': { familyKey: 'northeastsettlers', gender: '男', decisions: { 'northeast-settler-path': 'seasonal-farm-trial', 'northeast-settler-occupation': 'settler-split-addresses-records' } },
   'northeast-household-farm-sideline': { familyKey: 'northeastsettlers', gender: '女', decisions: { 'northeast-settler-path': 'household-sideline-trial', 'northeast-settler-occupation': 'settler-remain-confirmed-livelihood' } },
   'northeast-rural-tool-repairer': { familyKey: 'northeastsettlers', gender: '女', decisions: { 'northeast-settler-path': 'rural-repair-trial', 'northeast-settler-occupation': 'settler-verify-station-bed-work' } },
@@ -499,11 +503,11 @@ test('family lifecycle allows care without forcing marriage or children', () => 
   assert.ok(unmarried.facts.some((fact) => fact.source === 'family-future'));
 });
 
-test('portable v0.7.19 saves round-trip without changing the life ledger', () => {
+test('portable v0.7.20 saves round-trip without changing the life ledger', () => {
   const state = playScenario({ familyKey: 'subeipoor', decisions: { 'subei-war': 'join-army' } });
   const restored = Game.importGame(Game.exportGame(state));
 
-  assert.equal(restored.version, '0.7.19');
+  assert.equal(restored.version, '0.7.20');
   assert.equal(JSON.parse(Game.exportGame(restored)).schemaVersion, 6);
   assert.deepEqual(restored.identity, state.identity);
   assert.deepEqual(restored.facts, state.facts);
@@ -538,7 +542,7 @@ test('v0.2 states receive v0.7 complete-life and public-life defaults on import'
   delete legacy.contactHistory;
 
   const restored = Game.importGame(legacy);
-  assert.equal(restored.version, '0.7.19');
+  assert.equal(restored.version, '0.7.20');
   assert.equal(restored.publicLife.status, 'unaffiliated');
   assert.equal(Object.keys(restored.contacts).length, 3);
   assert.deepEqual(restored.annualNarratives, []);
@@ -561,7 +565,7 @@ test('v0.4 endings at 1949 resume as an unfinished life in 1950', () => {
   delete legacy.life;
 
   const restored = Game.importGame(legacy);
-  assert.equal(restored.version, '0.7.19');
+  assert.equal(restored.version, '0.7.20');
   assert.equal(restored.over, false);
   assert.equal(restored.year, 1950);
   assert.equal(restored.chapter, 'post1949');
@@ -851,11 +855,11 @@ test('keeping distance or staying nonparty remains a complete playable public-li
 
 test('the birth-to-death pack reaches the published content-density baseline', () => {
   const content = Game.content;
-  assert.equal(content.actions.length, 263);
-  assert.equal(content.decisions.length, 266);
-  assert.equal(content.decisions.reduce((sum, decision) => sum + decision.options.length, 0), 832);
-  assert.equal(content.ordinaryEvents.length, 1248);
-  assert.equal(content.ordinaryEvents.filter((event) => event.requiresEchoes).length, 771);
+  assert.equal(content.actions.length, 287);
+  assert.equal(content.decisions.length, 302);
+  assert.equal(content.decisions.reduce((sum, decision) => sum + decision.options.length, 0), 943);
+  assert.equal(content.ordinaryEvents.length, 1392);
+  assert.equal(content.ordinaryEvents.filter((event) => event.requiresEchoes).length, 879);
   assert.equal(new Set(content.actions.map((action) => action.id)).size, content.actions.length);
   assert.equal(new Set(content.decisions.map((decision) => decision.id)).size, content.decisions.length);
   assert.equal(new Set(content.ordinaryEvents.map((event) => event.id)).size, content.ordinaryEvents.length);
@@ -892,7 +896,7 @@ test('route choices produce guaranteed next-year echoes and ending facts', () =>
   assert.match(Game.buildEndingNarrative(state), /1942 年/);
 });
 
-test('all 832 key-decision options are reachable in a compatible life', () => {
+test('all 943 key-decision options are reachable in a compatible life', () => {
   for (const decision of Game.content.decisions) {
     for (const target of decision.options) {
       const routeKey = decision.routes?.[0] || target.routes?.[0];
@@ -941,7 +945,7 @@ test('all 832 key-decision options are reachable in a compatible life', () => {
   }
 });
 
-test('all 263 annual actions can be performed in a compatible life', () => {
+test('all 287 annual actions can be performed in a compatible life', () => {
   for (const target of Game.content.actions) {
     const routeKey = target.routes?.[0];
     const setup = routeKey
@@ -998,7 +1002,7 @@ test('coverage inspection reports family, route, subject and ending evidence', (
   assert.equal(report.subjectEvidenceCount, scenarios.length);
   assert.equal(report.post1949EmploymentEvidenceCount, scenarios.length);
   assert.equal(report.annualNarrativeRate, 1);
-  assert.equal(report.persistentContactCount, 303);
+  assert.equal(report.persistentContactCount, 321);
 });
 
 test('a career is a concrete workplace with bosses, coworkers, customers and work records', () => {
@@ -1068,10 +1072,12 @@ test('a life records recurring named illnesses, care and inner thoughts every ye
   const illnessEpisodes = state.lived.health.history.filter((entry) => entry.type === 'episode');
   assert.ok(illnessEpisodes.length >= 4);
   assert.ok(illnessEpisodes.every((entry) => entry.text.includes(entry.condition)));
+  assert.ok(state.lived.health.history.some((entry) => entry.type === 'treatment' && entry.source === 'decision:midlife-health-response:seek-doctor-and-rest'));
+  assert.ok(state.lived.health.treatedCount >= 1);
   assert.equal(state.lived.yearHistory.length, state.annualNarratives.length);
   assert.equal(state.lived.inner.history.length, state.annualNarratives.length);
   assert.ok(state.lived.inner.history.every((entry) => entry.text.startsWith('我')));
-  assert.match(Game.buildLifePortrait(state).health, /身体发作|求医/);
+  assert.match(Game.buildLifePortrait(state).health, /另有 [1-9]\d* 次主动求医或检查/);
 });
 
 test('adult lives know more than two people and preserve their independent occupations', () => {

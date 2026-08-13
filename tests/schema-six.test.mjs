@@ -25,6 +25,7 @@ await import('../assets/family-expansion-f03.js');
 await import('../assets/family-expansion-f07.js');
 await import('../assets/domain-expansion-education-knowledge.js');
 await import('../assets/domain-expansion-medical-public-health.js');
+await import('../assets/domain-expansion-care-professional-associations.js');
 await import('../assets/demo-engine.js');
 
 const Game = globalThis.MINGUO_GAME;
