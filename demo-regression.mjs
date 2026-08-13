@@ -19,6 +19,7 @@ await import('./assets/family-expansion-f08.js');
 await import('./assets/family-expansion-f12.js');
 await import('./assets/family-expansion-f09.js');
 await import('./assets/family-expansion-f15.js');
+await import('./assets/family-expansion-f02.js');
 await import('./assets/demo-engine.js');
 
 const Game = globalThis.MINGUO_GAME;
@@ -72,6 +73,10 @@ const baseDecisions = {
   'f15-political-application-1947': 'f15-apply-ccp',
   'f15-public-role-1948': 'f15-public-continue-open',
   'f15-political-answer-1949': 'f15-accept-membership',
+  'subei-artisan-child-skill-1918': 'f02-child-follow-repair',
+  'subei-artisan-customer-debt-1920': 'f02-debt-part-grain',
+  'subei-artisan-path': 'f02-repair-trial',
+  'subei-artisan-market-break-1938': 'f02-break-near-repair',
   'postwar-settlement': 'rebuild-local',
   'final-1949': 'stay-mainland',
   'later-life-livelihood': 'change-work',
@@ -199,12 +204,15 @@ const definitions = [
   { id: 'southwest-wartime-warehouse-supply', familyKey: 'southwestwarworkers', gender: '男', name: '郭承安', expectedRoute: 'southwest-wartime-warehouse-supply', expectedPost1949: 'mainland', decisions: { 'southwest-warworker-path': 'f15-warehouse-trial', 'route-southwest-wartime-warehouse-supply-1946': 'f15-warehouse-limited-inventory-team' } },
   { id: 'southwest-mechanical-drawing-repair', familyKey: 'southwestwarworkers', gender: '女', name: '郭承宁', expectedRoute: 'southwest-mechanical-drawing-repair', expectedPost1949: 'mainland', decisions: { 'southwest-warworker-path': 'f15-repair-drawing-trial', 'route-southwest-mechanical-drawing-repair-1946': 'f15-repair-limited-shop' } },
   { id: 'southwest-clinic-records-clerk', familyKey: 'southwestwarworkers', gender: '女', name: '郭承宁', expectedRoute: 'southwest-clinic-records-clerk', expectedPost1949: 'mainland', decisions: { 'southwest-warworker-path': 'f15-records-trial', 'route-southwest-clinic-records-clerk-1946': 'f15-records-limited-service-coop' } },
+  { id: 'subei-village-tool-repairer', familyKey: 'subeiartisans', gender: '男', name: '丁守成', expectedRoute: 'subei-village-tool-repairer', expectedPost1949: 'mainland', decisions: { 'subei-artisan-path': 'f02-repair-trial', 'route-subei-village-tool-repairer-1946': 'f02-repair-limited-workshop' } },
+  { id: 'subei-itinerant-market-vendor', familyKey: 'subeiartisans', gender: '女', name: '丁守兰', expectedRoute: 'subei-itinerant-market-vendor', expectedPost1949: 'mainland', decisions: { 'subei-artisan-path': 'f02-vendor-trial', 'route-subei-itinerant-market-vendor-1946': 'f02-vendor-limited-haul-coop' } },
+  { id: 'subei-market-stall-shopkeeper', familyKey: 'subeiartisans', gender: '女', name: '丁守兰', expectedRoute: 'subei-market-stall-shopkeeper', expectedPost1949: 'mainland', decisions: { 'subei-artisan-path': 'f02-stall-trial', 'route-subei-market-stall-shopkeeper-1946': 'f02-shop-limited-partnership' } },
 ];
 
 const states = definitions.map(runScenario);
 const report = Game.inspectCoverage(states);
-assert.equal(report.familyCount, 15);
-assert.equal(report.routeCount, 47);
+assert.equal(report.familyCount, 16);
+assert.equal(report.routeCount, 50);
 assert.equal(report.post1949PathCount, 8);
 assert.equal(report.factEndingCount, states.length);
 assert.equal(report.deathEndingCount, states.length);
@@ -216,13 +224,13 @@ assert.equal(report.informationEvidenceCount, states.length);
 assert.equal(report.contactEvidenceCount, states.length);
 assert.equal(report.familyLifecycleCount, states.length);
 assert.equal(report.annualNarrativeRate, 1);
-assert.equal(report.authoredActionCount, 188);
-assert.equal(report.keyDecisionCount, 164);
-assert.equal(report.decisionOptionCount, 520);
-assert.equal(report.authoredOrdinaryEventCount, 798);
-assert.equal(report.choiceEchoEventCount, 466);
+assert.equal(report.authoredActionCount, 197);
+assert.equal(report.keyDecisionCount, 174);
+assert.equal(report.decisionOptionCount, 550);
+assert.equal(report.authoredOrdinaryEventCount, 852);
+assert.equal(report.choiceEchoEventCount, 496);
 assert.equal(report.denseLifeCount, states.length);
-assert.equal(report.persistentContactCount, 222);
+assert.equal(report.persistentContactCount, 237);
 assert.equal(report.concreteCareerCount, states.length);
 assert.equal(report.parentLifecycleDetailCount, states.length);
 assert.equal(report.relationshipDetailCount, states.length);
@@ -236,7 +244,7 @@ assert.equal(report.publicActionCount, 6);
 assert.equal(report.publicDecisionCount, 12);
 assert.equal(report.publicOrdinarySceneCount, 21);
 assert.equal(report.publicEraEventCount, 11);
-assert.equal(report.publicContactProfileCount, 47);
+assert.equal(report.publicContactProfileCount, 50);
 
 const bundle = Game.inspectWholeGameProgressBundle(states);
 assert.equal(bundle.wholeGameStageLabel, '当前已实装内容通过出生到死亡验证；完整设计仍在扩建');
@@ -244,8 +252,8 @@ assert.equal(bundle.hardGates.publicLife, true);
 
 console.log(`[minguo-life] engine ${Game.VERSION}`);
 console.log(`[scenarios] ${states.length}/${definitions.length} complete`);
-console.log(`[families] ${report.familyCount}/15`);
-console.log(`[routes] ${report.routeCount}/47 ${report.routeKeys.join(', ')}`);
+console.log(`[families] ${report.familyCount}/16`);
+console.log(`[routes] ${report.routeCount}/50 ${report.routeKeys.join(', ')}`);
 console.log(`[post-1949] ${report.post1949PathCount}/8 ${report.post1949PathKeys.join(', ')}`);
 console.log(`[post-1949-era] ${report.post1949EraEvidenceCount}/${states.length} lives, ${report.authoredEraEventCount} authored era events`);
 console.log(`[post-1949-employment] ${report.post1949EmploymentEvidenceCount}/${states.length} lives with role, result and next step`);

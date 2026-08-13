@@ -20,6 +20,7 @@ await import('../assets/family-expansion-f08.js');
 await import('../assets/family-expansion-f12.js');
 await import('../assets/family-expansion-f09.js');
 await import('../assets/family-expansion-f15.js');
+await import('../assets/family-expansion-f02.js');
 await import('../assets/demo-engine.js');
 
 const Game = globalThis.MINGUO_GAME;
@@ -49,6 +50,7 @@ test('schema 6 publishes the 18-family, 48-domain, 8-destination design registry
     'shanghailabor',
     'sichuanmedicine',
     'southwestwarworkers',
+    'subeiartisans',
     'subeipoor',
     'tianjinclerks',
     'xianartisans',
