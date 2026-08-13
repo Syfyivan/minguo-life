@@ -2110,6 +2110,7 @@
     if (item.families && !has(item.families, state.familyKey)) return false;
     if (item.routes && !has(item.routes, state.routeKey)) return false;
     if (item.post1949Choices && !has(item.post1949Choices, state.post1949Choice)) return false;
+    if (item.familyOriginOnly && state.post1949Choice && state.post1949Choice !== 'mainland') return false;
     if (item.employmentStatuses && !has(item.employmentStatuses, ensureEmployment(state).status)) return false;
     if (item.genders && !has(item.genders, state.identity.gender)) return false;
     if (!publicConditionResult(state, item).ok) return false;
@@ -2144,7 +2145,9 @@
   }
 
   function resolveSceneText(state, event) {
-    var textValue = String(event.text || '');
+    var genderText = event.textByGender && event.textByGender[state.identity.gender];
+    var routeText = event.textByRoute && event.textByRoute[state.routeKey];
+    var textValue = String(routeText || genderText || event.text || '');
     if (textValue.length >= 80 || !C.sceneFrames) return textValue;
     var frames = C.sceneFrames[storyFrameKey(state)] || C.sceneFrames[state.routeKey] || C.sceneFrames[state.familyKey] || [];
     if (!frames.length) return textValue;

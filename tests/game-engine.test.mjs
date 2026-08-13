@@ -28,6 +28,7 @@ await import('../assets/domain-expansion-medical-public-health.js');
 await import('../assets/domain-expansion-care-professional-associations.js');
 await import('../assets/domain-expansion-wartime-relief-public-service.js');
 await import('../assets/domain-expansion-identity-finance-concession.js');
+await import('../assets/density-expansion-family-life.js');
 await import('../assets/demo-engine.js');
 
 const Game = globalThis.MINGUO_GAME;
@@ -543,11 +544,11 @@ test('family lifecycle allows care without forcing marriage or children', () => 
   assert.ok(unmarried.facts.some((fact) => fact.source === 'family-future'));
 });
 
-test('portable v0.7.22 saves round-trip without changing the life ledger', () => {
+test('portable v0.7.23 saves round-trip without changing the life ledger', () => {
   const state = playScenario({ familyKey: 'subeipoor', decisions: { 'subei-war': 'join-army' } });
   const restored = Game.importGame(Game.exportGame(state));
 
-  assert.equal(restored.version, '0.7.22');
+  assert.equal(restored.version, '0.7.23');
   assert.equal(JSON.parse(Game.exportGame(restored)).schemaVersion, 6);
   assert.deepEqual(restored.identity, state.identity);
   assert.deepEqual(restored.facts, state.facts);
@@ -582,7 +583,7 @@ test('v0.2 states receive v0.7 complete-life and public-life defaults on import'
   delete legacy.contactHistory;
 
   const restored = Game.importGame(legacy);
-  assert.equal(restored.version, '0.7.22');
+  assert.equal(restored.version, '0.7.23');
   assert.equal(restored.publicLife.status, 'unaffiliated');
   assert.equal(Object.keys(restored.contacts).length, 3);
   assert.deepEqual(restored.annualNarratives, []);
@@ -605,7 +606,7 @@ test('v0.4 endings at 1949 resume as an unfinished life in 1950', () => {
   delete legacy.life;
 
   const restored = Game.importGame(legacy);
-  assert.equal(restored.version, '0.7.22');
+  assert.equal(restored.version, '0.7.23');
   assert.equal(restored.over, false);
   assert.equal(restored.year, 1950);
   assert.equal(restored.chapter, 'post1949');
@@ -935,7 +936,7 @@ test('the birth-to-death pack reaches the published content-density baseline', (
   assert.equal(content.actions.length, 335);
   assert.equal(content.decisions.length, 375);
   assert.equal(content.decisions.reduce((sum, decision) => sum + decision.options.length, 0), 1165);
-  assert.equal(content.ordinaryEvents.length, 1680);
+  assert.equal(content.ordinaryEvents.length, 1896);
   assert.equal(content.ordinaryEvents.filter((event) => event.requiresEchoes).length, 1095);
   assert.equal(new Set(content.actions.map((action) => action.id)).size, content.actions.length);
   assert.equal(new Set(content.decisions.map((decision) => decision.id)).size, content.decisions.length);
