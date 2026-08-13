@@ -18,6 +18,7 @@ await import('../assets/family-expansion-f14.js');
 await import('../assets/family-expansion-f11.js');
 await import('../assets/family-expansion-f08.js');
 await import('../assets/family-expansion-f12.js');
+await import('../assets/family-expansion-f09.js');
 await import('../assets/demo-engine.js');
 
 const Game = globalThis.MINGUO_GAME;
@@ -42,6 +43,7 @@ test('schema 6 publishes the 18-family, 48-domain, 8-destination design registry
     'hankouport',
     'jiangnanshen',
     'northeastrailworkers',
+    'northeastsettlers',
     'shanghaigongshang',
     'shanghailabor',
     'sichuanmedicine',

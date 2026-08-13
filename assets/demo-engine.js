@@ -580,6 +580,12 @@
     return subject && (subject.status === 'dead-unconfirmed' || subject.status === 'dead-confirmed');
   }
 
+  function parentKeyForContact(state, contact) {
+    if (!contact || !contact.label) return null;
+    var parents = ensureLivedLife(state).parents;
+    return Object.keys(parents).find(function (key) { return parents[key].name === contact.label; }) || null;
+  }
+
   function ensureLivedLife(state) {
     var parentProfiles = (C.parentProfiles && C.parentProfiles[state.familyKey]) || {};
     var defaults = {
@@ -1075,7 +1081,7 @@
       var value = state.contacts[key];
       return { key: key, value: value };
     }).filter(function (entry) {
-      return entry.key !== 'spouse_partner' && entry.value.status !== 'deceased';
+      return entry.key !== 'spouse_partner' && !parentKeyForContact(state, entry.value) && entry.value.status !== 'deceased';
     }).sort(function (left, right) { return Number(right.value.relation || 0) - Number(left.value.relation || 0); });
   }
 
@@ -1162,6 +1168,15 @@
     }
     var text = parent.name + '在 ' + state.year + ' 年去世。去世前仍在' + parent.occupation + '，最后一次留下的话是' + parent.lastWords + (delayed ? '；消息当时尚未完成交叉确认。' : '；死亡由身边家人与邻人当年确认。');
     parent.history.push({ year: state.year, type: 'death', text: text });
+    Object.keys(state.contacts || {}).forEach(function (contactKey) {
+      var contact = state.contacts[contactKey];
+      if (!contact || contact.label !== parent.name) return;
+      contact.status = 'deceased';
+      contact.lastWords = parent.lastWords;
+      contact.lastUpdateYear = state.year;
+      if (!Array.isArray(contact.history)) contact.history = [];
+      contact.history.push({ year: state.year, type: 'parent-death-sync', text: text });
+    });
     addFact(state, { id: 'parent-death:' + key, kind: 'subject', text: text, source: 'family-lifecycle', ending: true });
     addLog(state, '【家人死亡】' + text, 'bad', 'family');
   }
@@ -1269,6 +1284,7 @@
     Object.keys(state.contacts || {}).forEach(function (key) {
       if (key === 'spouse_partner') return;
       var contact = state.contacts[key];
+      if (parentKeyForContact(state, contact)) return;
       if (!Array.isArray(contact.history)) contact.history = [];
       var born = Number(contact.born || state.identity.born - 5);
       var targetAge = Number(contact.targetDeathAge || 68 + stableIndex(state.seed + ':' + key + ':contact-death', 20));
@@ -1443,7 +1459,7 @@
     var childText = lived.children.length
       ? lived.children.map(function (child) { return child.name + '：' + child.status + (child.occupation ? '，后来' + child.occupation : '') + '。'; }).join('')
       : '没有子女；这不被写成人生缺失。';
-    var friends = Object.keys(state.contacts || {}).map(function (key) { return state.contacts[key]; }).filter(function (contact) { return contact.label && contact.label !== (lived.relationship.spouse && lived.relationship.spouse.name); }).sort(function (a, b) { return Number(b.relation || 0) - Number(a.relation || 0); });
+    var friends = Object.keys(state.contacts || {}).map(function (key) { return state.contacts[key]; }).filter(function (contact) { return contact.label && !parentKeyForContact(state, contact) && contact.label !== (lived.relationship.spouse && lived.relationship.spouse.name); }).sort(function (a, b) { return Number(b.relation || 0) - Number(a.relation || 0); });
     var friendText = friends.slice(0, 6).map(function (contact) {
       return contact.label + '（' + contact.role + '，' + ((C.contactStatusLabels && C.contactStatusLabels[contact.status]) || contact.status) + '）';
     }).join('、') + (friends.length > 6 ? '等 ' + friends.length + ' 位有名有姓的人' : '');
