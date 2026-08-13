@@ -23,6 +23,7 @@ await import('./assets/family-expansion-f02.js');
 await import('./assets/family-expansion-f03.js');
 await import('./assets/family-expansion-f07.js');
 await import('./assets/domain-expansion-education-knowledge.js');
+await import('./assets/domain-expansion-medical-public-health.js');
 await import('./assets/demo-engine.js');
 
 const Game = globalThis.MINGUO_GAME;
@@ -185,6 +186,9 @@ const definitions = [
   { id: 'sichuan-pharmacy', familyKey: 'sichuanmedicine', gender: '男', name: '唐济生', expectedRoute: 'sichuan-pharmacy', expectedPost1949: 'mainland', decisions: { 'sichuan-path': 'pharmacy-clerk' } },
   { id: 'sichuan-foodshop', familyKey: 'sichuanmedicine', gender: '女', name: '唐秀莲', expectedRoute: 'sichuan-foodshop', expectedPost1949: 'mainland', decisions: { 'sichuan-path': 'food-shop', 'sichuan-war': 'local-food-substitute' } },
   { id: 'sichuan-care', familyKey: 'sichuanmedicine', gender: '女', name: '唐慧生', expectedRoute: 'sichuan-care', expectedPost1949: 'mainland', decisions: { 'sichuan-path': 'care-training', 'sichuan-war': 'split-family-work' } },
+  { id: 'sichuan-clinical-medicine', familyKey: 'sichuanmedicine', gender: '女', name: '唐静和', expectedRoute: 'sichuan-clinical-medicine', expectedPost1949: 'mainland', decisions: { 'sichuan-path': 'clinical-training', 'sichuan-war': 'split-family-work' } },
+  { id: 'sichuan-hospital-services', familyKey: 'sichuanmedicine', gender: '男', name: '唐明生', expectedRoute: 'sichuan-hospital-services', expectedPost1949: 'mainland', decisions: { 'sichuan-path': 'hospital-services', 'sichuan-war': 'split-family-work' } },
+  { id: 'sichuan-public-health', familyKey: 'sichuanmedicine', gender: '女', name: '唐宜秋', expectedRoute: 'sichuan-public-health', expectedPost1949: 'mainland', decisions: { 'sichuan-path': 'public-health', 'sichuan-war': 'split-family-work' } },
   { id: 'guanzhong-farmwater', familyKey: 'guanzhongirrigation', gender: '男', name: '马保川', expectedRoute: 'guanzhong-farmwater', expectedPost1949: 'mainland', decisions: { 'guanzhong-path': 'farm-water-work' } },
   { id: 'guanzhong-market', familyKey: 'guanzhongirrigation', gender: '女', name: '马秀梅', expectedRoute: 'guanzhong-market', expectedPost1949: 'mainland', decisions: { 'guanzhong-path': 'market-grain-work', 'guanzhong-war': 'split-work-with-addresses' } },
   { id: 'guanzhong-migration', familyKey: 'guanzhongirrigation', gender: '男', name: '马迁生', expectedRoute: 'guanzhong-migration', expectedPost1949: 'mainland', decisions: { 'guanzhong-path': 'verified-migration-work' } },
@@ -232,7 +236,7 @@ const definitions = [
 const states = definitions.map(runScenario);
 const report = Game.inspectCoverage(states);
 assert.equal(report.familyCount, 18);
-assert.equal(report.routeCount, 59);
+assert.equal(report.routeCount, 62);
 assert.equal(report.post1949PathCount, 8);
 assert.equal(report.factEndingCount, states.length);
 assert.equal(report.deathEndingCount, states.length);
@@ -244,13 +248,13 @@ assert.equal(report.informationEvidenceCount, states.length);
 assert.equal(report.contactEvidenceCount, states.length);
 assert.equal(report.familyLifecycleCount, states.length);
 assert.equal(report.annualNarrativeRate, 1);
-assert.equal(report.authoredActionCount, 239);
-assert.equal(report.keyDecisionCount, 230);
-assert.equal(report.decisionOptionCount, 721);
-assert.equal(report.authoredOrdinaryEventCount, 1104);
-assert.equal(report.choiceEchoEventCount, 664);
+assert.equal(report.authoredActionCount, 263);
+assert.equal(report.keyDecisionCount, 266);
+assert.equal(report.decisionOptionCount, 832);
+assert.equal(report.authoredOrdinaryEventCount, 1248);
+assert.equal(report.choiceEchoEventCount, 772);
 assert.equal(report.denseLifeCount, states.length);
-assert.equal(report.persistentContactCount, 285);
+assert.equal(report.persistentContactCount, 303);
 assert.equal(report.concreteCareerCount, states.length);
 assert.equal(report.parentLifecycleDetailCount, states.length);
 assert.equal(report.relationshipDetailCount, states.length);
@@ -264,7 +268,7 @@ assert.equal(report.publicActionCount, 6);
 assert.equal(report.publicDecisionCount, 12);
 assert.equal(report.publicOrdinarySceneCount, 21);
 assert.equal(report.publicEraEventCount, 11);
-assert.equal(report.publicContactProfileCount, 59);
+assert.equal(report.publicContactProfileCount, 62);
 
 const bundle = Game.inspectWholeGameProgressBundle(states);
 assert.equal(bundle.wholeGameStageLabel, '当前已实装内容通过出生到死亡验证；完整设计仍在扩建');
@@ -273,7 +277,7 @@ assert.equal(bundle.hardGates.publicLife, true);
 console.log(`[minguo-life] engine ${Game.VERSION}`);
 console.log(`[scenarios] ${states.length}/${definitions.length} complete`);
 console.log(`[families] ${report.familyCount}/18`);
-console.log(`[routes] ${report.routeCount}/59 ${report.routeKeys.join(', ')}`);
+console.log(`[routes] ${report.routeCount}/62 ${report.routeKeys.join(', ')}`);
 console.log(`[post-1949] ${report.post1949PathCount}/8 ${report.post1949PathKeys.join(', ')}`);
 console.log(`[post-1949-era] ${report.post1949EraEvidenceCount}/${states.length} lives, ${report.authoredEraEventCount} authored era events`);
 console.log(`[post-1949-employment] ${report.post1949EmploymentEvidenceCount}/${states.length} lives with role, result and next step`);
