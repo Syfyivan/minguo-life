@@ -27,6 +27,7 @@ await import('../assets/domain-expansion-education-knowledge.js');
 await import('../assets/domain-expansion-medical-public-health.js');
 await import('../assets/domain-expansion-care-professional-associations.js');
 await import('../assets/domain-expansion-wartime-relief-public-service.js');
+await import('../assets/domain-expansion-identity-finance-concession.js');
 await import('../assets/demo-engine.js');
 
 const Game = globalThis.MINGUO_GAME;
@@ -77,9 +78,9 @@ const DEFAULT_DECISIONS = {
   'southwest-transition-1948': 'f15-transition-stay-southwest',
   'f15-public-contact-1945': 'f15-public-open-work',
   'f15-public-family-boundary-1946': 'f15-public-explain-scope',
-  'f15-political-application-1947': 'f15-apply-ccp',
+  'f15-political-application-1947': 'f15-apply-public-civic-network',
   'f15-public-role-1948': 'f15-public-continue-open',
-  'f15-political-answer-1949': 'f15-accept-membership',
+  'f15-political-answer-1949': 'f15-accept-network-membership',
   'subei-artisan-child-skill-1918': 'f02-child-follow-repair',
   'subei-artisan-customer-debt-1920': 'f02-debt-part-grain',
   'subei-artisan-path': 'f02-repair-trial',
@@ -99,8 +100,8 @@ const DEFAULT_DECISIONS = {
   'late-life-care': 'community-care',
   'late-life-record': 'sort-records',
   'public-life-contact': 'join-open-public-work',
-  'political-organization-application': 'apply-ccp',
-  'political-organization-answer': 'accept-membership',
+  'political-organization-application': 'apply-public-civic-network',
+  'political-organization-answer': 'accept-network-membership',
   'wartime-public-role': 'wartime-open-service',
   'public-family-boundary': 'tell-family-risk-range',
   'public-past-after-1949': 'state-confirmed-public-past',
@@ -166,6 +167,9 @@ const ROUTE_SETUPS = {
   'southwest-wartime-relief-logistics': { familyKey: 'southwestwarworkers', gender: '女', decisions: { 'southwest-warworker-path': 'f15-relief-logistics-trial' } },
   'southwest-civil-defense-relief': { familyKey: 'southwestwarworkers', gender: '男', decisions: { 'southwest-warworker-path': 'f15-civil-defense-relief-trial' } },
   'tianjin-public-community-service': { familyKey: 'tianjinclerks', gender: '女', decisions: { 'tianjin-clerk-path': 'public-community-trial' } },
+  'high-risk-double-identity': { familyKey: 'shanghaigongshang', gender: '女', decisions: { 'shanghai-path': 'salaried-professional', 'public-life-contact': 'join-open-public-work', 'political-organization-application': 'remain-nonparty-helper', 'wartime-public-role': 'wartime-secret-liaison', 'shanghai-war': 'relocate-own-work' } },
+  'banking-investment-insurance-owner': { familyKey: 'guangdongqiaoxiang', gender: '女', decisions: { 'qiaoxiang-path': 'remittance-trial', 'qiaoxiang-war': 'split-address-and-accounts', 'd47-finance-ownership-entry-1946': 'd47-form-share-finance-firm' } },
+  'macao-tourism-entertainment-concession': { familyKey: 'guangdongcoastal', gender: '女', decisions: { 'coastal-path': 'guesthouse-trial', 'coastal-war': 'coastal-split-addresses', 'final-1949': 'move-macau', 'post49-arrival': 'macau-verified-contact-work', 'macau-hospitality-concession-1962': 'macau-limited-concession-network-partner' } },
   'subei-village-tool-repairer': { familyKey: 'subeiartisans', gender: '男', decisions: { 'subei-artisan-path': 'f02-repair-trial' } },
   'subei-itinerant-market-vendor': { familyKey: 'subeiartisans', gender: '女', decisions: { 'subei-artisan-path': 'f02-vendor-trial' } },
   'subei-market-stall-shopkeeper': { familyKey: 'subeiartisans', gender: '女', decisions: { 'subei-artisan-path': 'f02-stall-trial' } },
@@ -244,6 +248,38 @@ function playScenario({
   assert.equal(state.over, true, `${familyKey} scenario should reach an ending`);
   assert.ok(turns < 140, `${familyKey} scenario should not stall`);
   return state;
+}
+
+function prepareCompatibleLife(state) {
+  Object.keys(state.attrs).forEach((key) => { state.attrs[key] = 100; });
+  Object.keys(state.res).forEach((key) => { state.res[key] = 100; });
+  ['newspaper', 'conversation', 'books', 'storytelling'].forEach((channel) => {
+    if (!state.information.channels.includes(channel)) state.information.channels.push(channel);
+  });
+}
+
+function decisionIsDueThisYear(state, decision) {
+  if (decision.year != null && state.year !== decision.year) return false;
+  if (decision.minYear != null && state.year < decision.minYear) return false;
+  if (decision.maxYear != null && state.year > decision.maxYear) return false;
+  if (decision.yearByAge != null && state.age !== decision.yearByAge) return false;
+  if (decision.minAge != null && state.age < decision.minAge) return false;
+  if (decision.maxAge != null && state.age > decision.maxAge) return false;
+  if (decision.families && !decision.families.includes(state.familyKey)) return false;
+  if (decision.routes && !decision.routes.includes(state.routeKey)) return false;
+  if (decision.post1949Choices && !decision.post1949Choices.includes(state.post1949Choice)) return false;
+  return true;
+}
+
+function actionCanBelongToCurrentLife(state, action) {
+  if (action.families && !action.families.includes(state.familyKey)) return false;
+  if (action.routes && !action.routes.includes(state.routeKey)) return false;
+  if (action.post1949Choices && !action.post1949Choices.includes(state.post1949Choice)) return false;
+  if (action.minYear != null && state.year < action.minYear) return false;
+  if (action.maxYear != null && state.year > action.maxYear) return false;
+  if (action.minAge != null && state.age < action.minAge) return false;
+  if (action.maxAge != null && state.age > action.maxAge) return false;
+  return true;
 }
 
 test('a player keeps the same identity while moving between life routes', () => {
@@ -507,11 +543,11 @@ test('family lifecycle allows care without forcing marriage or children', () => 
   assert.ok(unmarried.facts.some((fact) => fact.source === 'family-future'));
 });
 
-test('portable v0.7.21 saves round-trip without changing the life ledger', () => {
+test('portable v0.7.22 saves round-trip without changing the life ledger', () => {
   const state = playScenario({ familyKey: 'subeipoor', decisions: { 'subei-war': 'join-army' } });
   const restored = Game.importGame(Game.exportGame(state));
 
-  assert.equal(restored.version, '0.7.21');
+  assert.equal(restored.version, '0.7.22');
   assert.equal(JSON.parse(Game.exportGame(restored)).schemaVersion, 6);
   assert.deepEqual(restored.identity, state.identity);
   assert.deepEqual(restored.facts, state.facts);
@@ -546,7 +582,7 @@ test('v0.2 states receive v0.7 complete-life and public-life defaults on import'
   delete legacy.contactHistory;
 
   const restored = Game.importGame(legacy);
-  assert.equal(restored.version, '0.7.21');
+  assert.equal(restored.version, '0.7.22');
   assert.equal(restored.publicLife.status, 'unaffiliated');
   assert.equal(Object.keys(restored.contacts).length, 3);
   assert.deepEqual(restored.annualNarratives, []);
@@ -569,7 +605,7 @@ test('v0.4 endings at 1949 resume as an unfinished life in 1950', () => {
   delete legacy.life;
 
   const restored = Game.importGame(legacy);
-  assert.equal(restored.version, '0.7.21');
+  assert.equal(restored.version, '0.7.22');
   assert.equal(restored.over, false);
   assert.equal(restored.year, 1950);
   assert.equal(restored.chapter, 'post1949');
@@ -579,6 +615,36 @@ test('v0.4 endings at 1949 resume as an unfinished life in 1950', () => {
   assert.equal(restored.endingNarrative, '');
   assert.ok(!restored.facts.some((fact) => fact.id === 'life-ended'));
   assert.ok(restored.milestones.some((milestone) => milestone.id === 'v04-save-continued'));
+});
+
+test('completed saves rebuild cached ending facts with the current portrait rules', () => {
+  const completed = Game.createGame({ familyKey: 'shanghaigongshang', gender: '女', name: '旧终局人物', seed: 722 });
+  completed.over = true;
+  completed.year = 1998;
+  completed.age = completed.year - completed.identity.born;
+  completed.life.status = 'dead';
+  completed.life.deathOccurredYear = 1998;
+  completed.life.deathConfirmedYear = 1998;
+  completed.life.deathPlace = '香港住所';
+  completed.life.cause = '高龄后的自然衰老';
+  completed.lived.career.business = {
+    name: '旧账作坊', openedYear: 1946, lastActiveYear: 1952, ordersHandled: 0, lastCustomer: null,
+  };
+  completed.publicLife.organizationKey = 'ccp';
+  completed.publicLife.organizationName = '中国共产党';
+  completed.publicLife.status = 'member';
+  completed.publicLife.history = [{ year: 1930, status: 'member', organizationKey: 'ccp', organizationName: '中国共产党', text: '旧版直接组织交互。' }];
+  completed.endingFacts = ['具体工作与经营：最近一次客户为null。'];
+  completed.endingNarrative = completed.endingFacts[0];
+
+  const restored = Game.importGame(completed);
+  assert.doesNotMatch(restored.endingFacts.join(''), /null/);
+  assert.doesNotMatch(restored.endingNarrative, /null/);
+  assert.match(restored.endingFacts.join(''), /没有留下可确认姓名/);
+  assert.equal(restored.publicLife.organizationKey, 'legacy-unaligned');
+  assert.equal(restored.publicLife.status, 'inactive');
+  assert.ok(restored.publicLife.history.every((entry) => entry.organizationKey === 'legacy-unaligned'));
+  assert.doesNotMatch(restored.endingNarrative, /中国共产党/);
 });
 
 test('v0.5 saves replace leaked postwar route rhythms with the settled region', () => {
@@ -817,32 +883,39 @@ test('the 1921 founding appears as history, not a fictional chance for the child
   assert.ok(state.publicLife.history.every((entry) => entry.year >= 1925));
 });
 
-test('a political application remains pending until a later explicit acceptance', () => {
+test('a synthetic civic-network application remains pending until a later explicit acceptance', () => {
   const state = playScenario({ familyKey: 'jiangnanshen', decisions: {
-    'political-organization-application': 'apply-ccp',
-    'political-organization-answer': 'accept-membership',
+    'political-organization-application': 'apply-public-civic-network',
+    'political-organization-answer': 'accept-network-membership',
   } });
-  const application = state.publicLife.history.find((entry) => entry.source === 'decision:political-organization-application:apply-ccp');
-  const acceptance = state.publicLife.history.find((entry) => entry.source === 'decision:political-organization-answer:accept-membership');
+  const application = state.publicLife.history.find((entry) => entry.source === 'decision:political-organization-application:apply-public-civic-network');
+  const acceptance = state.publicLife.history.find((entry) => entry.source === 'decision:political-organization-answer:accept-network-membership');
   assert.equal(application.status, 'applicant');
   assert.equal(application.organizationKey, null);
-  assert.equal(application.pendingOrganizationKey, 'ccp');
+  assert.equal(application.pendingOrganizationKey, 'civic-open');
   assert.equal(acceptance.status, 'member');
-  assert.equal(acceptance.organizationKey, 'ccp');
+  assert.equal(acceptance.organizationKey, 'civic-open');
+  assert.doesNotMatch(state.decisionHistory.map((entry) => entry.label || '').join('\n'), /申请加入中国共产党|申请加入中国国民党/);
 });
 
-test('secret work, family boundaries and detention pressure leave factual consequences without traitor labels', () => {
+test('public-life choices keep real parties in history and remove infiltration or identification play', () => {
+  const choices = Game.content.decisions.flatMap((decision) => decision.options.map((option) => `${decision.title}\n${option.label}\n${option.fact || ''}`)).join('\n');
+  assert.doesNotMatch(choices, /申请加入中国共产党|申请加入中国国民党|潜入|协助辨认|提供.*姓名和住址/);
+  assert.ok(Game.content.events.some((event) => event.id === 'ccp-founding-1921' && event.historySource));
+});
+
+test('limited high-risk work, family boundaries and detention pressure leave factual consequences without identification play', () => {
   const state = playScenario({ familyKey: 'shanghaigongshang', decisions: {
-    'wartime-public-role': 'wartime-infiltration',
+    'wartime-public-role': 'wartime-limited-fact-check',
     'public-family-boundary': 'tell-family-emergency-only',
-    'public-detention-pressure': 'provide-address-under-pressure',
+    'public-detention-pressure': 'give-incomplete-own-statement',
     'public-past-after-1949': 'verify-before-stating-past',
   } });
-  assert.ok(state.publicLife.history.some((entry) => entry.status === 'infiltration'));
+  assert.ok(state.publicLife.history.some((entry) => /有限事实核对/.test(entry.text)));
   assert.equal(state.publicLife.status, 'coerced-cooperation');
   assert.ok(state.publicLife.coercion > 0);
-  assert.ok(state.facts.some((fact) => /提供了一个曾使用的地址/.test(fact.text)));
-  assert.doesNotMatch(Game.buildEndingNarrative(state), /叛徒|忠诚值/);
+  assert.ok(state.facts.some((fact) => /拒绝指认他人/.test(fact.text)));
+  assert.doesNotMatch(Game.buildEndingNarrative(state), /叛徒|忠诚值|协助辨认/);
   assert.match(Game.buildLifePortrait(state).publicLife, /拘留或问话压力/);
 });
 
@@ -859,11 +932,11 @@ test('keeping distance or staying nonparty remains a complete playable public-li
 
 test('the birth-to-death pack reaches the published content-density baseline', () => {
   const content = Game.content;
-  assert.equal(content.actions.length, 311);
-  assert.equal(content.decisions.length, 338);
-  assert.equal(content.decisions.reduce((sum, decision) => sum + decision.options.length, 0), 1054);
-  assert.equal(content.ordinaryEvents.length, 1536);
-  assert.equal(content.ordinaryEvents.filter((event) => event.requiresEchoes).length, 987);
+  assert.equal(content.actions.length, 335);
+  assert.equal(content.decisions.length, 375);
+  assert.equal(content.decisions.reduce((sum, decision) => sum + decision.options.length, 0), 1165);
+  assert.equal(content.ordinaryEvents.length, 1680);
+  assert.equal(content.ordinaryEvents.filter((event) => event.requiresEchoes).length, 1095);
   assert.equal(new Set(content.actions.map((action) => action.id)).size, content.actions.length);
   assert.equal(new Set(content.decisions.map((decision) => decision.id)).size, content.decisions.length);
   assert.equal(new Set(content.ordinaryEvents.map((event) => event.id)).size, content.ordinaryEvents.length);
@@ -900,7 +973,7 @@ test('route choices produce guaranteed next-year echoes and ending facts', () =>
   assert.match(Game.buildEndingNarrative(state), /1942 年/);
 });
 
-test('all 1054 key-decision options are reachable in a compatible life', () => {
+test('all 1165 key-decision options are reachable in a compatible life', () => {
   for (const decision of Game.content.decisions) {
     for (const target of decision.options) {
       const routeKey = decision.routes?.[0] || target.routes?.[0];
@@ -910,11 +983,11 @@ test('all 1054 key-decision options are reachable in a compatible life', () => {
       if (target.genders?.includes('女')) setup.gender = '女';
       if (decision.id === 'adult-partnership') setup.decisions.marriage = 'delay-marriage';
       if (decision.id === 'political-organization-application') setup.decisions['public-life-contact'] = 'join-open-public-work';
-      if (decision.id === 'political-organization-answer') setup.decisions['political-organization-application'] = 'apply-ccp';
+      if (decision.id === 'political-organization-answer') setup.decisions['political-organization-application'] = 'apply-public-civic-network';
       if (['wartime-public-role', 'public-family-boundary', 'public-detention-pressure'].includes(decision.id)) {
         setup.decisions['public-life-contact'] = 'join-open-public-work';
-        setup.decisions['political-organization-application'] = 'apply-ccp';
-        setup.decisions['political-organization-answer'] = 'accept-membership';
+        setup.decisions['political-organization-application'] = 'apply-public-civic-network';
+        setup.decisions['political-organization-answer'] = 'accept-network-membership';
       }
       if (decision.id === 'public-detention-pressure' || target.id === 'end-secret-work-for-family') setup.decisions['wartime-public-role'] = 'wartime-secret-liaison';
       setup.decisions[decision.id] = target.id;
@@ -925,6 +998,9 @@ test('all 1054 key-decision options are reachable in a compatible life', () => {
         ...setup,
         name: `选项-${decision.id}-${target.id}`,
         actionPicker(current, available) {
+          // Satisfy real prerequisites before this year's decision is presented;
+          // mutating after presentation cannot legitimately unlock a rendered option.
+          if ([1946, 1949, 1962].includes(current.year) || decisionIsDueThisYear(current, decision)) prepareCompatibleLife(current);
           const chosen = [];
           if (!current.information.channels.includes('newspaper') && available.some((action) => action.id === 'read-newspaper')) chosen.push('read-newspaper');
           if (available.some((action) => action.id === 'run-business')) chosen.push('run-business');
@@ -932,12 +1008,8 @@ test('all 1054 key-decision options are reachable in a compatible life', () => {
           return chosen;
         },
         prepareDecision(current, pending) {
-          if (pending.id !== decision.id && pending.id !== 'final-1949') return;
-          Object.keys(current.attrs).forEach((key) => { current.attrs[key] = 100; });
-          Object.keys(current.res).forEach((key) => { current.res[key] = 100; });
-          ['newspaper', 'conversation', 'books', 'storytelling'].forEach((channel) => {
-            if (!current.information.channels.includes(channel)) current.information.channels.push(channel);
-          });
+          if (pending.id !== decision.id && pending.id !== 'final-1949' && pending.id !== 'd47-finance-ownership-entry-1946' && pending.id !== 'macau-hospitality-concession-1962') return;
+          prepareCompatibleLife(current);
         },
       });
 
@@ -949,7 +1021,7 @@ test('all 1054 key-decision options are reachable in a compatible life', () => {
   }
 });
 
-test('all 311 annual actions can be performed in a compatible life', () => {
+test('all 335 annual actions can be performed in a compatible life', () => {
   for (const target of Game.content.actions) {
     const routeKey = target.routes?.[0];
     const setup = routeKey
@@ -957,11 +1029,18 @@ test('all 311 annual actions can be performed in a compatible life', () => {
       : setupForFamily(target.families?.[0] || 'shanghaigongshang');
     if (target.post1949Choices?.[0]) setup.decisions['final-1949'] = POST1949_OPTIONS[target.post1949Choices[0]];
     if (target.id === 'covert-liaison') setup.decisions['wartime-public-role'] = 'wartime-secret-liaison';
+    let targetPrepared = false;
 
     const state = playScenario({
       ...setup,
       name: `行动-${target.id}`,
       actionPicker(current, available) {
+        if ([1946, 1949, 1962].includes(current.year)) prepareCompatibleLife(current);
+        if (!targetPrepared && actionCanBelongToCurrentLife(current, target)) {
+          prepareCompatibleLife(current);
+          targetPrepared = true;
+          available = Game.availableActions(current);
+        }
         if (available.some((action) => action.id === target.id)) return [target.id];
         if (target.post1949Choices?.includes('overseas') && !current.information.channels.includes('newspaper') && available.some((action) => action.id === 'read-newspaper')) return ['read-newspaper'];
         if (target.post1949Choices?.includes('overseas') && available.some((action) => action.id === 'run-business')) return ['run-business'];
@@ -975,11 +1054,7 @@ test('all 311 annual actions can be performed in a compatible life', () => {
       },
       prepareDecision(current, pending) {
         if (pending.id !== 'final-1949') return;
-        Object.keys(current.attrs).forEach((key) => { current.attrs[key] = 100; });
-        Object.keys(current.res).forEach((key) => { current.res[key] = 100; });
-        ['newspaper', 'conversation', 'books', 'storytelling'].forEach((channel) => {
-          if (!current.information.channels.includes(channel)) current.information.channels.push(channel);
-        });
+        prepareCompatibleLife(current);
       },
     });
 
@@ -1006,7 +1081,7 @@ test('coverage inspection reports family, route, subject and ending evidence', (
   assert.equal(report.subjectEvidenceCount, scenarios.length);
   assert.equal(report.post1949EmploymentEvidenceCount, scenarios.length);
   assert.equal(report.annualNarrativeRate, 1);
-  assert.equal(report.persistentContactCount, 339);
+  assert.equal(report.persistentContactCount, 357);
 });
 
 test('a career is a concrete workplace with bosses, coworkers, customers and work records', () => {

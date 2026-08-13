@@ -19,11 +19,11 @@
     unaffiliated: '没有参加政治组织',
     'public-participant': '参与公开公共活动',
     'peripheral-helper': '承担外围具体事务',
-    applicant: '等待组织答复',
-    member: '组织成员',
+    applicant: '等待合成公共网络答复',
+    member: '合成公共网络成员',
     'nonparty-helper': '无党派公共工作者',
     'secret-worker': '秘密联络与交通工作',
-    infiltration: '以公开职业维持隐蔽身份',
+    infiltration: '旧版未对齐的隐蔽身份记录',
     inactive: '政治活动已经中断',
     withdrawn: '已经退出原有活动',
     'coerced-cooperation': '受压后曾向调查者提供信息',
@@ -31,9 +31,10 @@
   C.publicSecrecyLabels = { open: '公开', limited: '只向少数家人说明风险范围', secret: '身份与任务不公开' };
   C.familyKnowledgeLabels = { none: '家人不知道', partial: '家人只知道风险范围', full: '家人知道能够公开说明的经历' };
   C.publicOrganizations = {
-    ccp: { name: '中国共产党', short: '中共' },
-    kmt: { name: '中国国民党', short: '国民党' },
-    nonparty: { name: '无党派公共网络', short: '无党派' },
+    'civic-open': { name: '合成地方公共事务社（虚构）', short: '合成公开社团' },
+    'civic-mutual': { name: '合成行业互助网络（虚构）', short: '合成互助网络' },
+    nonparty: { name: '无党派公共网络（合成）', short: '无党派' },
+    'legacy-unaligned': { name: '旧版未对齐组织记录', short: '旧版记录' },
   };
 
   C.publicRouteProfiles = {
@@ -93,6 +94,9 @@
       contact: { id: 'public_wen_qiming', label: '温启明', role: '机器行技术员，也组织同行读书和互助', status: 'coworker', relation: 16, born: 1899 },
     },
   };
+  Object.keys(C.publicRouteProfiles).forEach(function (routeKey) {
+    C.publicRouteProfiles[routeKey].infiltrationRole = '不提供潜入、冒名、套取资料或接触未授权机构的玩法；只保留本职公开工作与一次有边界的事实核对。';
+  });
 
   C.actions.push(
     {
@@ -102,12 +106,12 @@
       delta: { network: 2, mind: 2, health: -1 }, note: '会写清社团、联系人和本年实际事务；参加公共活动不等于自动加入任何党派。',
     },
     {
-      id: 'organization-routine', name: '完成已经答应的组织事务', minYear: 1930, maxYear: 1949, minAge: 18, spirit: 3,
+      id: 'organization-routine', name: '完成已经答应的合成公共网络事务', minYear: 1930, maxYear: 1949, minAge: 18, spirit: 3,
       publicStatuses: ['member', 'secret-worker', 'infiltration'], publicEffect: { trustDelta: 4, exposureDelta: 3, historyText: '完成一次已经答应、且与当前身份相符的组织事务。' },
       delta: { mind: 2, network: 1, health: -1 }, note: '不会只增加“忠诚值”；它会留下做了什么、谁知道、公开身份是否受到影响。',
     },
     {
-      id: 'covert-liaison', name: '核对一次秘密联络是否仍然安全', minYear: 1937, maxYear: 1949, minAge: 20, spirit: 4,
+      id: 'covert-liaison', name: '核对一次有限联络是否仍应继续', minYear: 1937, maxYear: 1949, minAge: 20, spirit: 4,
       publicStatuses: ['secret-worker', 'infiltration'], publicSecrecy: ['secret'],
       publicEffect: { trustDelta: 3, exposureDelta: 6, roleFromRoute: 'covertRole', historyText: '核对了一次联络；没有出现的人仍记作失联，不能补写成死亡或被捕。' },
       delta: { mind: 3, health: -2, relation: -1 }, note: '风险会提高；结果只确认消息是否抵达，不展示可复制的秘密操作细节。',
@@ -143,20 +147,20 @@
       ],
     },
     {
-      id: 'political-organization-application', year: 1928, publicStatuses: ['public-participant', 'peripheral-helper'], title: '公共事务之后，要不要申请加入政治组织',
-      prompt: '几年的公开事务让你认识了具体的人，也看见组织内部有介绍、观察和责任。加入不是读到一张传单后的即时升级；申请以后仍要等待答复，并承担身份暴露、工作与家人的现实后果。',
+      id: 'political-organization-application', year: 1928, publicStatuses: ['public-participant', 'peripheral-helper'], title: '公共事务之后，要不要加入一个合成地方网络',
+      prompt: '几年的公开事务让你认识了具体的人，也看见地方社团与行业互助网络有介绍、观察和责任。这里的个人组织均为合成虚构；真实党派只出现在时代近况中。申请以后仍要等待答复，并承担工作时间、家庭知情与公开风险。',
       options: [
-        { id: 'apply-ccp', label: '我请认识的成员说明条件，申请加入中国共产党并等待组织答复', echo: 'public:apply-ccp', publicEffect: { status: 'applicant', organizationKey: null, pendingOrganizationKey: 'ccp', secrecy: 'limited', familyKnowledge: 'partial', trustDelta: 10, exposureDelta: 8, historyText: '经具体成员介绍申请加入中国共产党，尚未被写成已经入党。' }, delta: { mind: 3, network: 1, relation: -1 }, fact: '1928 年经介绍申请加入中国共产党，申请与正式接收被分开记录。', endingFact: true },
-        { id: 'apply-kmt', label: '我通过学校、行业或地方关系申请加入中国国民党地方组织', echo: 'public:apply-kmt', publicEffect: { status: 'applicant', organizationKey: null, pendingOrganizationKey: 'kmt', secrecy: 'open', familyKnowledge: 'partial', trustDelta: 9, exposureDelta: 10, historyText: '通过公开关系申请加入中国国民党地方组织，尚未把申请写成成员身份。' }, delta: { network: 2, position: 1, mind: 2 }, fact: '1928 年通过公开关系申请加入中国国民党地方组织，等待明确答复。', endingFact: true },
+        { id: 'apply-public-civic-network', label: '我申请加入“合成地方公共事务社”，先核清公开职责与退出办法', echo: 'public:apply-civic-open', publicEffect: { status: 'applicant', organizationKey: null, pendingOrganizationKey: 'civic-open', secrecy: 'open', familyKnowledge: 'partial', trustDelta: 10, exposureDelta: 8, historyText: '申请加入合成地方公共事务社；等待答复期间仍只承担已经说清的公开事务。' }, delta: { mind: 3, network: 1, relation: -1 }, fact: '1928 年申请加入合成地方公共事务社，申请与正式接收被分开记录。', endingFact: true },
+        { id: 'apply-mutual-aid-network', label: '我申请加入“合成行业互助网络”，只承担本职相关的互助事务', echo: 'public:apply-civic-mutual', publicEffect: { status: 'applicant', organizationKey: null, pendingOrganizationKey: 'civic-mutual', secrecy: 'limited', familyKnowledge: 'partial', trustDelta: 9, exposureDelta: 6, historyText: '申请加入合成行业互助网络，职责限定在本职相关的公开互助与事实核对。' }, delta: { network: 2, position: 1, mind: 2 }, fact: '1928 年申请加入合成行业互助网络，等待明确答复。', endingFact: true },
         { id: 'remain-nonparty-helper', label: '我继续做具体公共事务，但不申请加入任何党派', echo: 'public:nonparty', publicEffect: { status: 'nonparty-helper', organizationKey: 'nonparty', pendingOrganizationKey: null, secrecy: 'open', familyKnowledge: 'full', trustDelta: 6, exposureDelta: 2, historyText: '明确保留无党派身份，继续承担公共事务。' }, delta: { craft: 2, network: 2, mind: 3 }, fact: '1928 年决定保持无党派身份，继续承担公开公共事务。', endingFact: true },
         { id: 'withdraw-before-joining', label: '我退出这批活动，把原因和未完成事务当面交代清楚', echo: 'public:withdrawn', publicEffect: { status: 'withdrawn', organizationKey: null, pendingOrganizationKey: null, secrecy: 'open', trustDelta: -4, exposureDelta: -3, historyText: '在加入任何党派前退出，并交代了已经答应的事务。' }, delta: { health: 2, relation: -1, mind: 2 }, fact: '1928 年在加入任何政治党派前退出公共活动。', endingFact: true },
       ],
     },
     {
-      id: 'political-organization-answer', year: 1930, publicStatuses: ['applicant'], title: '申请终于得到答复',
-      prompt: '介绍人带来组织答复，并再次说明日常责任与暴露风险。你仍可以接受、继续做外围事务，或在正式接收前退出；系统只记录你实际作出的选择。',
+      id: 'political-organization-answer', year: 1930, publicStatuses: ['applicant'], title: '合成公共网络的申请终于得到答复',
+      prompt: '经手人带来合成地方网络的答复，并再次说明日常责任、公开范围和退出办法。你仍可以接受、继续做外围事务，或在正式接收前退出；它不会生成任何真实党派身份。',
       options: [
-        { id: 'accept-membership', label: '我接受答复，成为该组织成员并承担经常事务', echo: 'public:member', publicEffect: { status: 'member', organizationFromPending: true, pendingOrganizationKey: null, trustDelta: 15, exposureDelta: 5, roleFromRoute: 'publicRole', historyText: '申请得到答复后成为组织成员，开始承担经常事务。' }, delta: { mind: 3, network: 2, health: -1 }, fact: '1930 年申请得到答复，正式成为所申请政治组织的成员。', endingFact: true },
+        { id: 'accept-network-membership', label: '我接受答复，成为这个合成网络的成员并承担经常事务', echo: 'public:member', publicEffect: { status: 'member', organizationFromPending: true, pendingOrganizationKey: null, trustDelta: 15, exposureDelta: 5, roleFromRoute: 'publicRole', historyText: '申请得到答复后成为合成公共网络成员，开始承担有边界的经常事务。' }, delta: { mind: 3, network: 2, health: -1 }, fact: '1930 年申请得到答复，成为所申请合成公共网络的成员。', endingFact: true },
         { id: 'continue-peripheral-after-answer', label: '我说明目前接不住成员责任，继续只做外围事务', echo: 'public:remain-peripheral', publicEffect: { status: 'peripheral-helper', organizationKey: 'nonparty', pendingOrganizationKey: null, secrecy: 'open', trustDelta: 3, exposureDelta: -2, historyText: '没有接受成员身份，继续只承担外围事务。' }, delta: { craft: 2, relation: 1, mind: 2 }, fact: '1930 年没有接受成员身份，继续承担外围公共事务。', endingFact: true },
         { id: 'decline-membership', label: '我拒绝这次接收，并把已经掌握的联系边界说清', echo: 'public:declined', publicEffect: { status: 'withdrawn', organizationKey: null, pendingOrganizationKey: null, secrecy: 'limited', trustDelta: -5, exposureDelta: -4, historyText: '在正式接收时拒绝加入，并结束原有联系。' }, delta: { mind: 3, relation: -1, health: 1 }, fact: '1930 年拒绝加入所申请的政治组织，并结束原有组织联系。', endingFact: true },
       ],
@@ -167,7 +171,7 @@
       options: [
         { id: 'wartime-open-service', label: '我继续公开救济、教育、医护或工友互助，不承担秘密身份', echo: 'public:wartime-open', publicEffect: { status: 'public-participant', secrecy: 'open', familyKnowledge: 'full', trustDelta: 7, exposureDelta: 6, roleFromRoute: 'publicRole', historyText: '战争时期继续承担公开公共服务，没有把它写成秘密工作。' }, delta: { network: 3, relation: 2, health: -2 }, fact: '1937 年以后继续从事公开救济、教育、医护或互助工作。', endingFact: true },
         { id: 'wartime-secret-liaison', label: '我接受秘密联络与交通工作，同时保留原来的公开职业', echo: 'public:secret-work', publicEffect: { status: 'secret-worker', secrecy: 'secret', familyKnowledge: 'partial', trustDelta: 15, exposureDelta: 18, roleFromRoute: 'covertRole', coverFromCareer: true, historyText: '在公开职业之外承担秘密联络与交通工作。' }, delta: { mind: 4, health: -3, relation: -2 }, fact: '1937 年以后在原有职业之外承担秘密联络与交通工作。', endingFact: true },
-        { id: 'wartime-infiltration', label: '我以现有职业进入一个机构维持隐蔽身份，承担内部联络', echo: 'public:infiltration', publicEffect: { status: 'infiltration', secrecy: 'secret', familyKnowledge: 'partial', trustDelta: 18, exposureDelta: 24, roleFromRoute: 'infiltrationRole', coverFromCareer: true, historyText: '以公开职业进入相关机构，维持隐蔽身份并承担内部联络。' }, delta: { mind: 5, health: -4, relation: -3, position: -2 }, fact: '1937 年以后以公开职业维持隐蔽身份，承担内部联络；具体机构与经历属于合成叙事。', endingFact: true },
+        { id: 'wartime-limited-fact-check', label: '我只接受一次有限事实核对，不进入机构、不取得额外权限', echo: 'public:limited-fact-check', publicEffect: { status: 'secret-worker', secrecy: 'limited', familyKnowledge: 'partial', trustDelta: 8, exposureDelta: 9, roleFromRoute: 'covertRole', coverFromCareer: true, historyText: '只承担一次有限事实核对；没有进入机构、冒用职业权限或接触未授权材料。' }, delta: { mind: 4, health: -2, relation: -1 }, fact: '1937 年以后在原有职业之外承担一次有限事实核对，并保留拒绝、失败与退出边界。', endingFact: true },
         { id: 'wartime-reduce-public-work', label: '我交接现有事务，把主要精力转回生计和家人', echo: 'public:wartime-inactive', publicEffect: { status: 'inactive', secrecy: 'limited', familyKnowledge: 'full', trustDelta: -3, exposureDelta: -6, historyText: '战争扩大后交接公共事务，把主要精力转回生计和家人。' }, delta: { health: 2, relation: 3, network: -1 }, fact: '1937 年战争扩大后中断政治与公共活动，转回生计和家人。', endingFact: true },
       ],
     },
@@ -185,8 +189,8 @@
       prompt: '公开身份受到怀疑后，你被带去问话。系统不设置“忠诚值”，也不用“叛徒”替代事实；你要决定自己实际说了什么，身体、家人和其他联系人将分别承担后果。',
       options: [
         { id: 'state-public-identity-only', label: '我只说明公开职业与可核对行程，不确认秘密联系', echo: 'public:pressure-public-only', publicEffect: { status: 'secret-worker', coercionDelta: 22, exposureDelta: 16, trustDelta: 3, historyText: '拘留中只说明公开职业与可核对行程，没有确认秘密联系。' }, delta: { health: -6, mind: 3, position: -2 }, fact: '1943 年一次拘留中只说明公开职业与可核对行程，没有确认秘密联系。', endingFact: true },
-        { id: 'admit-own-role-no-names', label: '我承认自己承担过联络，但不提供其他人的姓名和住址', echo: 'public:pressure-own-role', publicEffect: { status: 'inactive', coercionDelta: 30, exposureDelta: 28, trustDelta: -8, familyKnowledge: 'full', historyText: '拘留中承认自己的联络活动，但没有提供其他人的姓名和住址；此后活动中断。' }, delta: { health: -4, mind: 2, relation: -2, position: -3 }, fact: '1943 年一次拘留中承认自己的联络活动，但没有提供其他人的姓名和住址；此后活动中断。', endingFact: true },
-        { id: 'provide-address-under-pressure', label: '我在压力下提供一个曾经使用的地址，并接受以后协助辨认的条件', echo: 'public:pressure-address', publicEffect: { status: 'coerced-cooperation', coercionDelta: 45, exposureDelta: 40, trustDelta: -35, familyKnowledge: 'full', historyText: '拘留中提供一个曾使用的地址，并接受以后协助辨认的条件；地址带来的具体后果仍需后来确认。' }, delta: { health: -2, mind: -4, relation: -5, position: -4 }, fact: '1943 年一次拘留中在压力下提供了一个曾使用的地址，并接受以后协助辨认的条件；由此造成的具体后果当时尚未完全确认。', endingFact: true },
+        { id: 'admit-own-role-no-names', label: '我只说明自己的经手范围，不谈任何可识别他人的信息', echo: 'public:pressure-own-role', publicEffect: { status: 'inactive', coercionDelta: 30, exposureDelta: 28, trustDelta: -8, familyKnowledge: 'full', historyText: '拘留中只说明自己的经手范围，没有陈述任何可识别他人的信息；此后活动中断。' }, delta: { health: -4, mind: 2, relation: -2, position: -3 }, fact: '1943 年一次拘留中只说明自己的经手范围，没有陈述任何可识别他人的信息；此后活动中断。', endingFact: true },
+        { id: 'give-incomplete-own-statement', label: '我在压力下只对自己的经手事实作不完整陈述，拒绝指认他人', echo: 'public:pressure-own-statement', publicEffect: { status: 'coerced-cooperation', coercionDelta: 45, exposureDelta: 28, trustDelta: -18, familyKnowledge: 'full', historyText: '拘留中在压力下只对自己的经手事实作了不完整陈述，并拒绝提供可识别他人的姓名、住址或辨认协助。' }, delta: { health: -3, mind: -3, relation: -3, position: -4 }, fact: '1943 年一次拘留中在压力下对自己的经手事实作了不完整陈述，拒绝指认他人；后果只按后来能够确认的事实记录。', endingFact: true },
       ],
     },
     {
@@ -204,8 +208,8 @@
     { id: 'public-open-meeting', title: '第一次把名字写在公开名单上', minYear: 1925, maxYear: 1927, requiresEchoes: ['public:open-contact'], text: '何玉贞一类的具体联系人先把活动时间、地点和要做的事务说清。你只在公开名单上写下自己愿意承担的一项工作，没有把一次到场写成已经加入政治组织；回家后还得解释为何少做了半日工。', delta: { mind: 1, network: 1 } },
     { id: 'public-practical-ledger', title: '救济名单上有一个重复名字', minYear: 1925, maxYear: 1927, requiresEchoes: ['public:practical-contact'], text: '登记时发现同一个名字出现两次。你没有立刻说有人冒领，而是请联系人分别核对住处与家口，最后确认是一对同名的人；粮食照实分开，名单旁也留下核对方式。', delta: { craft: 1, mind: 1 } },
     { id: 'public-distance-aftermath', title: '没有参加，也仍然听见后续消息', minYear: 1925, maxYear: 1927, requiresEchoes: ['public:distance'], text: '你没有参加眼前的活动，工作和家计因此没有立刻中断。几天后熟人来说明谁受伤、谁回去上工；你只把听见的事实记下来，没有把保持距离写成冷漠或失败。', delta: { mind: 1 } },
-    { id: 'public-ccp-application-wait', title: '申请之后仍然只是等待', minYear: 1928, maxYear: 1929, requiresEchoes: ['public:apply-ccp'], text: '介绍人没有给你一个立刻生效的身份，只问了工作、家人和此前承担的事务，又说明答复不会在公开场合送来。你继续原有职业，也开始明白申请与正式成为成员是两件事。', delta: { mind: 2 } },
-    { id: 'public-kmt-application-wait', title: '地方组织先核对公开履历', minYear: 1928, maxYear: 1929, requiresEchoes: ['public:apply-kmt'], text: '负责登记的人先核对学校、行业或地方介绍关系，又问你能否承担公开会议和日常事务。你递交申请后仍照常做工；名册是否接收、谁负责联系，都没有被一句“加入”跳过去。', delta: { network: 1, mind: 1 } },
+    { id: 'public-civic-open-application-wait', title: '合成公开社团的申请仍在等待', minYear: 1928, maxYear: 1929, requiresEchoes: ['public:apply-civic-open'], text: '合成地方公共事务社的经手人没有给你一个立刻生效的身份，只问工作、家人和此前承担的公开事务。你继续原有职业，也开始明白申请与正式接收是两件事。', delta: { mind: 2 } },
+    { id: 'public-civic-mutual-application-wait', title: '合成行业互助网络先核对职责边界', minYear: 1928, maxYear: 1929, requiresEchoes: ['public:apply-civic-mutual'], text: '负责登记的人先核对行业经历、能够承担的互助事务与退出边界。你递交申请后仍照常做工；是否接收、谁负责答复，都没有被一句“加入”跳过去。', delta: { network: 1, mind: 1 } },
     { id: 'public-nonparty-work', title: '不入党仍然要把事务做完', minYear: 1928, maxYear: 1936, requiresEchoes: ['public:nonparty'], text: '你拒绝把公共工作等同于某个党派身份，却仍要核对场地、欠费、救济或参与者去向。有人试着替你贴上立场标签，你只说明自己实际答应了什么、没有答应什么。', delta: { craft: 1, mind: 2 } },
     { id: 'public-withdraw-before-membership', title: '退出以后先把借来的名册交还', minYear: 1928, maxYear: 1930, requiresEchoes: ['public:withdrawn'], text: '你在加入任何党派以前退出，先把借来的名册和未结清的事务交还。熟人没有因此立刻消失，却也不再把新的名单交给你；往后记录的是关系怎样变远，而不是给退出行为判胜负。', delta: { mind: 1, network: -1 } },
     { id: 'public-member-routine', title: '成员身份没有替你免掉日常工作', minYear: 1930, maxYear: 1936, requiresEchoes: ['public:member'], text: '得到正式答复以后，第一件事仍是完成此前没有做完的登记、教学、工友或行业事务。组织身份没有替你挣工钱、照顾父母或解决房租，反而要求你把时间和风险重新排进日常。', delta: { mind: 2, health: -1 } },
@@ -213,14 +217,14 @@
     { id: 'public-declined-membership-aftermath', title: '拒绝接收以后，联系逐步结束', minYear: 1930, maxYear: 1934, requiresEchoes: ['public:declined'], text: '你在正式接收时拒绝加入，并与介绍人逐项交代哪些地址和事务已经停止使用。对方没有替你作道德结论；往后能确认的只是来往减少、原有公共工作中断，以及你重新安排生计。', delta: { health: 1, network: -1 } },
     { id: 'public-open-war-service', title: '公开救济点先问能接住多少人', minYear: 1937, maxYear: 1944, requiresEchoes: ['public:wartime-open'], text: '战事扩大后，救济点的人比物资增长得更快。你与同事先写清药、粮、住处和转介条件，再告诉排在后面的人哪些今天办不到；公开服务会被看见，也会带来工作停顿和家人担心。', delta: { relation: 1, health: -1 } },
     { id: 'public-secret-missed-contact', title: '联络人没有按约出现', minYear: 1938, maxYear: 1942, requiresEchoes: ['public:secret-work'], text: '约定时间过去后，联系人没有出现。你没有继续等到公开身份变得可疑，只按事先说清的边界回到工作；账本只记“本次未接上”，没有把对方补写成被捕、死亡或转向。', delta: { mind: 2, position: -1 } },
-    { id: 'public-infiltration-cover-job', title: '公开职业必须真的做得下去', minYear: 1938, maxYear: 1942, requiresEchoes: ['public:infiltration'], text: '隐蔽身份不能只靠一个假称呼。老板要求你补完本职工作的差错，同事又追问迟到原因；你先把公开职责做完，内部消息只记到能够确认的范围，家庭时间却因此再次被挤掉。', delta: { craft: 1, health: -2, relation: -1 } },
+    { id: 'public-limited-fact-check-aftermath', title: '有限事实核对没有改变职业权限', minYear: 1938, maxYear: 1942, requiresEchoes: ['public:limited-fact-check'], text: '老板仍要求你补完本职工作的差错，同事也只按公开岗位与你交接。那次事实核对没有让你取得机构权限；无法交叉确认的消息继续记作未知，家庭时间却仍被挤掉。', delta: { craft: 1, health: -2, relation: -1 } },
     { id: 'public-wartime-inactive-aftermath', title: '交接公共事务以后，生活没有立刻恢复原样', minYear: 1937, maxYear: 1941, requiresEchoes: ['public:wartime-inactive'], text: '你把现有事务交给能够接手的人，重新把时间放回工资、住处和家人。旧联系人偶尔仍来核对消息，但不再默认你会承担任务；家庭压力有所缓解，先前留下的公开身份却不会从别人的记忆里消失。', delta: { relation: 1, health: 1 } },
     { id: 'public-family-full-aftermath', title: '家人知道以后没有自动同意', minYear: 1940, maxYear: 1942, requiresEchoes: ['public:family-full'], text: '家人听完风险后没有立刻支持或反对，而是先问住处、工作和孩子怎么办。你们把能够各自决定的部分分开：是否搬走、是否继续工作、出了事找谁核实，都由当事人自己答复。', delta: { relation: 1, mind: 1 } },
     { id: 'public-family-partial-aftermath', title: '一张只写紧急地址的纸', minYear: 1940, maxYear: 1942, requiresEchoes: ['public:family-partial'], text: '家人只知道发生危险时到哪里核实消息，不知道具体联系人和任务。他们接受的是自己的应对安排，不是替你保管秘密工作的责任；纸上的地址后来又因住处变化被重新核对。', delta: { mind: 1 } },
     { id: 'public-family-withdraw-aftermath', title: '交接秘密事务以后，家人重新安排共同生活', minYear: 1940, maxYear: 1943, requiresEchoes: ['public:family-withdraw'], text: '你交接秘密事务后，家人没有把一切当作已经过去。他们先确认住处是否还安全、工作能否继续、旧联系人该怎样拒绝；共同生活逐渐恢复，但活动中断与关系变化都被保留在账本里。', delta: { relation: 2, health: 1 } },
     { id: 'public-pressure-public-only-echo', title: '释放以后，公开职业已经留下缺口', minYear: 1943, maxYear: 1945, requiresEchoes: ['public:pressure-public-only'], text: '问话时没有确认秘密联系，不代表生活没有后果。回到工作地点后，老板追问缺勤，同事知道你被带走过，家人也要求重新讨论住处；身体留下的伤与身份暴露分别进入记录。', delta: { health: -2, position: -1 } },
     { id: 'public-pressure-own-role-echo', title: '活动中断以后，旧联系人没有自动安全', minYear: 1943, maxYear: 1946, requiresEchoes: ['public:pressure-own-role'], text: '你承认自己的联络活动后没有提供其他姓名，但原有联系仍被迫中断。旧联系人是否及时转移不能由你代替确认；家里只知道你暂时不再外出，工作也需要重新解释空缺。', delta: { mind: 2, network: -1 } },
-    { id: 'public-pressure-address-echo', title: '一个地址造成了什么，后来才逐项确认', minYear: 1943, maxYear: 1947, requiresEchoes: ['public:pressure-address'], text: '你在压力下说出的旧地址并没有立刻生成一个全知结局。后来只能确认房东受到询问、一名常去的人提前离开；另一名联系人的去向仍然未知，不能用“出卖了所有人”或“没有造成后果”代替事实。', delta: { mind: -1, relation: -2 } },
+    { id: 'public-pressure-own-statement-echo', title: '不完整陈述的后果后来才逐项确认', minYear: 1943, maxYear: 1947, requiresEchoes: ['public:pressure-own-statement'], text: '你在压力下只说了自己的部分经手事实。后来能确认的是工作中断、家人重新安排住处和一名熟人停止往来；其他人的经历仍属未知，不能用英雄或叛徒标签替代事实。', delta: { mind: -1, relation: -2 } },
     { id: 'public-post1949-record-echo', title: '不同落点对同一段履历有不同问题', minYear: 1951, maxYear: 1956, requiresAnyEchoes: ['public:post1949-disclosed', 'public:post1949-verified', 'public:post1949-withdrawn'], text: '新落点的登记人员、雇主、邻居和旧联系人分别关心不同部分：有人只问工作年资，有人追问组织关系，也有人只想知道某位失联者是否还活着。你把亲历、后来确认和他人指控分栏记录，没有让一句身份标签吞掉一生。', delta: { mind: 2 } },
   ];
   publicScenes.forEach(function (scene) { C.ordinaryEvents.push(scene); });

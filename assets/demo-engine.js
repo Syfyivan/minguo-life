@@ -422,6 +422,8 @@
       supplier: config.supplier || null,
       product: config.product || null,
       employees: Number(config.employees || 0),
+      shareStatus: config.shareStatus || '出资、劳动与分配办法已记录，精确产权比例未记录',
+      partnerCount: (config.partners || []).length,
       openedYear: state.year,
       closedYear: null,
       status: 'operating',
@@ -576,6 +578,61 @@
     recordCanonicalRoute(state, routeKey, source);
   }
 
+  function syncPost1949EmploymentForRoute(state, routeKey, source) {
+    if (!state.post1949Choice || !state.post1949) return;
+    var routeProfiles = C.post1949RouteJobs && C.post1949RouteJobs[routeKey];
+    var profile = routeProfiles && routeProfiles[state.post1949Choice];
+    if (!profile) return;
+    var current = ensureEmployment(state);
+    var previousRole = current.role;
+    var previousWorkplace = current.workplace;
+    current.status = 'employed';
+    current.track = profile.track || current.track || livelihoodTrack(state);
+    current.role = profile.role;
+    current.workplace = profile.workplace;
+    current.duties = profile.duties;
+    current.terms = profile.terms;
+    current.startedYear = state.year;
+    current.yearsWorked = 0;
+    current.lastResultYear = state.year;
+    current.lastResult = state.year + ' 年，你结束了' + (previousRole || '此前工作') + (previousWorkplace ? '（' + previousWorkplace + '）' : '') + '的本段职责，转入' + profile.workplace + '担任' + profile.role + '；旧岗位的工钱、交接和未结事项继续单独保留。';
+    current.nextStep = '按新职位继续处理具体职责、报酬、共同治理、申诉和交接。';
+    current.history.push({
+      year: state.year,
+      source: 'route-transition:' + (source || routeKey),
+      status: current.status,
+      role: current.role,
+      workplace: current.workplace,
+      previousRole: previousRole,
+      previousWorkplace: previousWorkplace,
+      result: current.lastResult,
+      nextStep: current.nextStep,
+    });
+    syncCareerFromEmployment(state);
+    if (state.lived && state.lived.career) {
+      state.lived.career.lastWork = null;
+      if (state.lived.career.business) {
+        state.lived.career.business.active = true;
+        state.lived.career.business.lastActiveYear = null;
+      }
+    }
+    if (state.lived && state.lived.inner) {
+      state.lived.inner.current = '我刚从' + (previousWorkplace || '此前工作地点') + '的' + (previousRole || '旧工作') + '转入' + profile.workplace + '担任' + profile.role + '。称号不是结果；眼前要先接住共同治理、员工工资、顾客申诉、债务和旧岗位交接。';
+    }
+    var transitionProfile = post1949CareerProfile(state);
+    if (transitionProfile && state.lived && state.lived.career && state.lived.career.active) {
+      recordCareerWork(state, 'route-transition', '接下新职位并完成第一段交接');
+    }
+    state.post1949.livelihood = '已经转入：' + current.role + '（' + current.workplace + '）。' + current.lastResult;
+    addFact(state, {
+      id: 'employment-route-transition:' + routeKey + ':' + state.year,
+      kind: 'livelihood',
+      text: current.lastResult,
+      source: source || 'route-transition',
+    });
+    addLog(state, '【谋生转接】' + current.lastResult + ' 下一步：' + current.nextStep, 'turn', 'livelihood');
+  }
+
   function subjectIsDead(subject) {
     return subject && (subject.status === 'dead-unconfirmed' || subject.status === 'dead-confirmed');
   }
@@ -677,6 +734,27 @@
     };
     state.publicLife = Object.assign(defaults, state.publicLife || {});
     if (!Array.isArray(state.publicLife.history)) state.publicLife.history = [];
+    state.publicLife.history.forEach(function (entry) {
+      if (['ccp', 'kmt'].indexOf(entry.organizationKey) >= 0 || ['ccp', 'kmt'].indexOf(entry.pendingOrganizationKey) >= 0) {
+        entry.organizationKey = 'legacy-unaligned';
+        entry.organizationName = '旧版未对齐组织记录';
+        entry.pendingOrganizationKey = null;
+        entry.status = 'inactive';
+        entry.text = '旧版真实组织交互已停用；只保留当年发生过一条未对齐记录，不补造身份、答复或后续玩法。';
+      }
+    });
+    if (['ccp', 'kmt'].indexOf(state.publicLife.organizationKey) >= 0) {
+      state.publicLife.organizationKey = 'legacy-unaligned';
+      state.publicLife.organizationName = '旧版未对齐组织记录';
+      state.publicLife.status = 'inactive';
+      state.publicLife.lastUpdate = '旧存档保留了一条真实组织经历；当前版只把它标为“旧版未对齐记录”，不再由此生成个人组织玩法。';
+    }
+    if (['ccp', 'kmt'].indexOf(state.publicLife.pendingOrganizationKey) >= 0) {
+      state.publicLife.pendingOrganizationKey = null;
+      state.publicLife.organizationName = '旧版未对齐组织记录';
+      state.publicLife.status = 'inactive';
+      state.publicLife.lastUpdate = '旧存档保留了一条尚未结算的真实组织申请；当前版不补造答复，只保留“旧版未对齐记录”。';
+    }
     return state.publicLife;
   }
 
@@ -896,7 +974,7 @@
       ? state.post1949.employment.nextStep
       : '下一年继续核对职责、报酬以及这次工作留下的人情或返工。';
     lived.career.history.push(record);
-    if (lived.career.business && lived.career.phase === 'route' && lived.career.business.active !== false) {
+    if (lived.career.business && lived.career.business.active !== false) {
       lived.career.business.ordersHandled += 1;
       lived.career.business.lastCustomer = profile.publicPerson;
       lived.career.business.lastProblem = text;
@@ -1381,6 +1459,10 @@
     if (!career.active || state.age < 68) return;
     career.active = false;
     career.retiredYear = state.year;
+    if (career.business && career.business.active !== false) {
+      career.business.active = false;
+      career.business.lastActiveYear = state.year;
+    }
     career.nextStep = '不再把往后每一年写成照常上工；日常改由既有储备、家庭协商、邻里互助与能够承担的零散帮忙接住。';
     var employment = state.post1949 && state.post1949.employment;
     if (employment && employment.role) {
@@ -1496,7 +1578,7 @@
       ? '最后一份明确职业是在' + lived.career.workplace + '担任' + lived.career.role + '，往来对象包括' + [lived.career.supervisor, lived.career.colleague, lived.career.publicPerson].filter(Boolean).join('、') + '。一生留下 ' + lived.career.history.length + ' 条具体工作记录。'
       : '没有留下可以确认的具体职业记录。';
     if (lived.career.retiredYear) careerText += lived.career.retiredYear + ' 年完成最后一段工钱与交接，此后停止固定工作。';
-    if (lived.career.business) careerText += '从 ' + lived.career.business.openedYear + ' 年到 ' + (lived.career.business.lastActiveYear || '仍在经营') + ' 经营过“' + lived.career.business.name + '”，记录了 ' + lived.career.business.ordersHandled + ' 次订单、客户或经营问题；最近一次客户为' + lived.career.business.lastCustomer + '。';
+    if (lived.career.business) careerText += '从 ' + lived.career.business.openedYear + ' 年到 ' + (lived.career.business.lastActiveYear || '仍在经营') + ' 经营过“' + lived.career.business.name + '”，记录了 ' + lived.career.business.ordersHandled + ' 次订单、客户或经营问题；' + (lived.career.business.lastCustomer ? '最近一次客户为' + lived.career.business.lastCustomer + '。' : '首批客户或经营问题没有留下可确认姓名。');
     var illnessEntries = lived.health.history.filter(function (item) { return item.type === 'episode' || (item.condition && item.type !== 'treatment'); });
     var healthText = illnessEntries.length
       ? '明确记录过 ' + illnessEntries.length + ' 次身体发作，包括' + illnessEntries.slice(-6).map(function (item) { return item.condition + '（' + item.year + '）'; }).join('、') + '；另有 ' + lived.health.treatedCount + ' 次主动求医或检查。'
@@ -2371,6 +2453,14 @@
     if (state.post1949.livelihood) facts.push('1949 年后谋生：' + state.post1949.livelihood + '。');
     var employment = state.post1949 && state.post1949.employment;
     if (employment && employment.role) facts.push('明确职业记录：在' + employment.workplace + '担任' + employment.role + '，最后状态为「' + employmentStatusLabel(employment.status) + '」，累计记录 ' + employment.yearsWorked + ' 个续工年份。');
+    var economicLife = ensureEconomicLife(state);
+    var enterprises = economicLife.enterprises.filter(function (item) { return item.source && String(item.source).indexOf('decision:') === 0; });
+    if (enterprises.length) facts.push('具体企业经营：' + enterprises.map(function (enterprise) {
+      var shareholders = economicLife.shareholders.filter(function (item) { return item.enterpriseId === enterprise.id; });
+      var licenseCount = economicLife.licenses.filter(function (item) { return item.enterpriseId === enterprise.id; }).length;
+      var concessionCount = economicLife.concessions.filter(function (item) { return item.enterpriseId === enterprise.id; }).length;
+      return enterprise.name + '于 ' + enterprise.openedYear + ' 年形成，记录 ' + enterprise.employees + ' 名雇员、' + shareholders.length + ' 名经营股东或合伙人、' + licenseCount + ' 项许可' + (concessionCount ? '和 ' + concessionCount + ' 项有期限批给' : '') + '；' + enterprise.shareStatus;
+    }).join('；') + '。');
     var portrait = buildLifePortrait(state);
     facts.push('具体工作与经营：' + portrait.career);
     facts.push('父母各自的人生：' + portrait.parents);
@@ -2522,6 +2612,7 @@
       state.lived.career.business.lastProblem = option.fact;
     }
     if (option.enterpriseStart) startDecisionEnterprise(state, option.enterpriseStart, 'decision:' + decision.id + ':' + option.id);
+    if (option.syncEmploymentToRoute) syncPost1949EmploymentForRoute(state, state.routeKey, decision.id + ':' + option.id);
     if (option.spouseStatus) {
       state.subjects.spouse.status = option.spouseStatus;
       addFact(state, {
@@ -2854,6 +2945,10 @@
     }
     migrateLegacyPostwarRhythms(state);
     ensureSchemaSixState(state, sourceSchema);
+    if (state.over && state.life && state.life.deathOccurredYear) {
+      state.endingFacts = buildEndingFacts(state);
+      state.endingNarrative = buildEndingNarrative(state);
+    }
     return state;
   }
 
@@ -2990,9 +3085,9 @@
       publicLifeEvidenceCount: states.filter(function (state) {
         return state.publicLife && state.publicLife.history && state.publicLife.history.length >= 5;
       }).length,
-      politicalMembershipCount: states.filter(function (state) {
+      syntheticNetworkMembershipCount: states.filter(function (state) {
         return state.publicLife && state.publicLife.history && state.publicLife.history.some(function (entry) {
-          return entry.status === 'member' && (entry.organizationKey === 'ccp' || entry.organizationKey === 'kmt');
+          return entry.status === 'member' && (entry.organizationKey === 'civic-open' || entry.organizationKey === 'civic-mutual');
         });
       }).length,
       secretPublicLifeCount: states.filter(function (state) {

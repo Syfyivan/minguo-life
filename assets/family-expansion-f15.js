@@ -232,11 +232,11 @@
   });
 
   installDecision({
-    id: 'f15-political-application-1947', year: 1947, followYear: 1948, families: ['southwestwarworkers'], publicStatuses: ['public-participant', 'peripheral-helper'], title: '做过公开事务以后，要不要申请加入政治组织',
-    prompt: '一名具名成员说明介绍、审查、日常责任和可能没有答复的现实。申请不等于已经加入，职业联系人也不自动是介绍人；你可以申请一个组织、保持无党派或在加入前退出。',
+    id: 'f15-political-application-1947', year: 1947, followYear: 1948, families: ['southwestwarworkers'], publicStatuses: ['public-participant', 'peripheral-helper'], title: '做过公开事务以后，要不要加入一个合成地方网络',
+    prompt: '具名经手人说明介绍、审查、日常责任、退出办法和可能没有答复的现实。这里的个人组织均为合成虚构；真实党派只进入时代近况。你可以申请一个合成网络、保持无党派或退出。',
     options: [
-      option('f15-apply-ccp', '经具名成员说明条件后，申请加入中国共产党并等待答复', { mind: 3, network: 1, relation: -1 }, 'f15:public:apply-ccp', '1947 年经具名成员介绍申请加入中国共产党，申请与正式接收分开记录。', '申请之后仍然只有等待身份', '介绍人核此前公开事务、家计与能承担的责任；你继续原有工作，是否接收尚无答复，没有因递交申请就被写成党员。', { publicEffect: { status: 'applicant', organizationKey: null, pendingOrganizationKey: 'ccp', secrecy: 'limited', familyKnowledge: 'partial', trustDelta: 9, exposureDelta: 6, historyText: '经具名成员说明条件后申请加入中国共产党，仍在等待正式答复。' } }),
-      option('f15-apply-kmt', '通过公开学校、行业或地方关系申请加入国民党地方组织', { network: 2, position: 1, mind: 2 }, 'f15:public:apply-kmt', '1947 年通过公开关系申请加入国民党地方组织，等待明确答复。', '公开履历先被逐项核对', '经手人核工作、住处、介绍关系与能承担的公开事务；你递交申请后仍照常上班，名册是否接收没有被一句“加入”跳过。', { publicEffect: { status: 'applicant', organizationKey: null, pendingOrganizationKey: 'kmt', secrecy: 'open', familyKnowledge: 'partial', trustDelta: 8, exposureDelta: 8, historyText: '通过公开关系申请加入国民党地方组织，仍在等待明确答复。' } }),
+      option('f15-apply-public-civic-network', '申请加入“合成迁入住区公共事务社”，先核公开职责与退出办法', { mind: 3, network: 1, relation: -1 }, 'f15:public:apply-civic-open', '1947 年申请加入合成迁入住区公共事务社，申请与正式接收分开记录。', '申请之后仍然只有等待状态', '经手人核此前公开事务、家计与能承担的责任；你继续原有工作，是否接收尚无答复，没有因递交申请就生成任何真实党派身份。', { publicEffect: { status: 'applicant', organizationKey: null, pendingOrganizationKey: 'civic-open', secrecy: 'open', familyKnowledge: 'partial', trustDelta: 9, exposureDelta: 6, historyText: '申请加入合成迁入住区公共事务社，仍在等待正式答复。' } }),
+      option('f15-apply-mutual-aid-network', '申请加入“合成迁厂职工互助网络”，只做工资伤病住处事务', { network: 2, position: 1, mind: 2 }, 'f15:public:apply-civic-mutual', '1947 年申请加入合成迁厂职工互助网络，等待明确答复。', '公开履历与职责先被逐项核对', '经手人核工作、住处与能承担的公开事务；你递交申请后仍照常上班，网络是否接收没有被一句“加入”跳过。', { publicEffect: { status: 'applicant', organizationKey: null, pendingOrganizationKey: 'civic-mutual', secrecy: 'limited', familyKnowledge: 'partial', trustDelta: 8, exposureDelta: 6, historyText: '申请加入合成迁厂职工互助网络，仍在等待明确答复。' } }),
       option('f15-remain-nonparty-helper', '继续公开互助，但明确不申请加入任何党派', { craft: 2, network: 2, mind: 3 }, 'f15:public:nonparty', '1947 年决定保持无党派身份，继续承担公开公共事务。', '不入党也要交付具体事务', '你继续核一份伤病、欠薪或失所材料，联系人只按公开职责分工；无党派不是空白标签，也不被系统暗写成某一组织外围成员。', { publicEffect: { status: 'nonparty-helper', organizationKey: 'nonparty', pendingOrganizationKey: null, secrecy: 'open', familyKnowledge: 'full', trustDelta: 5, exposureDelta: 2, historyText: '明确保持无党派身份，继续承担公开公共事务。' } }),
       option('f15-withdraw-before-joining', '在加入以前退出，并交清借来的表格与未完事务', { health: 2, relation: -1, mind: 2 }, 'f15:public:withdraw', '1947 年在加入任何政治党派前退出公共活动。', '退出后往来逐步减少', '你归还表格、列明未办事项和停止使用的联系；旧熟人没有被抹掉，但不再把新事务默认交给你。', { publicEffect: { status: 'withdrawn', organizationKey: null, pendingOrganizationKey: null, secrecy: 'open', trustDelta: -4, exposureDelta: -3, historyText: '在加入任何党派以前退出，并交清已经答应的事务。' } }),
     ],
@@ -253,10 +253,10 @@
   });
 
   installDecision({
-    id: 'f15-political-answer-1949', year: 1949, followYear: 1950, families: ['southwestwarworkers'], publicStatuses: ['applicant'], title: '申请得到答复时，是否接受成员身份',
-    prompt: '介绍人带来迟到的正式答复，并再次说明日常责任、地域变化与身份后果。你可以接受，也可以继续外围工作或在正式接收前拒绝；系统只记录实际答复和选择。',
+    id: 'f15-political-answer-1949', year: 1949, followYear: 1950, families: ['southwestwarworkers'], publicStatuses: ['applicant'], title: '合成公共网络的申请得到答复时，是否接受成员责任',
+    prompt: '经手人带来迟到的正式答复，并再次说明日常责任、地域变化与退出办法。你可以接受，也可以继续外围工作或拒绝；系统不会由此生成真实党派身份。',
     options: [
-      option('f15-accept-membership', '接受答复，成为所申请组织成员并承担经常事务', { mind: 3, network: 2, health: -1 }, 'f15:public:member', '1949 年申请得到答复，正式成为所申请政治组织的成员。', '成员身份没有替你解决工资、住处和照料', '第一件经常事务仍有对象和交付结果；你继续处理工作、房租、父母与伴侣生活，组织身份没有变成免除日常的等级。', { publicEffect: { status: 'member', organizationFromPending: true, pendingOrganizationKey: null, trustDelta: 12, exposureDelta: 5, roleFromRoute: 'publicRole', historyText: '申请得到正式答复后成为组织成员，并开始承担经常事务。' } }),
+      option('f15-accept-network-membership', '接受答复，成为所申请合成网络成员并承担经常事务', { mind: 3, network: 2, health: -1 }, 'f15:public:member', '1949 年申请得到答复，成为所申请合成公共网络的成员。', '网络成员身份没有替你解决工资、住处和照料', '第一件经常事务仍有对象和交付结果；你继续处理工作、房租、父母与伴侣生活，合成网络身份没有变成免除日常的等级。', { publicEffect: { status: 'member', organizationFromPending: true, pendingOrganizationKey: null, trustDelta: 12, exposureDelta: 5, roleFromRoute: 'publicRole', historyText: '申请得到正式答复后成为合成公共网络成员，并开始承担有边界的经常事务。' } }),
       option('f15-continue-peripheral', '说明目前接不住成员责任，只继续外围公开事务', { craft: 2, relation: 1, mind: 2 }, 'f15:public:peripheral', '1949 年没有接受成员身份，继续只承担外围公共事务。', '外围职责重新写清', '介绍人不再以成员责任要求你，双方只保留公开登记、转介或互助事务；家人和职业联系人没有被自动纳入。', { publicEffect: { status: 'peripheral-helper', organizationKey: 'nonparty', pendingOrganizationKey: null, secrecy: 'open', trustDelta: 2, exposureDelta: -1, historyText: '没有接受成员身份，重新写清能够继续承担的外围公开事务。' } }),
       option('f15-decline-membership', '拒绝正式接收，并结束原有组织申请关系', { mind: 3, relation: -1, health: 1 }, 'f15:public:decline', '1949 年拒绝加入所申请的政治组织，并结束原有申请关系。', '拒绝以后联系逐步结束', '你交代停止使用的联系与尚未完成的公开事务，对方没有替你作道德结论；往后只记录来往减少与生活重排。', { publicEffect: { status: 'withdrawn', organizationKey: null, pendingOrganizationKey: null, secrecy: 'limited', trustDelta: -5, exposureDelta: -3, historyText: '在正式接收时拒绝加入，并结束原有组织申请关系。' } }),
     ],

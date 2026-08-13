@@ -26,6 +26,7 @@ await import('./assets/domain-expansion-education-knowledge.js');
 await import('./assets/domain-expansion-medical-public-health.js');
 await import('./assets/domain-expansion-care-professional-associations.js');
 await import('./assets/domain-expansion-wartime-relief-public-service.js');
+await import('./assets/domain-expansion-identity-finance-concession.js');
 await import('./assets/demo-engine.js');
 
 const Game = globalThis.MINGUO_GAME;
@@ -76,9 +77,9 @@ const baseDecisions = {
   'southwest-transition-1948': 'f15-transition-stay-southwest',
   'f15-public-contact-1945': 'f15-public-open-work',
   'f15-public-family-boundary-1946': 'f15-public-explain-scope',
-  'f15-political-application-1947': 'f15-apply-ccp',
+  'f15-political-application-1947': 'f15-apply-public-civic-network',
   'f15-public-role-1948': 'f15-public-continue-open',
-  'f15-political-answer-1949': 'f15-accept-membership',
+  'f15-political-answer-1949': 'f15-accept-network-membership',
   'subei-artisan-child-skill-1918': 'f02-child-follow-repair',
   'subei-artisan-customer-debt-1920': 'f02-debt-part-grain',
   'subei-artisan-path': 'f02-repair-trial',
@@ -98,8 +99,8 @@ const baseDecisions = {
   'late-life-care': 'community-care',
   'late-life-record': 'sort-records',
   'public-life-contact': 'join-open-public-work',
-  'political-organization-application': 'apply-ccp',
-  'political-organization-answer': 'accept-membership',
+  'political-organization-application': 'apply-public-civic-network',
+  'political-organization-answer': 'accept-network-membership',
   'wartime-public-role': 'wartime-open-service',
   'public-family-boundary': 'tell-family-risk-range',
   'public-past-after-1949': 'state-confirmed-public-past',
@@ -135,6 +136,13 @@ function runScenario(definition) {
     }
     Game.advanceYear(state, actions);
     while (state.pendingDecision) {
+      if (definition.prepareHighGates && ['d47-finance-ownership-entry-1946', 'final-1949', 'macau-hospitality-concession-1962'].includes(state.pendingDecision.id)) {
+        Object.keys(state.attrs).forEach((key) => { state.attrs[key] = 100; });
+        Object.keys(state.res).forEach((key) => { state.res[key] = 100; });
+        ['newspaper', 'conversation', 'books', 'storytelling'].forEach((channel) => {
+          if (!state.information.channels.includes(channel)) state.information.channels.push(channel);
+        });
+      }
       const requested = decisions[state.pendingDecision.id];
       const option = state.pendingDecision.options.find((item) => item.id === requested && item.enabled && !item.hidden)
         || state.pendingDecision.options.find((item) => item.enabled && !item.hidden);
@@ -230,6 +238,9 @@ const definitions = [
   { id: 'southwest-wartime-relief-logistics', familyKey: 'southwestwarworkers', gender: '女', name: '郭静安', expectedRoute: 'southwest-wartime-relief-logistics', expectedPost1949: 'mainland', decisions: { 'southwest-warworker-path': 'f15-relief-logistics-trial', 'route-d38-1947': 'bounded-desk' } },
   { id: 'southwest-civil-defense-relief', familyKey: 'southwestwarworkers', gender: '男', name: '郭守安', expectedRoute: 'southwest-civil-defense-relief', expectedPost1949: 'mainland', decisions: { 'southwest-warworker-path': 'f15-civil-defense-relief-trial', 'route-d39-1947': 'relief-coop' } },
   { id: 'tianjin-public-community-service', familyKey: 'tianjinclerks', gender: '女', name: '许静兰', expectedRoute: 'tianjin-public-community-service', expectedPost1949: 'mainland', decisions: { 'tianjin-clerk-path': 'public-community-trial', 'route-d41-1943': 'bounded-desk' } },
+  { id: 'high-risk-double-identity', familyKey: 'shanghaigongshang', gender: '女', name: '顾静仪', expectedRoute: 'high-risk-double-identity', expectedPost1949: 'mainland', decisions: { 'shanghai-path': 'salaried-professional', 'shanghai-war': 'relocate-own-work', 'political-organization-application': 'remain-nonparty-helper', 'wartime-public-role': 'wartime-secret-liaison', 'public-family-boundary': 'tell-family-risk-range' } },
+  { id: 'banking-investment-insurance-owner', familyKey: 'guangdongqiaoxiang', gender: '女', name: '梁素安', expectedRoute: 'banking-investment-insurance-owner', expectedPost1949: 'hong-kong', prepareHighGates: true, decisions: { 'qiaoxiang-path': 'remittance-trial', 'qiaoxiang-war': 'split-address-and-accounts', 'd47-finance-ownership-entry-1946': 'd47-form-share-finance-firm', 'final-1949': 'move-hong-kong' } },
+  { id: 'macao-tourism-entertainment-concession', familyKey: 'guangdongcoastal', gender: '女', name: '梁惠莲', expectedRoute: 'macao-tourism-entertainment-concession', expectedPost1949: 'macau', prepareHighGates: true, decisions: { 'coastal-path': 'guesthouse-trial', 'coastal-war': 'coastal-split-addresses', 'final-1949': 'move-macau', 'post49-arrival': 'macau-verified-contact-work', 'macau-hospitality-concession-1962': 'macau-limited-concession-network-partner' } },
   { id: 'subei-village-tool-repairer', familyKey: 'subeiartisans', gender: '男', name: '丁守成', expectedRoute: 'subei-village-tool-repairer', expectedPost1949: 'mainland', decisions: { 'subei-artisan-path': 'f02-repair-trial', 'route-subei-village-tool-repairer-1946': 'f02-repair-limited-workshop' } },
   { id: 'subei-itinerant-market-vendor', familyKey: 'subeiartisans', gender: '女', name: '丁守兰', expectedRoute: 'subei-itinerant-market-vendor', expectedPost1949: 'mainland', decisions: { 'subei-artisan-path': 'f02-vendor-trial', 'route-subei-itinerant-market-vendor-1946': 'f02-vendor-limited-haul-coop' } },
   { id: 'subei-market-stall-shopkeeper', familyKey: 'subeiartisans', gender: '女', name: '丁守兰', expectedRoute: 'subei-market-stall-shopkeeper', expectedPost1949: 'mainland', decisions: { 'subei-artisan-path': 'f02-stall-trial', 'route-subei-market-stall-shopkeeper-1946': 'f02-shop-limited-partnership' } },
@@ -244,7 +255,7 @@ const definitions = [
 const states = definitions.map(runScenario);
 const report = Game.inspectCoverage(states);
 assert.equal(report.familyCount, 18);
-assert.equal(report.routeCount, 68);
+assert.equal(report.routeCount, 71);
 assert.equal(report.post1949PathCount, 8);
 assert.equal(report.factEndingCount, states.length);
 assert.equal(report.deathEndingCount, states.length);
@@ -256,13 +267,13 @@ assert.equal(report.informationEvidenceCount, states.length);
 assert.equal(report.contactEvidenceCount, states.length);
 assert.equal(report.familyLifecycleCount, states.length);
 assert.equal(report.annualNarrativeRate, 1);
-assert.equal(report.authoredActionCount, 311);
-assert.equal(report.keyDecisionCount, 338);
-assert.equal(report.decisionOptionCount, 1054);
-assert.equal(report.authoredOrdinaryEventCount, 1536);
-assert.equal(report.choiceEchoEventCount, 988);
+assert.equal(report.authoredActionCount, 335);
+assert.equal(report.keyDecisionCount, 375);
+assert.equal(report.decisionOptionCount, 1165);
+assert.equal(report.authoredOrdinaryEventCount, 1680);
+assert.equal(report.choiceEchoEventCount, 1096);
 assert.equal(report.denseLifeCount, states.length);
-assert.equal(report.persistentContactCount, 339);
+assert.equal(report.persistentContactCount, 357);
 assert.equal(report.concreteCareerCount, states.length);
 assert.equal(report.parentLifecycleDetailCount, states.length);
 assert.equal(report.relationshipDetailCount, states.length);
@@ -271,12 +282,13 @@ assert.equal(report.socialWorldCount, states.length);
 assert.equal(report.innerLifeCount, states.length);
 assert.equal(report.concreteYearCount, report.expectedNarrativeYears);
 assert.equal(report.publicLifeEvidenceCount, states.length);
-assert.equal(report.politicalMembershipCount, states.length);
+assert.equal(report.syntheticNetworkMembershipCount, states.length - 1);
+assert.ok(states.some((state) => state.publicLife.status !== 'member'), 'at least one complete life must remain outside synthetic-network membership');
 assert.equal(report.publicActionCount, 6);
 assert.equal(report.publicDecisionCount, 12);
 assert.equal(report.publicOrdinarySceneCount, 21);
 assert.equal(report.publicEraEventCount, 11);
-assert.equal(report.publicContactProfileCount, 68);
+assert.equal(report.publicContactProfileCount, 71);
 
 const bundle = Game.inspectWholeGameProgressBundle(states);
 assert.equal(bundle.wholeGameStageLabel, '当前已实装内容通过出生到死亡验证；完整设计仍在扩建');
@@ -285,7 +297,7 @@ assert.equal(bundle.hardGates.publicLife, true);
 console.log(`[minguo-life] engine ${Game.VERSION}`);
 console.log(`[scenarios] ${states.length}/${definitions.length} complete`);
 console.log(`[families] ${report.familyCount}/18`);
-console.log(`[routes] ${report.routeCount}/68 ${report.routeKeys.join(', ')}`);
+console.log(`[routes] ${report.routeCount}/71 ${report.routeKeys.join(', ')}`);
 console.log(`[post-1949] ${report.post1949PathCount}/8 ${report.post1949PathKeys.join(', ')}`);
 console.log(`[post-1949-era] ${report.post1949EraEvidenceCount}/${states.length} lives, ${report.authoredEraEventCount} authored era events`);
 console.log(`[post-1949-employment] ${report.post1949EmploymentEvidenceCount}/${states.length} lives with role, result and next step`);
