@@ -29,6 +29,7 @@ await import('../assets/domain-expansion-care-professional-associations.js');
 await import('../assets/domain-expansion-wartime-relief-public-service.js');
 await import('../assets/domain-expansion-identity-finance-concession.js');
 await import('../assets/density-expansion-family-life.js');
+await import('../assets/density-expansion-route-work.js');
 await import('../assets/demo-engine.js');
 
 const Game = globalThis.MINGUO_GAME;

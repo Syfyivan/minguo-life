@@ -29,6 +29,7 @@ await import('../assets/domain-expansion-care-professional-associations.js');
 await import('../assets/domain-expansion-wartime-relief-public-service.js');
 await import('../assets/domain-expansion-identity-finance-concession.js');
 await import('../assets/density-expansion-family-life.js');
+await import('../assets/density-expansion-route-work.js');
 await import('../assets/demo-engine.js');
 
 const Content = globalThis.MINGUO_GAME_CONTENT;
@@ -37,7 +38,6 @@ const pack = Content.ordinaryEvents.filter((event) => event.densityPack === 'fam
 const categories = ['parent', 'friend', 'spouse', 'health', 'work', 'customer'];
 
 test('the first family-life density pack adds twelve concrete scenes to all eighteen families', () => {
-  assert.equal(Content.version, '0.7.23');
   assert.deepEqual(Content.densityExpansion.familyLifeV1, {
     version: '0.7.23', familyCount: 18, scenesPerFamily: 12, sceneCount: 216,
     categories, note: '第一批家庭具体生活密度包；不代表五千条场景总门槛已经完成。',

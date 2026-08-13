@@ -217,7 +217,7 @@
       '傍晚回到' + p.place + '，' + father.name + '说清自己' + father.occupation + '，并' + father.activities[0] + '。家里原以为这次门路能立刻解决' + p.expense + '，他却拿出' + p.object + '逐项说明已经结算、仍欠和根本没有答应的部分。当天只补上一处缺口；以后再谈工作时，全家不再把介绍、试工和正式留用混成一件事。',
       { minAge: 9, maxAge: 28 });
     install(familyKey, p, 'friend-shared-object', 'friend', friendA.name + '不肯让一次帮忙变成长期欠情',
-      '在' + p.place + '，' + friendA.name + '以' + friendA.role + '的身份借走' + p.object + '，答应两日后归还。第二日他因自家急事无法赴约，却没有消失，而是托人送来一张新日期和半份补偿。你可以生气，也必须决定是否续借；物件最终归还，关系少了一点想当然，后来共同做事时双方都会先写清时间和责任。',
+      '在' + p.place + '，' + friendA.name + '以' + friendA.role + '的身份借走' + p.object + '，答应两日后归还。第二日对方因自家急事无法赴约，却没有消失，而是托人送来一张新日期和半份补偿。你可以生气，也必须决定是否续借；物件最终归还，关系少了一点想当然，后来共同做事时双方都会先写清时间和责任。',
       { minAge: 11, maxAge: 35 });
     install(familyKey, p, 'friend-separate-choice', 'friend', friendB.name + '选择了与你不同的去向',
       friendB.name + '在' + p.place + '告诉你，自己作为' + friendB.role + '，决定先处理家里的住处和收入，不参加你计划中的' + p.move + '。你们为谁先失约争了几句，最后把已经共同垫付的钱、' + p.object + '和下一次联系地点分别记下。当年这项计划缩小了；几年后重逢时，他有自己的工作和亲属消息，而不是一直停在原地等你调用。',
